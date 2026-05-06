@@ -1,0 +1,947 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "total_cases": 50,
+    "categories": {
+      "quant_research": 20,
+      "quant_multimodal": 15,
+      "research_multimodal": 10,
+      "triple_loop": 5
+    },
+    "difficulty_levels": {
+      "medium": 20,
+      "hard": 20,
+      "very_hard": 10
+    }
+  },
+  "test_cases": [
+    {
+      "id": "QR001",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "我620分，位次12000，想学计算机，推荐3个保研率超过20%的985院校",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true,
+        "requires_vision": false
+      },
+      "expected_loops": ["fast", "slow"],
+      "expected_tools": ["quant_engine", "search_tool"],
+      "success_criteria": {
+        "must_have_game_matrix": true,
+        "must_have_research_report": true,
+        "min_recommendations": 3,
+        "must_mention_保研率": true
+      },
+      "ground_truth": "应先用量化引擎筛选位次12000能上的985计算机专业，再通过搜索查询各院校保研率"
+    },
+    {
+      "id": "QR002",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "找一个广东的985大学，计算机专业排名全国前十，我位次8000能冲一下吗？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true,
+        "requires_vision": false
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_专业排名": true,
+        "must_calculate_admission_prob": true,
+        "must_filter_by_location": true
+      },
+      "ground_truth": "应先搜索'广东985大学计算机专业排名'确定候选院校，再用量化引擎计算位次8000的录取概率"
+    },
+    {
+      "id": "QR003",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "推荐3个性价比高的双非院校，要求我位次25000能稳上，且就业口碑好",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["fast", "slow"],
+      "expected_tools": ["quant_engine", "search_tool"],
+      "success_criteria": {
+        "must_have_safe_schools": true,
+        "must_search_就业口碑": true,
+        "min_admission_prob": 0.95
+      },
+      "ground_truth": "先用量化引擎找位次25000稳上的双非院校（概率>95%），再搜索就业口碑评价"
+    },
+    {
+      "id": "QR004",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "我想学人工智能，620分，要求学校在北京或上海，且有AI国家重点实验室",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_重点实验室": true,
+        "must_filter_by_score": true,
+        "must_filter_by_location": true
+      },
+      "ground_truth": "先搜索'北京上海AI国家重点实验室高校'，再用620分筛选可行院校"
+    },
+    {
+      "id": "QR005",
+      "category": "quant_research",
+      "difficulty": "very_hard",
+      "question": "我想读博，找3个保研率前五的计算机211院校，我位次15000，要求调剂风险<10%",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_保研率排名": true,
+        "must_calculate_adjustment_risk": true,
+        "max_adjustment_risk": 0.1
+      },
+      "ground_truth": "先搜索211院校计算机保研率排名，再用量化引擎计算位次15000的调剂风险"
+    },
+    {
+      "id": "QR006",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "推荐江苏省内的工科院校，我600分，希望宿舍条件好",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["fast", "slow"],
+      "expected_tools": ["quant_engine", "search_tool"],
+      "success_criteria": {
+        "must_filter_by_province": true,
+        "must_search_宿舍条件": true
+      },
+      "ground_truth": "用量化引擎筛选江苏600分可上的工科院校，再搜索宿舍评价"
+    },
+    {
+      "id": "QR007",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "我想学金融，位次5000，要求学校在一线城市，且CFA通过率高",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_CFA通过率": true,
+        "must_filter_by_location": true
+      },
+      "ground_truth": "先搜索一线城市CFA通过率高的金融院校，再用位次5000筛选"
+    },
+    {
+      "id": "QR008",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "我580分，想找调剂风险低的师范类专业，要求学校有免费师范生政策",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["fast", "slow"],
+      "expected_tools": ["quant_engine", "search_tool"],
+      "success_criteria": {
+        "must_calculate_adjustment_risk": true,
+        "must_search_免费师范生": true
+      },
+      "ground_truth": "用量化引擎找580分调剂风险低的师范专业，再搜索免费师范生政策"
+    },
+    {
+      "id": "QR009",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "推荐临床医学专业，我位次3000，要求附属医院是三甲医院且规培通过率>90%",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_附属医院": true,
+        "must_search_规培通过率": true
+      },
+      "ground_truth": "先搜索拥有三甲附属医院且规培通过率高的医学院，再用位次3000筛选"
+    },
+    {
+      "id": "QR010",
+      "category": "quant_research",
+      "difficulty": "very_hard",
+      "question": "我想出国深造，找3个国际交流项目多的985院校，我630分，要求有2+2联合培养",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_国际交流项目": true,
+        "must_search_2plus2": true,
+        "must_filter_985": true
+      },
+      "ground_truth": "先搜索985院校2+2联合培养项目，再用630分筛选可行院校"
+    },
+    {
+      "id": "QR011",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "我610分想学电子信息，要求学校有微电子国家重点学科",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_国家重点学科": true
+      },
+      "ground_truth": "先搜索拥有微电子国家重点学科的院校，再用610分筛选"
+    },
+    {
+      "id": "QR012",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "推荐建筑学专业，我位次20000，要求学校有建筑学评估A档且通过专业认证",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_学科评估": true,
+        "must_search_专业认证": true
+      },
+      "ground_truth": "先搜索建筑学评估A档且通过认证的院校，再用位次20000筛选"
+    },
+    {
+      "id": "QR013",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "我想学软件工程，590分，要求学校有企业合作实训基地且就业率>95%",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["fast", "slow"],
+      "expected_tools": ["quant_engine", "search_tool"],
+      "success_criteria": {
+        "must_search_实训基地": true,
+        "must_search_就业率": true
+      },
+      "ground_truth": "用590分筛选软件工程院校，再搜索企业合作和就业率数据"
+    },
+    {
+      "id": "QR014",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "找法学专业，我位次10000，要求学校法考通过率前十且有模拟法庭",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_法考通过率": true,
+        "must_search_模拟法庭": true
+      },
+      "ground_truth": "先搜索法考通过率前十的法学院校，再用位次10000筛选"
+    },
+    {
+      "id": "QR015",
+      "category": "quant_research",
+      "difficulty": "very_hard",
+      "question": "我想考公务员，推荐3个公考录取率高的政治学院校，我600分，要求在省会城市",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_公考录取率": true,
+        "must_filter_by_location": true
+      },
+      "ground_truth": "先搜索省会城市公考录取率高的政治学院校，再用600分筛选"
+    },
+    {
+      "id": "QR016",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "我620分想学机械工程，要求学校有智能制造方向且校企合作强",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["fast", "slow"],
+      "expected_tools": ["quant_engine", "search_tool"],
+      "success_criteria": {
+        "must_search_智能制造": true,
+        "must_search_校企合作": true
+      },
+      "ground_truth": "用620分筛选机械工程院校，再搜索智能制造和校企合作情况"
+    },
+    {
+      "id": "QR017",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "推荐新闻传播专业，我位次18000，要求学校有省级以上融媒体中心",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_融媒体中心": true
+      },
+      "ground_truth": "先搜索拥有融媒体中心的新闻传播院校，再用位次18000筛选"
+    },
+    {
+      "id": "QR018",
+      "category": "quant_research",
+      "difficulty": "medium",
+      "question": "我想学会计，580分，要求学校ACCA免考科目多且考证通过率高",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["fast", "slow"],
+      "expected_tools": ["quant_engine", "search_tool"],
+      "success_criteria": {
+        "must_search_ACCA免考": true,
+        "must_search_考证通过率": true
+      },
+      "ground_truth": "用580分筛选会计专业，再搜索ACCA免考和考证数据"
+    },
+    {
+      "id": "QR019",
+      "category": "quant_research",
+      "difficulty": "hard",
+      "question": "找环境工程专业，我位次22000，要求学校有环保部重点实验室且产学研结合好",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_重点实验室": true,
+        "must_search_产学研": true
+      },
+      "ground_truth": "先搜索有环保部重点实验室的环境工程院校，再用位次22000筛选"
+    },
+    {
+      "id": "QR020",
+      "category": "quant_research",
+      "difficulty": "very_hard",
+      "question": "我想创业，推荐3个创新创业氛围好的院校，我610分，要求有创业孵化基地且融资成功案例多",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true
+      },
+      "expected_loops": ["slow", "fast"],
+      "expected_tools": ["search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_search_创业孵化基地": true,
+        "must_search_融资案例": true
+      },
+      "ground_truth": "先搜索创业孵化基地和融资案例，再用610分筛选可行院校"
+    },
+    {
+      "id": "QM001",
+      "category": "quant_multimodal",
+      "difficulty": "medium",
+      "question": "我色弱，620分想学计算机，哪些985院校对色弱没有限制？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": false,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_health_restrictions": true,
+        "must_filter_by_score": true,
+        "must_exclude_color_blind_restricted": true
+      },
+      "ground_truth": "先用PDF解析+Vision检查985计算机专业招生章程体检限制，再用620分筛选无色弱限制的院校"
+    },
+    {
+      "id": "QM002",
+      "category": "quant_multimodal",
+      "difficulty": "hard",
+      "question": "我身高160cm，想学空乘专业，我位次30000，哪些学校身高要求我能达到？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_height_requirement": true,
+        "must_filter_by_rank": true
+      },
+      "ground_truth": "先解析空乘专业招生章程身高要求，筛选160cm符合的，再用位次30000匹配"
+    },
+    {
+      "id": "QM003",
+      "category": "quant_multimodal",
+      "difficulty": "medium",
+      "question": "我有轻度近视，600分想学航空航天，需要检查哪些学校的视力要求？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_vision_requirement": true,
+        "must_filter_by_score": true
+      },
+      "ground_truth": "解析航空航天专业招生章程视力要求，筛选近视可报的，再用600分匹配"
+    },
+    {
+      "id": "QM004",
+      "category": "quant_multimodal",
+      "difficulty": "hard",
+      "question": "我数学单科120分，位次15000，哪些985计算机专业有单科成绩要求我能满足？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "quant_engine"],
+      "success_criteria": {
+        "must_check_subject_requirement": true,
+        "must_filter_985": true
+      },
+      "ground_truth": "解析985计算机招生章程单科要求，筛选数学120分可报的，再用位次15000匹配"
+    },
+    {
+      "id": "QM005",
+      "category": "quant_multimodal",
+      "difficulty": "very_hard",
+      "question": "我左手有残疾，610分想学软件工程，哪些211院校招生章程没有肢体限制？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_physical_disability": true,
+        "must_filter_211": true
+      },
+      "ground_truth": "解析211软件工程招生章程体检限制，筛选无肢体限制的，再用610分匹配"
+    },
+    {
+      "id": "QM006",
+      "category": "quant_multimodal",
+      "difficulty": "medium",
+      "question": "我英语单科110分，620分想读中外合作办学，哪些项目英语要求我能达到？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "quant_engine"],
+      "success_criteria": {
+        "must_check_english_requirement": true,
+        "must_filter_joint_program": true
+      },
+      "ground_truth": "解析中外合作办学招生章程英语要求，筛选110分可报的，再用620分匹配"
+    },
+    {
+      "id": "QM007",
+      "category": "quant_multimodal",
+      "difficulty": "hard",
+      "question": "我是少数民族，600分，哪些985院校有少数民族加分政策且我的位次能上？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "quant_engine"],
+      "success_criteria": {
+        "must_check_minority_policy": true,
+        "must_calculate_with_bonus": true
+      },
+      "ground_truth": "解析985招生章程少数民族政策，计算加分后的等效位次，再匹配院校"
+    },
+    {
+      "id": "QM008",
+      "category": "quant_multimodal",
+      "difficulty": "medium",
+      "question": "我色盲，590分想学生物工程，需要排除哪些有色觉限制的学校？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_color_blindness": true,
+        "must_exclude_restricted": true
+      },
+      "ground_truth": "解析生物工程招生章程色觉要求，排除色盲限制的，再用590分匹配"
+    },
+    {
+      "id": "QM009",
+      "category": "quant_multimodal",
+      "difficulty": "hard",
+      "question": "我转氨酶偏高，位次8000想学临床医学，哪些医学院对肝功能有要求？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_liver_function": true,
+        "must_filter_medical_schools": true
+      },
+      "ground_truth": "解析医学院招生章程体检要求，检查肝功能限制，再用位次8000匹配"
+    },
+    {
+      "id": "QM010",
+      "category": "quant_multimodal",
+      "difficulty": "very_hard",
+      "question": "我听力有轻微障碍，620分想学外语，哪些211外语专业对听力要求宽松？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_hearing_requirement": true,
+        "must_filter_211": true
+      },
+      "ground_truth": "解析211外语专业招生章程听力要求，筛选宽松的，再用620分匹配"
+    },
+    {
+      "id": "QM011",
+      "category": "quant_multimodal",
+      "difficulty": "medium",
+      "question": "我身高185cm，600分想学表演专业，哪些学校身高上限我不会超标？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "quant_engine"],
+      "success_criteria": {
+        "must_check_height_limit": true
+      },
+      "ground_truth": "解析表演专业招生章程身高限制，筛选185cm符合的，再用600分匹配"
+    },
+    {
+      "id": "QM012",
+      "category": "quant_multimodal",
+      "difficulty": "hard",
+      "question": "我物理单科95分，位次10000，哪些工科强校对物理单科有要求且我能满足？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "quant_engine"],
+      "success_criteria": {
+        "must_check_physics_requirement": true,
+        "must_filter_engineering": true
+      },
+      "ground_truth": "解析工科招生章程物理单科要求，筛选95分满足的，再用位次10000匹配"
+    },
+    {
+      "id": "QM013",
+      "category": "quant_multimodal",
+      "difficulty": "medium",
+      "question": "我有哮喘，610分想学化学，哪些学校对呼吸系统疾病有限制？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_respiratory_disease": true
+      },
+      "ground_truth": "解析化学专业招生章程体检要求，检查呼吸系统限制，再用610分匹配"
+    },
+    {
+      "id": "QM014",
+      "category": "quant_multimodal",
+      "difficulty": "hard",
+      "question": "我语文单科100分，620分想学汉语言文学，哪些985对语文单科有要求我达不到？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "quant_engine"],
+      "success_criteria": {
+        "must_check_chinese_requirement": true,
+        "must_identify_unreachable": true
+      },
+      "ground_truth": "解析985汉语言文学招生章程语文要求，标注100分达不到的，再用620分筛选"
+    },
+    {
+      "id": "QM015",
+      "category": "quant_multimodal",
+      "difficulty": "very_hard",
+      "question": "我有轻度脊柱侧弯，位次12000想学体育教育，哪些师范院校体检要求我能通过？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_check_spine_condition": true,
+        "must_filter_normal_schools": true
+      },
+      "ground_truth": "解析师范体育教育招生章程体检要求，检查脊柱限制，再用位次12000匹配"
+    },
+    {
+      "id": "RM001",
+      "category": "research_multimodal",
+      "difficulty": "medium",
+      "question": "清华大学计算机系对色弱有限制吗？如果有，他们的保研率是多少？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": false,
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_health_restrictions": true,
+        "must_search_保研率": true
+      },
+      "ground_truth": "先解析清华计算机招生章程体检限制，再搜索保研率数据"
+    },
+    {
+      "id": "RM002",
+      "category": "research_multimodal",
+      "difficulty": "hard",
+      "question": "北航飞行器设计对视力的要求是什么？这个专业的就业去向主要是哪里？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_vision_requirement": true,
+        "must_search_就业去向": true
+      },
+      "ground_truth": "解析北航飞行器设计招生章程视力要求，再搜索就业去向数据"
+    },
+    {
+      "id": "RM003",
+      "category": "research_multimodal",
+      "difficulty": "medium",
+      "question": "上海交大医学院对肝功能有要求吗？他们的规培通过率怎么样？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_liver_function": true,
+        "must_search_规培通过率": true
+      },
+      "ground_truth": "解析上交医学院招生章程体检要求，再搜索规培通过率"
+    },
+    {
+      "id": "RM004",
+      "category": "research_multimodal",
+      "difficulty": "hard",
+      "question": "北外英语专业对听力有什么具体要求？学费是多少？有没有奖学金？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_hearing_requirement": true,
+        "must_check_tuition": true,
+        "must_search_scholarship": true
+      },
+      "ground_truth": "解析北外招生章程听力和学费要求，再搜索奖学金政策"
+    },
+    {
+      "id": "RM005",
+      "category": "research_multimodal",
+      "difficulty": "very_hard",
+      "question": "中国民航大学飞行技术专业的身高视力要求分别是什么？毕业生主要去哪些航空公司？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_height_vision": true,
+        "must_search_就业航空公司": true
+      },
+      "ground_truth": "解析中国民航大学招生章程身高视力要求，再搜索就业去向"
+    },
+    {
+      "id": "RM006",
+      "category": "research_multimodal",
+      "difficulty": "medium",
+      "question": "同济大学建筑学对色觉有限制吗？他们的建筑学在第五轮学科评估中是什么等级？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_color_vision": true,
+        "must_search_学科评估": true
+      },
+      "ground_truth": "解析同济建筑学招生章程色觉要求，再搜索学科评估等级"
+    },
+    {
+      "id": "RM007",
+      "category": "research_multimodal",
+      "difficulty": "hard",
+      "question": "华中科技大学临床医学的单科成绩要求是什么？附属医院有几家三甲？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "search_tool"],
+      "success_criteria": {
+        "must_check_subject_requirement": true,
+        "must_search_附属医院": true
+      },
+      "ground_truth": "解析华科临床医学招生章程单科要求，再搜索附属医院信息"
+    },
+    {
+      "id": "RM008",
+      "category": "research_multimodal",
+      "difficulty": "medium",
+      "question": "北师大免费师范生对少数民族有加分吗？毕业后的就业分配政策是什么？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "search_tool"],
+      "success_criteria": {
+        "must_check_minority_policy": true,
+        "must_search_就业分配": true
+      },
+      "ground_truth": "解析北师大招生章程少数民族政策，再搜索就业分配政策"
+    },
+    {
+      "id": "RM009",
+      "category": "research_multimodal",
+      "difficulty": "hard",
+      "question": "中央美院设计学对色盲色弱的限制是什么？学费多少？有国际交流项目吗？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_color_vision": true,
+        "must_check_tuition": true,
+        "must_search_国际交流": true
+      },
+      "ground_truth": "解析央美招生章程色觉和学费要求，再搜索国际交流项目"
+    },
+    {
+      "id": "RM010",
+      "category": "research_multimodal",
+      "difficulty": "very_hard",
+      "question": "南京航空航天大学飞行器动力工程对视力和身高的要求分别是什么？这个专业有哪些企业合作实训基地？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool"],
+      "success_criteria": {
+        "must_check_vision_height": true,
+        "must_search_实训基地": true
+      },
+      "ground_truth": "解析南航招生章程视力身高要求，再搜索企业合作基地"
+    },
+    {
+      "id": "TL001",
+      "category": "triple_loop",
+      "difficulty": "very_hard",
+      "question": "找一个广东的985大学，计算机保研率前三且对色弱友好，我位次8000能上吗？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["slow", "multimodal", "fast"],
+      "expected_tools": ["search_tool", "pdf_parser", "vision_analyzer", "quant_engine"],
+      "success_criteria": {
+        "must_search_保研率": true,
+        "must_check_color_weakness": true,
+        "must_calculate_admission_prob": true,
+        "must_filter_by_location": true
+      },
+      "ground_truth": "先搜索广东985计算机保研率排名→解析招生章程色弱限制→用位次8000计算录取概率"
+    },
+    {
+      "id": "TL002",
+      "category": "triple_loop",
+      "difficulty": "very_hard",
+      "question": "我色盲，620分，想学生物工程，要求学校有国家重点实验室且就业率>95%，推荐3个",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_check_color_blindness": true,
+        "must_search_重点实验室": true,
+        "must_search_就业率": true,
+        "must_filter_by_score": true,
+        "min_recommendations": 3
+      },
+      "ground_truth": "先解析生物工程招生章程排除色盲限制→搜索重点实验室和就业率→用620分筛选推荐3个"
+    },
+    {
+      "id": "TL003",
+      "category": "triple_loop",
+      "difficulty": "very_hard",
+      "question": "我数学单科130分，位次10000，找一个临床医学专业，要求对视力宽松、有三甲附属医院且规培通过率全国前五",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_check_vision_requirement": true,
+        "must_check_math_requirement": true,
+        "must_search_附属医院": true,
+        "must_search_规培通过率": true,
+        "must_filter_by_rank": true
+      },
+      "ground_truth": "解析医学院招生章程视力和数学要求→搜索三甲附属医院和规培通过率前五→用位次10000匹配"
+    },
+    {
+      "id": "TL004",
+      "category": "triple_loop",
+      "difficulty": "very_hard",
+      "question": "我身高162cm有轻度近视，想学飞行技术，600分，哪些航空院校的身高视力要求我能达到且就业去国航或东航的比例高？",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_check_height_vision": true,
+        "must_search_就业去向": true,
+        "must_filter_by_score": true
+      },
+      "ground_truth": "解析飞行技术招生章程身高视力要求筛选符合的→搜索就业去国航东航数据→用600分匹配"
+    },
+    {
+      "id": "TL005",
+      "category": "triple_loop",
+      "difficulty": "very_hard",
+      "question": "我是少数民族色弱考生，英语单科115分，位次15000，想找一个211外语专业，要求对色弱友好、有少数民族加分、英语要求我能达到且有2+2国际项目",
+      "expected_intent": {
+        "primary_intent": "MIXED",
+        "requires_quant": true,
+        "requires_search": true,
+        "requires_vision": true
+      },
+      "expected_loops": ["multimodal", "slow", "fast"],
+      "expected_tools": ["pdf_parser", "vision_analyzer", "search_tool", "quant_engine"],
+      "success_criteria": {
+        "must_check_color_weakness": true,
+        "must_check_minority_policy": true,
+        "must_check_english_requirement": true,
+        "must_search_2plus2": true,
+        "must_filter_211": true,
+        "must_calculate_with_bonus": true
+      },
+      "ground_truth": "解析211外语招生章程色弱限制、少数民族政策、英语要求→搜索2+2项目→计算加分后位次匹配"
+    }
+  ]
+}
