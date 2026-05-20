@@ -421,6 +421,82 @@ def evidence_guardian_agent_node(state: SupervisorState) -> dict:
     return update
 
 
+def _build_deliberation_quality(
+    *,
+    messages: list,
+    participating_agents: list[str],
+    missing_required_agents: list[str],
+    protocol_violations: list[str],
+    consensus_strength: float,
+) -> tuple[float, list[str], dict[str, str]]:
+    """Summarize whether the advisor round is strong enough to trust."""
+    advisor_actions = {
+        message.sender: message.action_preference
+        for message in messages
+        if message.sender in POST_GAME_ADVISORS and message.action_preference
+    }
+    flags: list[str] = []
+    if protocol_violations:
+        flags.append("protocol_violation")
+    if missing_required_agents:
+        flags.append("missing_required_agent")
+
+    max_candidate_count = max(
+        [int((message.metadata or {}).get("candidate_count", 0)) for message in messages]
+        or [0]
+    )
+    max_safe_count = max(
+        [int((message.metadata or {}).get("safe_count", 0)) for message in messages]
+        or [0]
+    )
+    max_key_tail_count = max(
+        [int((message.metadata or {}).get("key_high_tail_count", 0)) for message in messages]
+        or [0]
+    )
+    max_bait_count = max(
+        [int((message.metadata or {}).get("bait_group_count", 0)) for message in messages]
+        or [0]
+    )
+    max_crowding_count = max(
+        [int((message.metadata or {}).get("high_crowding_count", 0)) for message in messages]
+        or [0]
+    )
+    requires_unfinished_search = any(
+        bool((message.metadata or {}).get("requires_search"))
+        and not bool((message.metadata or {}).get("search_done"))
+        for message in messages
+    )
+    llm_errors = [
+        str((message.metadata or {}).get("llm_advisor_error"))
+        for message in messages
+        if (message.metadata or {}).get("llm_advisor_error")
+    ]
+
+    if max_candidate_count and max_candidate_count < 15:
+        flags.append("thin_candidate_slate")
+    if max_candidate_count and max_safe_count == 0:
+        flags.append("missing_safe_anchor")
+    if max_key_tail_count > 0:
+        flags.append("key_tail_assignment_risk")
+    if max_bait_count > 0:
+        flags.append("bait_major_group_risk")
+    if max_crowding_count > 0:
+        flags.append("crowding_risk")
+    if requires_unfinished_search:
+        flags.append("external_evidence_required")
+    if llm_errors:
+        flags.append("llm_advisor_fallback")
+
+    deduped_flags = list(dict.fromkeys(flags))
+    if protocol_violations:
+        return 0.0, deduped_flags, advisor_actions
+
+    coverage = len(participating_agents) / max(len(POST_GAME_ADVISORS), 1)
+    score = 0.55 + 0.25 * coverage + 0.20 * consensus_strength
+    score -= 0.12 * len(deduped_flags)
+    return round(min(1.0, max(0.0, score)), 3), deduped_flags, advisor_actions
+
+
 def deliberation_coordinator_node(state: SupervisorState) -> dict:
     """Aggregate advisor votes into a shared recommendation for the supervisor."""
     votes = defaultdict(float)
@@ -479,6 +555,13 @@ def deliberation_coordinator_node(state: SupervisorState) -> dict:
             f"Votes={dict(votes)}; recommended {recommended_action} with "
             f"margin {top_score - second_score:.2f}."
         )
+    quality_score, quality_flags, advisor_actions = _build_deliberation_quality(
+        messages=messages,
+        participating_agents=participating_agents,
+        missing_required_agents=missing_required_agents,
+        protocol_violations=protocol_violations,
+        consensus_strength=consensus_strength,
+    )
     summary = DeliberationSummary(
         stage=POST_GAME_STAGE,
         recommended_action=recommended_action,
@@ -491,6 +574,9 @@ def deliberation_coordinator_node(state: SupervisorState) -> dict:
         dissent_count=dissent_count,
         consensus_strength=round(consensus_strength, 3),
         requires_research=requires_research,
+        quality_score=quality_score,
+        quality_flags=quality_flags,
+        advisor_actions=advisor_actions,
     )
 
     update = {}
@@ -510,6 +596,9 @@ def deliberation_coordinator_node(state: SupervisorState) -> dict:
             metadata={
                 "dissent_count": dissent_count,
                 "consensus_strength": consensus_strength,
+                "quality_score": quality_score,
+                "quality_flags": quality_flags,
+                "advisor_actions": advisor_actions,
                 "protocol_violation_count": len(protocol_violations),
                 "message_count": len(messages),
             },
@@ -529,7 +618,8 @@ def deliberation_coordinator_node(state: SupervisorState) -> dict:
     update["debug_logs"] = [
         (
             f"[Deliberation] action={recommended_action}, votes={dict(votes)}, "
-            f"dissent={dissent_count}, violations={protocol_violations}"
+            f"dissent={dissent_count}, quality={quality_score:.3f}, "
+            f"flags={quality_flags}, violations={protocol_violations}"
         )
     ]
     update["messages"] = [AIMessage(content="Deliberation completed.")]

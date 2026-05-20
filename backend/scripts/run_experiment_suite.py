@@ -36,6 +36,11 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--actual-outcomes", help="Optional 2025 actual outcome CSV.")
     parser.add_argument("--plans-jsonl", help="Optional frozen plan JSONL for 2025 backtest.")
+    parser.add_argument(
+        "--run-ablation",
+        action="store_true",
+        help="Also run full-vs-baseline 2025 ablations. Frozen records must include candidate_rows and user_profile.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -111,6 +116,27 @@ def main() -> int:
         if status != 0:
             _write_manifest(output_dir / "manifest.json", manifest)
             return status
+
+        if args.run_ablation:
+            status = run_stage(
+                "ablation_2025",
+                [
+                    "ablate-2025",
+                    "--actual-outcomes",
+                    args.actual_outcomes,
+                    "--plans-jsonl",
+                    args.plans_jsonl,
+                    "--output",
+                    str(output_dir / "ablation_2025_summary.json"),
+                    "--results-jsonl",
+                    str(output_dir / "ablation_2025_results.jsonl"),
+                    "--report-md",
+                    str(output_dir / "ablation_2025_report.md"),
+                ],
+            )
+            if status != 0:
+                _write_manifest(output_dir / "manifest.json", manifest)
+                return status
 
     _write_manifest(output_dir / "manifest.json", manifest)
     print(f"saved experiment manifest -> {output_dir / 'manifest.json'}")

@@ -53,3 +53,6 @@ class DeliberationSummary(BaseModel):
     dissent_count: int = Field(default=0)
     consensus_strength: float = Field(default=0.0, ge=0.0, le=1.0)
     requires_research: bool = Field(default=False)
+    quality_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    quality_flags: List[str] = Field(default_factory=list)
+    advisor_actions: Dict[str, str] = Field(default_factory=dict)

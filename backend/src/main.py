@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import HumanMessage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from graph.dual_loop_supervisor import supervisor_graph
@@ -28,6 +28,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+SERVICE_VERSION = "2.0.0-dual-loop"
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT == "production"
@@ -124,6 +128,21 @@ class QueryRequest(BaseModel):
     )
     scores: Optional[SubjectScores] = None
 
+    @field_validator("subject_group", mode="before")
+    @classmethod
+    def normalize_subject_group(cls, value):
+        """Normalize common API subject-group variants to canonical Chinese labels."""
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip().lower()
+        if normalized in {"物理", "物理类", "物", "physics"}:
+            return "物理"
+        if normalized in {"历史", "历史类", "历", "史", "history"}:
+            return "历史"
+        return value.strip()
+
 
 class QueryResponse(BaseModel):
     """Response payload for Gaokao planning."""
@@ -163,15 +182,79 @@ def _enum_value(value: Any) -> Any:
     return getattr(value, "value", value)
 
 
+def build_user_message(request: QueryRequest) -> str:
+    """Build the structured message passed to the supervisor graph."""
+    if request.score is None or request.rank is None or not request.subject_group:
+        return request.message
+    return f"""我的高考信息如下：
+- 总分：{request.score}
+- 全省位次：{request.rank}
+- 选科组合：{request.subject_group}
+
+{request.message}
+"""
+
+
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "0").lower() in {"1", "true", "yes", "on"}
+
+
+def get_runtime_status() -> dict[str, Any]:
+    """Return a compact backend and agent capability snapshot."""
+    frontend_dist = REPO_ROOT / "frontend" / "dist" / "index.html"
+    backend_data = BACKEND_ROOT / "data"
+    root_data = REPO_ROOT / "data"
+    return {
+        "service": "GaokaoAgent",
+        "version": SERVICE_VERSION,
+        "architecture": "Meta-Router + Fast/Slow/Multimodal Loops",
+        "status": "running",
+        "runtime": {
+            "environment": ENVIRONMENT,
+            "is_production": IS_PRODUCTION,
+            "python": sys.version.split()[0],
+        },
+        "capabilities": {
+            "structured_recommendation": True,
+            "multi_agent_deliberation": True,
+            "critic_audit": True,
+            "deep_research": True,
+            "orchestration_alignment": True,
+            "llm_advisors_enabled": _env_flag("ENABLE_LLM_ADVISORS"),
+            "llm_critic_enabled": _env_flag("ENABLE_LLM_CRITIC"),
+            "learned_supervisor_enabled": _env_flag("ENABLE_LEARNED_SUPERVISOR_POLICY"),
+            "llm_supervisor_enabled": _env_flag("ENABLE_LLM_SUPERVISOR_POLICY"),
+            "reward_model_supervisor_enabled": _env_flag("ENABLE_REWARD_MODEL_SUPERVISOR"),
+        },
+        "data": {
+            "backend_data_exists": backend_data.exists(),
+            "root_data_exists": root_data.exists(),
+            "frontend_dist_exists": frontend_dist.exists(),
+        },
+        "entrypoints": {
+            "api": ["/", "/api/status", "/api/analyze", "/api/stats"],
+            "cli_commands": [
+                "smoke",
+                "rollout",
+                "build-pairwise",
+                "eval-orchestration",
+                "backtest-2025",
+                "ablate-2025",
+            ],
+        },
+    }
+
+
 @app.get("/")
 def read_root():
     """Health-check endpoint."""
-    return {
-        "service": "GaokaoAgent",
-        "version": "2.0.0-dual-loop",
-        "architecture": "Meta-Router + Fast/Slow/Multimodal Loops",
-        "status": "running",
-    }
+    return get_runtime_status()
+
+
+@app.get("/api/status")
+def get_status():
+    """Return backend and agent capability status."""
+    return get_runtime_status()
 
 
 @app.post("/api/analyze", response_model=QueryResponse)
@@ -201,15 +284,7 @@ async def analyze_application(request: QueryRequest, req: Request):
     start_time = time.time()
 
     try:
-        user_message = request.message
-        if request.score is not None and request.rank is not None and request.subject_group:
-            user_message = f"""我的高考信息如下：
-- 总分：{request.score}
-- 全省位次：{request.rank}
-- 选科组合：{request.subject_group}
-
-{request.message}
-"""
+        user_message = build_user_message(request)
 
         initial_state: SupervisorState = {
             "messages": [HumanMessage(content=user_message)],

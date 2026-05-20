@@ -10,6 +10,11 @@ import subprocess
 import sys
 from typing import Any, Iterable
 
+from evaluation.ablation_2025 import (
+    DEFAULT_ABLATION_VARIANTS,
+    build_markdown_ablation_report,
+    run_ablation_backtest_records,
+)
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
@@ -27,6 +32,8 @@ SRC_DIR = Path(__file__).resolve().parent
 SCRIPTS_DIR = BACKEND_DIR / "scripts"
 
 DEFAULT_SMOKE_TESTS = [
+    "test_encoding_smoke.py",
+    "test_backend_api_status_smoke.py",
     "test_tradeoff_policy_smoke.py",
     "test_volunteer_plan_schema_smoke.py",
     "test_first_hit_prefix_smoke.py",
@@ -36,6 +43,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_orchestration_data_pipeline_smoke.py",
     "test_orchestration_trl_utils_smoke.py",
     "test_backtest_2025_smoke.py",
+    "test_ablation_2025_smoke.py",
 ]
 
 
@@ -198,6 +206,31 @@ def cmd_backtest_2025(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ablate_2025(args: argparse.Namespace) -> int:
+    actual_outcomes = load_actual_outcomes_csv(args.actual_outcomes, encoding=args.encoding)
+    records = _read_jsonl(Path(args.plans_jsonl))
+    result = run_ablation_backtest_records(
+        records=records,
+        actual_outcomes=actual_outcomes,
+        variants=args.variants or DEFAULT_ABLATION_VARIANTS,
+    )
+
+    if args.results_jsonl:
+        _write_jsonl(Path(args.results_jsonl), result["per_case"])
+        print(f"saved per-case ablation results -> {args.results_jsonl}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_ablation_report(result), encoding="utf-8")
+        print(f"saved ablation report -> {report_path}")
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved ablation summary -> {args.output}")
+    else:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -237,6 +270,21 @@ def build_parser() -> argparse.ArgumentParser:
     backtest.add_argument("--output", help="Summary JSON output path.")
     backtest.add_argument("--results-jsonl", help="Per-case result JSONL output path.")
     backtest.set_defaults(func=cmd_backtest_2025)
+
+    ablate = subparsers.add_parser("ablate-2025", help="Run 2025 full-vs-baseline ablation backtests.")
+    ablate.add_argument("--actual-outcomes", required=True, help="CSV with actual 2025 group/major outcomes.")
+    ablate.add_argument("--plans-jsonl", required=True, help="Frozen plan JSONL with candidate_rows for baselines.")
+    ablate.add_argument("--encoding", default="utf-8-sig")
+    ablate.add_argument(
+        "--variants",
+        nargs="*",
+        default=None,
+        help=f"Variants to compare. Default: {' '.join(DEFAULT_ABLATION_VARIANTS)}",
+    )
+    ablate.add_argument("--output", help="Ablation summary JSON output path.")
+    ablate.add_argument("--results-jsonl", help="Per-case ablation result JSONL output path.")
+    ablate.add_argument("--report-md", help="Markdown ablation report output path.")
+    ablate.set_defaults(func=cmd_ablate_2025)
 
     return parser
 

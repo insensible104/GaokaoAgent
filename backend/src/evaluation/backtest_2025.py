@@ -97,8 +97,10 @@ def load_actual_outcomes_csv(
             major_rank = _to_int(row[major_rank_col])
             major_name = str(row[major_name_col]).strip()
             if major_name and major_rank is not None:
-                bucket["major_min_ranks"][major_name] = major_rank
-                if major_code_col:
+                existing_rank = bucket["major_min_ranks"].get(major_name)
+                if existing_rank is None or major_rank > existing_rank:
+                    bucket["major_min_ranks"][major_name] = major_rank
+                if major_code_col and (existing_rank is None or major_rank >= existing_rank):
                     major_code = str(row[major_code_col]).strip()
                     if major_code and major_code.lower() != "nan":
                         bucket["major_codes"][major_name] = major_code

@@ -1,0 +1,24 @@
+{
+  "source": "C:\\Users\\95340\\Downloads\\(安托生涯)25年广东高考分专业录取数据-26430.xlsx",
+  "major_rows": 10980,
+  "group_rows": 2975,
+  "pipeline_rows": 10980,
+  "schools": 470,
+  "major_groups_from_major_rows": 2975,
+  "major_groups_from_group_rows": 2975,
+  "subject_major_rows": {
+    "物理": 8324,
+    "历史": 2656
+  },
+  "subject_group_rows": {
+    "物理": 2069,
+    "历史": 906
+  },
+  "missing_major_min_rank": 0,
+  "missing_group_min_rank": 0,
+  "duplicate_major_keys": 0,
+  "duplicate_group_keys": 0,
+  "duplicate_major_name_rows_within_group": 445,
+  "duplicate_major_name_groups_within_group": 195,
+  "note": "Rows with duplicate major names inside the same group are preserved in CSV. The backtest loader aggregates them by major name using the largest cutoff rank."
+}

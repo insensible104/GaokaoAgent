@@ -20,6 +20,7 @@ rollout
 build-pairwise
 eval-orchestration
 backtest-2025
+ablate-2025
 ```
 
 ## Smoke Checks
@@ -73,6 +74,32 @@ Run:
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py backtest-2025 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\backtest_2025_summary.json --results-jsonl logs\backtest_2025_results.jsonl
 ```
 
+## 2025 Ablation
+
+Ablation uses the same post-hoc 2025 labels, but rebuilds baseline plans from
+the same frozen candidate pool. Each JSONL record must include `plan`,
+`candidate_rows`, and `user_profile`:
+
+```json
+{"case_id":"case_001","user_rank":12000,"preferred_majors":["计算机"],"blacklist_majors":["土木"],"plan":{ "...": "VolunteerPlan JSON" },"candidate_rows":[{ "...": "MajorGroupRow JSON" }],"user_profile":{ "...": "UserProfile JSON" }}
+```
+
+Run:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py ablate-2025 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\ablation_2025_summary.json --results-jsonl logs\ablation_2025_results.jsonl --report-md logs\ablation_2025_report.md
+```
+
+Default variants:
+
+```text
+full
+probability_only
+history_tight_rank
+safe_first
+no_tradeoff_policy
+```
+
 ## One-Shot Suite
 
 Use this when you want one command to create an experiment folder:
@@ -87,6 +114,13 @@ Add post-hoc 2025 evaluation when frozen plans and actual outcomes are ready:
 backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --output-dir logs\experiments\run_001 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl
 ```
 
+Add ablation when the frozen plan records also contain candidate rows and user
+profiles:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --output-dir logs\experiments\run_001 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --run-ablation
+```
+
 ## Claim-Evidence Mapping
 
 Use these outputs for project claims:
@@ -97,4 +131,5 @@ Use these outputs for project claims:
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |
+| Tradeoff/re-ranking choices improve 2025 outcomes | `ablation_2025_summary.json`, `ablation_2025_report.md` |
 

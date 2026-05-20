@@ -46,6 +46,8 @@ The project is now a deterministic workflow with a governed multi-agent review l
 ## Next Cleanup Checklist
 
 - Run the smoke tests before major edits.
+- Keep source and documentation files as UTF-8. On Windows PowerShell, use
+  `Get-Content -Encoding UTF8` when inspecting Chinese text.
 - Keep generated training artifacts out of git.
 - Add new agent messages through `publish_agent_message()` only.
 - Add new deliberation stages with explicit required-message contracts.

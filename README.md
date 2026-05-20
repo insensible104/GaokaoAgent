@@ -194,6 +194,9 @@ Current facts and architecture:
 - [Current Project Status](docs/current_project_status_overview.md)
 - [Architecture Guide](docs/project_architecture_guide.md)
 - [Route A FastAPI Entry](docs/ROUTE_A_FASTAPI.md)
+- [2025 Data Inventory](docs/2025_data_inventory.md)
+- [2025 Actual Outcome Inventory](docs/2025_actual_outcome_inventory.md)
+- [Experiment Runbook](docs/experiment_runbook.md)
 
 Interview and resume preparation:
 
@@ -212,12 +215,14 @@ Safe claims:
 - The project includes explicit multi-agent communication, local memory, and parallel deliberation.
 - The alignment pipeline for supervisor orchestration is wired end to end.
 - Learned policies can be attached as controlled runtime hooks.
+- The repository now contains 2025 enrollment-plan inputs and separated 2025 post-hoc outcome labels for backtest/ablation.
 
 Claims to avoid:
 
 - Do not claim fully autonomous or decentralized multi-agent behavior.
 - Do not claim stable GRPO online gains.
 - Do not claim the reward is a true business reward.
+- Do not claim 2025 backtest superiority until frozen plans have been generated and evaluated.
 - Do not call the system production-ready without the missing benchmark, monitoring, and feedback infrastructure.
 
 ## Development Status
@@ -232,16 +237,18 @@ Completed:
 - deep research path with search/fallback behavior.
 - parallel deliberation layer.
 - supervisor policy hooks and orchestration alignment scripts.
+- 2025 actual outcome normalization and backtest/ablation entrypoints.
 
 Still incomplete:
 
+- frozen 2025 plan dataset and the first real backtest/ablation result table.
 - large-scale benchmark and regression suite.
 - stronger learned-policy gain verification.
 - production monitoring and safety rails.
 - source reliability ranking for deep research.
 - broader province/rule generalization.
 
-Last updated: 2026-04-27
+Last updated: 2026-05-20
 
 ## License
 

@@ -154,9 +154,13 @@ def test_deliberation_recommends_deep_research_for_search_required_case() -> Non
         state = _merge_state(state, node(state))
 
     assert state["deliberation_summaries"], "deliberation summary should be produced"
+    summary = state["deliberation_summaries"][-1]
     assert state["recommended_next_action"] == "deep_research"
-    assert state["deliberation_summaries"][-1].missing_required_agents == []
-    assert state["deliberation_summaries"][-1].protocol_violations == []
+    assert summary.missing_required_agents == []
+    assert summary.protocol_violations == []
+    assert summary.quality_score < 0.75
+    assert "thin_candidate_slate" in summary.quality_flags
+    assert summary.advisor_actions["evidence_guardian_agent"] == "deep_research"
 
     decision = HeuristicSupervisorPolicy().decide_after_game(state)
     assert decision.selected_action == "deep_research"
@@ -166,11 +170,11 @@ def test_deliberation_recommends_deep_research_for_search_required_case() -> Non
 def test_deliberation_recommends_report_when_evidence_is_sufficient() -> None:
     state = _base_state(
         requires_search=False,
-        rows=[
-            _make_row("C大学", StrategyTag.SAFE, 0.94),
-            _make_row("D大学", StrategyTag.TARGET, 0.83),
-            _make_row("E大学", StrategyTag.RUSH, 0.62),
-        ],
+        rows=(
+            [_make_row(f"S{i}大学", StrategyTag.SAFE, 0.94) for i in range(5)]
+            + [_make_row(f"T{i}大学", StrategyTag.TARGET, 0.83) for i in range(5)]
+            + [_make_row(f"R{i}大学", StrategyTag.RUSH, 0.62) for i in range(5)]
+        ),
     )
     for node in (
         risk_guardian_agent_node,
@@ -183,6 +187,14 @@ def test_deliberation_recommends_report_when_evidence_is_sufficient() -> None:
     decision = HeuristicSupervisorPolicy().decide_after_game(state)
     assert state["recommended_next_action"] == "report_agent"
     assert decision.selected_action == "report_agent"
+    summary = state["deliberation_summaries"][-1]
+    assert summary.quality_score >= 0.75
+    assert summary.quality_flags == []
+    assert summary.advisor_actions == {
+        "evidence_guardian_agent": "report_agent",
+        "opportunity_advocate_agent": "report_agent",
+        "risk_guardian_agent": "report_agent",
+    }
 
 
 def test_coordinator_blocks_incomplete_protocol() -> None:
@@ -202,6 +214,8 @@ def test_coordinator_blocks_incomplete_protocol() -> None:
     assert "opportunity_advocate_agent" in summary.missing_required_agents
     assert summary.protocol_violations
     assert state["protocol_violations"]
+    assert summary.quality_score == 0.0
+    assert "protocol_violation" in summary.quality_flags
 
 
 if __name__ == "__main__":
