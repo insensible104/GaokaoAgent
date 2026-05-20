@@ -182,7 +182,7 @@ def build_markdown_ablation_report(result: dict) -> str:
         "",
         f"Cases: {result.get('case_count', 0)}",
         "",
-        "| Variant | Cases | Success | Preferred Major | Blacklist | Tail Assignment | Avg Utility | Δ Success | Δ Preferred |",
+        "| Variant | Cases | Success | Preferred Major | Blacklist | Tail Assignment | Avg Utility | Delta Success | Delta Preferred |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     full_summary = result.get("summaries", {}).get("full", {})

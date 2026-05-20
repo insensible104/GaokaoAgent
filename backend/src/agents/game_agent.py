@@ -1,6 +1,7 @@
 """Agent 2: 博弈推荐智能体（专业组级别）"""
 import os
 import pandas as pd
+from pathlib import Path
 from langchain_core.messages import AIMessage
 
 from models.state import SupervisorState
@@ -29,6 +30,27 @@ from utils.city_mapping import get_school_city, calculate_city_preference_score
 from rl.rank_gradient_strategy import RankGradientStrategy
 from rl.runtime_policy import RLRuntimePolicy
 from engines.pareto_optimizer import compute_pareto_frontier, Objective
+
+
+def _resolve_runtime_data_dir() -> str:
+    """Find prediction-time admissions data without reading post-hoc outcome labels."""
+    candidate_dirs = [
+        Path.cwd() / "data",
+        Path.cwd() / "backend" / "data",
+        Path.cwd().parent / "data",
+    ]
+    for path in candidate_dirs:
+        if (
+            (path / "2025_enrollment_full.csv").exists()
+            and any(path.glob("2024_*.csv"))
+        ):
+            return str(path)
+
+    for path in candidate_dirs:
+        if any(path.glob("2024_*.csv")):
+            return str(path)
+
+    return "data"
 
 
 def game_agent_node(state: SupervisorState) -> dict:
@@ -64,24 +86,8 @@ def game_agent_node(state: SupervisorState) -> dict:
         from pathlib import Path
         import os
 
-        # 优先检查相对于backend/的data目录（修复路径bug）
-        if Path("data").exists():
-            data_dir = "data"
-            print(f"[DEBUG] 使用相对路径: data/")
-        elif Path("../data").exists():
-            data_dir = "../data"
-            print(f"[DEBUG] 使用相对路径: ../data/")
-        elif Path("backend/data").exists():
-            data_dir = "backend/data"
-            print(f"[DEBUG] 使用相对路径: backend/data/")
-        else:
-            # 使用绝对路径作为最后的备选
-            cwd = Path.cwd()
-            abs_data_dir = cwd / "data"
-            if not abs_data_dir.exists():
-                abs_data_dir = cwd.parent / "data"
-            data_dir = str(abs_data_dir)
-            print(f"[DEBUG] 使用绝对路径: {data_dir}")
+        data_dir = _resolve_runtime_data_dir()
+        print(f"[DEBUG] 使用预测阶段数据目录: {data_dir}")
 
         engine = GaokaoQuantEngine(data_dir=data_dir)
         enrollment_loader = EnrollmentPlanLoader(data_dir=data_dir)
@@ -268,6 +274,7 @@ def game_agent_node(state: SupervisorState) -> dict:
 
         # 分类策略标签（基于Z-score的AI智能分类）
         strategy = classify_strategy_tag(admission_prob, z_score=z_score)
+        strategy_value = strategy.value if hasattr(strategy, "value") else str(strategy)
         print(f"[DEBUG] {school}-{major_group_code}: Z-score = {z_score:.3f}, Probability = {admission_prob:.1%}, Strategy = {strategy}")
 
         scoring_major_names = suggested_major_names or major_list[:6]
@@ -378,7 +385,7 @@ def game_agent_node(state: SupervisorState) -> dict:
             bundle_type=bundle_risk.bundle_type,
             obey_adjustment=bundle_risk.obey_adjustment,
             adjustment_advice=bundle_risk.adjustment_advice,
-            recommendation_role=f"{strategy.value}:{school_signal.tradeoff_label}",
+            recommendation_role=f"{strategy_value}:{school_signal.tradeoff_label}",
             risk_reasons=bundle_risk.risk_reasons,
             audit_flags=bundle_risk.audit_flags,
             # 修复问题1：使用comprehensive_score字段存储综合评分

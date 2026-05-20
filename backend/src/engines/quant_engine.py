@@ -35,6 +35,7 @@ class GaokaoQuantEngine:
             if "enrollment" not in Path(file).name
             and "yifenyiduan" not in Path(file).name
             and "一分一段" not in Path(file).name
+            and "actual_2025" not in Path(file).name
         ]
 
         if not csv_files:
@@ -382,7 +383,8 @@ class GaokaoQuantEngine:
                 df_historical['subject_requirement'].str.contains(
                     subject_abbr,
                     na=False,
-                    case=False
+                    case=False,
+                    regex=False,
                 )
             ]
 
@@ -466,7 +468,8 @@ class GaokaoQuantEngine:
                 df_latest['subject_requirement'].str.contains(
                     subject_abbr,
                     na=False,
-                    case=False
+                    case=False,
+                    regex=False,
                 )
             ]
 
