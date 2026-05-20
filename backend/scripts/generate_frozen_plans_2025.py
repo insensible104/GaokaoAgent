@@ -150,26 +150,37 @@ def build_candidate_rows(
     seen: set[tuple[str, str, str]] = set()
 
     for _, group in major_groups.iterrows():
-        school = str(group["school"]).strip()
-        school_code = EnrollmentPlanLoader._normalize_code(group.get("school_code", school)) or school
+        historical_school = str(group["school"]).strip()
+        school_code = EnrollmentPlanLoader._normalize_code(group.get("school_code", historical_school)) or historical_school
         major_group_raw = group["major_group"]
         major_group_code = EnrollmentPlanLoader._normalize_code(major_group_raw)
-        key = (school_code, school, major_group_code)
-        if key in seen:
-            continue
-        seen.add(key)
 
-        hist_data = engine.get_major_group_history(school=school, major_group=major_group_raw)
+        hist_data = engine.get_major_group_history(school=historical_school, major_group=major_group_raw)
         probability = calculate_admission_probability(user_rank=int(profile.rank or 0), hist_data=hist_data)
         if not probability or probability["prob"] < min_probability:
             continue
 
         plan_records = enrollment_loader.get_major_group_options(
-            school_name=school,
+            school_name=historical_school,
             school_code=school_code,
             major_group_code=major_group_code,
             category=profile.subject_group,
         )
+        if not plan_records:
+            continue
+
+        canonical_record = plan_records[0]
+        school = str(canonical_record.get("school_name") or historical_school).strip()
+        school_code = EnrollmentPlanLoader._normalize_code(canonical_record.get("school_code") or school_code) or school_code
+        major_group_code = (
+            EnrollmentPlanLoader._normalize_code(canonical_record.get("major_group_code") or major_group_code)
+            or major_group_code
+        )
+        key = (school_code, school, major_group_code)
+        if key in seen:
+            continue
+        seen.add(key)
+
         fallback_majors = [str(item).strip() for item in group["major"] if str(item).strip()]
         major_options = build_major_options_from_records(plan_records, fallback_majors=fallback_majors)
         major_options = score_major_options(major_options, profile)

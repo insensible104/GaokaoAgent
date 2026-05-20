@@ -7,7 +7,7 @@ This run evaluates frozen GaokaoAgent volunteer plans against the parsed 2025 Gu
 ## Commands
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\generate_frozen_plans_2025.py --output logs\frozen_plans_2025.jsonl --num-cases 24 --target-count 300 --max-choices 30 --min-probability 0.03 *> logs\frozen_plans_2025_generation.log
+backend\.venv\Scripts\python.exe backend\scripts\generate_frozen_plans_2025.py --output logs\frozen_plans_2025.jsonl --num-cases 24 --target-count 500 --max-choices 30 --min-probability 0.0 *> logs\frozen_plans_2025_generation.log
 
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py backtest-2025 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\backtest_2025_summary.json --results-jsonl logs\backtest_2025_results.jsonl *> logs\backtest_2025_run.log
 
@@ -21,11 +21,11 @@ backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py ablate-2025 --a
 | Requested cases | 24 |
 | Generated cases | 23 |
 | Skipped cases | 1 |
-| Min plan choices | 21 |
+| Min plan choices | 10 |
 | Max plan choices | 30 |
 | Uses actual 2025 labels during generation | false |
 
-The skipped case was `历史_rank_130000`, because the current prediction-time filters found too few viable candidates for that case.
+The skipped case was `历史_rank_130000`, because the current prediction-time filters found too few viable candidates for that case after requiring a matching 2025 enrollment-plan group.
 
 ## Backtest Summary
 
@@ -34,32 +34,33 @@ The skipped case was `历史_rank_130000`, because the current prediction-time f
 | Cases | 23 |
 | Success rate | 95.7% |
 | Sliding rate | 4.3% |
-| Selected-major hit rate | 43.5% |
+| Selected-major hit rate | 69.6% |
 | Preferred-major hit rate | 21.7% |
 | Blacklist hit rate | 0.0% |
-| Tail-assignment rate | 65.2% |
-| Wasted-score rate | 52.2% |
-| Average first-hit index | 3.27 |
-| Average first-hit margin | 29,147.18 |
-| Average assigned-major utility | 0.453 |
+| Tail-assignment rate | 39.1% |
+| Wasted-score rate | 21.7% |
+| Average first-hit index | 2.50 |
+| Average first-hit margin | 7,990.91 |
+| Average assigned-major utility | 0.493 |
 
 ## Ablation Results
 
 | Variant | Cases | Success | Preferred | Blacklist | Tail | Wasted | First-hit idx | Avg utility | Delta success | Delta preferred |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `full` | 23 | 95.7% | 21.7% | 0.0% | 65.2% | 52.2% | 3.27 | 0.453 | +0.0% | +0.0% |
-| `probability_only` | 23 | 87.0% | 8.7% | 0.0% | 56.5% | 47.8% | 5.30 | 0.454 | -8.7% | -13.0% |
-| `history_tight_rank` | 23 | 91.3% | 13.0% | 4.3% | 56.5% | 47.8% | 8.33 | 0.436 | -4.3% | -8.7% |
-| `safe_first` | 23 | 87.0% | 4.3% | 0.0% | 56.5% | 52.2% | 5.25 | 0.439 | -8.7% | -17.4% |
-| `no_tradeoff_policy` | 23 | 91.3% | 17.4% | 0.0% | 69.6% | 43.5% | 4.95 | 0.472 | -4.3% | -4.3% |
+| `full` | 23 | 95.7% | 21.7% | 0.0% | 39.1% | 21.7% | 2.50 | 0.493 | +0.0% | +0.0% |
+| `probability_only` | 23 | 95.7% | 13.0% | 0.0% | 52.2% | 21.7% | 2.18 | 0.449 | +0.0% | -8.7% |
+| `history_tight_rank` | 23 | 95.7% | 13.0% | 4.3% | 60.9% | 21.7% | 2.68 | 0.430 | +0.0% | -8.7% |
+| `safe_first` | 23 | 95.7% | 8.7% | 0.0% | 47.8% | 21.7% | 2.09 | 0.433 | +0.0% | -13.0% |
+| `no_tradeoff_policy` | 23 | 95.7% | 47.8% | 0.0% | 30.4% | 17.4% | 1.95 | 0.620 | +0.0% | +26.1% |
 
 ## Integrity Notes
 
 - Ground truth provenance: `data/actual_2025.csv` is parsed from the provided 2025 major-level admission spreadsheet and is only used by the evaluation commands.
 - Data-boundary fix: the runtime recommendation engine now ignores files named like `actual_2025*.csv` when loading prediction-time data.
-- Coverage: 218 of 681 evaluated choice outcomes matched a 2025 actual outcome row, for a 32.0% choice-level coverage rate. The remaining 463 choices were marked `missing_actual_outcome`.
-- Scope: this is the first real-label backtest over frozen synthetic case profiles. It supports an engineering-research claim that the full policy beats the included baselines on this covered slice, but it is not yet a final large-scale benchmark.
+- Coverage: 537 of 659 evaluated choice outcomes matched a 2025 actual outcome row, for an 81.5% choice-level coverage rate. The remaining 122 choices were marked `missing_actual_outcome`.
+- Coverage improvement: the previous run matched 218 of 681 choices, or 32.0%. The new generator requires a matching 2025 enrollment-plan group before a historical candidate can enter the frozen plan, and the evaluator also supports school-code + major-group fallback for renamed schools.
+- Scope: this is the first real-label backtest over frozen synthetic case profiles. It supports a stronger data-alignment claim than the previous run, but it is not yet a final large-scale benchmark.
 
 ## Readout
 
-The full policy improves success rate over `probability_only` and `safe_first` by 8.7 percentage points and improves preferred-major hit rate over all included baselines. The strongest caveat is coverage: many generated choices do not yet align exactly with the parsed 2025 outcome keyspace, so the next experiment should improve school/group/code normalization and then rerun the same frozen-plan protocol.
+The coverage fix changes the interpretation. The full policy still keeps the same 95.7% success rate and lowers tail-assignment risk versus `probability_only`, `history_tight_rank`, and `safe_first`, but `no_tradeoff_policy` now has higher preferred-major hit rate and utility on this covered slice. That is useful negative evidence: the data alignment is much better, and the next method work should inspect whether the current tradeoff policy over-penalizes preference-heavy options.

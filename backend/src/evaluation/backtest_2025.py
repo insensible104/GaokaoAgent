@@ -44,6 +44,18 @@ def _to_int(value) -> int | None:
         return None
 
 
+def _normalize_code(value) -> str:
+    """Normalize Excel/CSV code cells into stable string keys."""
+    if pd.isna(value):
+        return ""
+    text = str(value).strip()
+    if not text or text.lower() == "nan":
+        return ""
+    if text.endswith(".0"):
+        text = text[:-2]
+    return text
+
+
 def load_actual_outcomes_csv(
     path: str | Path,
     *,
@@ -76,9 +88,11 @@ def load_actual_outcomes_csv(
         group_min_rank = _to_int(row[group_rank_col])
         if group_min_rank is None:
             continue
-        school_code = str(row[school_code_col]).strip() if school_code_col else ""
+        school_code = _normalize_code(row[school_code_col]) if school_code_col else ""
         school_name = str(row[school_name_col]).strip()
-        group_code = str(row[group_code_col]).strip()
+        group_code = _normalize_code(row[group_code_col])
+        if not school_name or not group_code:
+            continue
         key = (school_code, school_name, group_code)
         bucket = grouped.setdefault(
             key,
@@ -101,8 +115,8 @@ def load_actual_outcomes_csv(
                 if existing_rank is None or major_rank > existing_rank:
                     bucket["major_min_ranks"][major_name] = major_rank
                 if major_code_col and (existing_rank is None or major_rank >= existing_rank):
-                    major_code = str(row[major_code_col]).strip()
-                    if major_code and major_code.lower() != "nan":
+                    major_code = _normalize_code(row[major_code_col])
+                    if major_code:
                         bucket["major_codes"][major_name] = major_code
 
     return [ActualMajorGroupOutcome(**payload) for payload in grouped.values()]

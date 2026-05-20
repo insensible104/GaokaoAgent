@@ -18,14 +18,25 @@ def _norm(value: object) -> str:
     return str(value or "").strip()
 
 
+def _norm_code(value: object) -> str:
+    text = _norm(value)
+    if text.lower() == "nan":
+        return ""
+    if text.endswith(".0"):
+        return text[:-2]
+    return text
+
+
 def _index_outcomes(
     actual_outcomes: Iterable[ActualMajorGroupOutcome],
 ) -> dict[tuple[str, str, str], ActualMajorGroupOutcome]:
     index: dict[tuple[str, str, str], ActualMajorGroupOutcome] = {}
     for outcome in actual_outcomes:
-        full_key = outcome.key
+        full_key = (_norm_code(outcome.school_code), _norm(outcome.school_name), _norm_code(outcome.major_group_code))
         index[full_key] = outcome
         index[("", full_key[1], full_key[2])] = outcome
+        if full_key[0]:
+            index[(full_key[0], "", full_key[2])] = outcome
     return index
 
 
@@ -33,9 +44,14 @@ def _lookup_outcome(
     choice: VolunteerChoice,
     outcome_index: Mapping[tuple[str, str, str], ActualMajorGroupOutcome],
 ) -> Optional[ActualMajorGroupOutcome]:
-    full_key = (_norm(choice.school_code), _norm(choice.school_name), _norm(choice.major_group_code))
-    loose_key = ("", _norm(choice.school_name), _norm(choice.major_group_code))
-    return outcome_index.get(full_key) or outcome_index.get(loose_key)
+    full_key = (_norm_code(choice.school_code), _norm(choice.school_name), _norm_code(choice.major_group_code))
+    name_group_key = ("", full_key[1], full_key[2])
+    code_group_key = (full_key[0], "", full_key[2])
+    return (
+        outcome_index.get(full_key)
+        or outcome_index.get(name_group_key)
+        or outcome_index.get(code_group_key)
+    )
 
 
 def _major_utility(major_name: Optional[str], choices: Sequence[MajorOption]) -> float:

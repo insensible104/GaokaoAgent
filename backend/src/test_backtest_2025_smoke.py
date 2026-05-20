@@ -103,7 +103,50 @@ def test_aggregate_metrics_are_stable() -> None:
     assert result.assigned_major_code == "101"
 
 
+def test_2025_backtest_matches_school_rename_by_code_and_group() -> None:
+    option = MajorOption(major_name="Accounting", user_utility=0.9)
+    plan = VolunteerPlan(
+        user_rank=10000,
+        choices=[
+            VolunteerChoice(
+                choice_index=1,
+                school_code="11847",
+                school_name="Old School Name",
+                major_group_code="216",
+                major_choices=[option],
+                obey_adjustment=True,
+                adjustment_advice=AdjustmentAdvice.CAUTIOUS,
+                group_admission_prob=0.8,
+                expected_major_utility=0.9,
+                tail_assignment_risk=0.1,
+            )
+        ],
+    )
+    plan.calculate_statistics()
+    actual = [
+        ActualMajorGroupOutcome(
+            school_code="11847",
+            school_name="New School Name",
+            major_group_code="216",
+            actual_group_min_rank=12000,
+            major_min_ranks={"Accounting": 12000},
+            major_codes={"Accounting": "01"},
+        )
+    ]
+
+    result = run_plan_backtest(
+        plan=plan,
+        actual_outcomes=actual,
+        user_rank=10000,
+    )
+
+    assert result.success is True
+    assert result.first_hit_school == "Old School Name"
+    assert result.assigned_major_code == "01"
+
+
 if __name__ == "__main__":
     test_2025_backtest_finds_first_hit_and_major_assignment()
     test_aggregate_metrics_are_stable()
+    test_2025_backtest_matches_school_rename_by_code_and_group()
     print("2025 backtest smoke tests passed")
