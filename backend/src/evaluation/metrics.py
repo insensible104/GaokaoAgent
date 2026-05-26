@@ -12,6 +12,7 @@ from evaluation.schemas import (
     ChoiceBacktestOutcome,
     PlanBacktestResult,
 )
+from evaluation.major_normalizer import major_names_match
 
 
 def _norm(value: object) -> str:
@@ -54,11 +55,17 @@ def _lookup_outcome(
     )
 
 
-def _major_utility(major_name: Optional[str], choices: Sequence[MajorOption]) -> float:
+def _major_utility(
+    major_name: Optional[str],
+    major_code: Optional[str],
+    choices: Sequence[MajorOption],
+) -> float:
     if not major_name:
         return 0.0
     for option in choices:
-        if option.major_name == major_name:
+        if _norm_code(option.major_code) and _norm_code(option.major_code) == _norm_code(major_code):
+            return float(option.user_utility)
+        if option.major_name == major_name or major_names_match(option.major_name, major_name):
             return float(option.user_utility)
     return 0.5
 
@@ -85,8 +92,12 @@ def _resolve_assigned_major(
     if not outcome.major_min_ranks:
         return None, None, None, False
 
-    selected_names = [option.major_name for option in choice.major_choices]
-    for major_name in selected_names:
+    selected_actual_names: list[str] = []
+    for option in choice.major_choices:
+        major_name = _match_actual_major_name(option, outcome)
+        if not major_name:
+            continue
+        selected_actual_names.append(major_name)
         cutoff = outcome.major_min_ranks.get(major_name)
         if cutoff is not None and user_rank <= cutoff:
             return major_name, outcome.major_codes.get(major_name), cutoff - user_rank, True
@@ -107,8 +118,24 @@ def _resolve_assigned_major(
         assigned_name,
         outcome.major_codes.get(assigned_name),
         cutoff - user_rank,
-        assigned_name in selected_names,
+        assigned_name in selected_actual_names,
     )
+
+
+def _match_actual_major_name(
+    option: MajorOption,
+    outcome: ActualMajorGroupOutcome,
+) -> Optional[str]:
+    option_code = _norm_code(option.major_code)
+    if option_code:
+        for actual_name, actual_code in outcome.major_codes.items():
+            if _norm_code(actual_code) == option_code:
+                return actual_name
+
+    for actual_name in outcome.major_min_ranks:
+        if option.major_name == actual_name or major_names_match(option.major_name, actual_name):
+            return actual_name
+    return None
 
 
 def evaluate_volunteer_plan(
@@ -157,7 +184,7 @@ def evaluate_volunteer_plan(
                 outcome=actual,
             )
 
-        utility = _major_utility(assigned_major, choice.major_choices)
+        utility = _major_utility(assigned_major, assigned_major_code, choice.major_choices)
         preferred_hit = _contains_keyword(assigned_major, preferred_majors)
         blacklist_hit = _contains_keyword(assigned_major, blacklist_majors)
         tail_hit = bool(group_admitted and (not selected_hit or utility <= low_utility_threshold or blacklist_hit))

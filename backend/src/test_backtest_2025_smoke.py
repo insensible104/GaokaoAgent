@@ -145,8 +145,63 @@ def test_2025_backtest_matches_school_rename_by_code_and_group() -> None:
     assert result.assigned_major_code == "01"
 
 
+def test_2025_backtest_matches_major_by_code_and_normalized_name() -> None:
+    option = MajorOption(major_code="07", major_name="Computer Science", user_utility=0.9)
+    option_without_code = MajorOption(major_name="Data Science", user_utility=0.8)
+    plan = VolunteerPlan(
+        user_rank=10000,
+        choices=[
+            VolunteerChoice(
+                choice_index=1,
+                school_code="10001",
+                school_name="A University",
+                major_group_code="201",
+                major_choices=[option, option_without_code],
+                obey_adjustment=True,
+                adjustment_advice=AdjustmentAdvice.CAUTIOUS,
+                group_admission_prob=0.8,
+                expected_major_utility=0.85,
+                tail_assignment_risk=0.1,
+            )
+        ],
+    )
+    plan.calculate_statistics()
+    actual = [
+        ActualMajorGroupOutcome(
+            school_code="10001",
+            school_name="A University",
+            major_group_code="201",
+            actual_group_min_rank=12000,
+            major_min_ranks={
+                "Computer Science (AI Track)": 12000,
+                "Data Science（智能科学方向）": 13000,
+            },
+            major_codes={
+                "Computer Science (AI Track)": "07",
+                "Data Science（智能科学方向）": "08",
+            },
+        )
+    ]
+
+    result = run_plan_backtest(
+        plan=plan,
+        actual_outcomes=actual,
+        user_rank=10000,
+        preferred_majors=["Computer Science"],
+    )
+
+    assert result.success is True
+    assert result.assigned_major_name == "Computer Science (AI Track)"
+    assert result.assigned_major_code == "07"
+    assert result.assigned_major_utility == 0.9
+    assert result.selected_major_hit is True
+    assert result.preferred_major_hit is True
+    assert result.tail_assignment_hit is False
+
+
 if __name__ == "__main__":
     test_2025_backtest_finds_first_hit_and_major_assignment()
     test_aggregate_metrics_are_stable()
     test_2025_backtest_matches_school_rename_by_code_and_group()
+    test_2025_backtest_matches_major_by_code_and_normalized_name()
     print("2025 backtest smoke tests passed")
