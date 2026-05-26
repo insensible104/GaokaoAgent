@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from models.game_matrix import MajorOption, VolunteerChoice, VolunteerPlan
 from models.user_profile import UserProfile
+from recommendation.prefix_optimizer import optimize_prefix_order
 
 
 KEY_FIRST_HIT_THRESHOLD = 0.10
@@ -95,6 +96,27 @@ def build_volunteer_choice(row, choice_index: int) -> VolunteerChoice:
         pain_point_flags=list(getattr(row, "pain_point_flags", []) or []),
         market_behavior_notes=list(getattr(row, "market_behavior_notes", []) or []),
         tradeoff_summary=getattr(row, "tradeoff_summary", ""),
+        arbitrage_score=getattr(row, "arbitrage_score", 0.0),
+        front_major_arbitrage_score=getattr(row, "front_major_arbitrage_score", 0.0),
+        relative_lift=getattr(row, "relative_lift", 0.0),
+        market_discount_score=getattr(row, "market_discount_score", 0.0),
+        personal_acceptability=getattr(row, "personal_acceptability", 0.0),
+        sacrifice_cost=getattr(row, "sacrifice_cost", 0.0),
+        assignment_opportunity=getattr(row, "assignment_opportunity", 0.0),
+        front_major_hit_prob=getattr(row, "front_major_hit_prob", 0.0),
+        rebound_risk=getattr(row, "rebound_risk", 0.0),
+        opportunity_types=list(getattr(row, "opportunity_types", []) or []),
+        opportunity_pools=list(getattr(row, "opportunity_pools", []) or []),
+        arbitrage_breakdown=dict(getattr(row, "arbitrage_breakdown", {}) or {}),
+        market_evidence_cards=list(getattr(row, "market_evidence_cards", []) or []),
+        market_evidence_strength=getattr(row, "market_evidence_strength", 0.0),
+        publicity_heat_score=getattr(row, "publicity_heat_score", 0.0),
+        publicity_rebound_risk=getattr(row, "publicity_rebound_risk", 0.0),
+        segment_demand_score=getattr(row, "segment_demand_score", 0.0),
+        low_attention_signal=getattr(row, "low_attention_signal", 0.0),
+        segment_rebound_risk=getattr(row, "segment_rebound_risk", 0.0),
+        best_fit_archetypes=list(getattr(row, "best_fit_archetypes", []) or []),
+        segment_demand_breakdown=dict(getattr(row, "segment_demand_breakdown", {}) or {}),
     )
 
 
@@ -155,9 +177,19 @@ def _build_plan_review_items(plan: VolunteerPlan) -> list[str]:
     return review_items
 
 
-def build_volunteer_plan(rows: list, profile: UserProfile, max_choices: int | None = None) -> VolunteerPlan:
+def build_volunteer_plan(
+    rows: list,
+    profile: UserProfile,
+    max_choices: int | None = None,
+    optimize_prefix: bool = False,
+) -> VolunteerPlan:
     """Build a structured volunteer-plan draft from final recommended rows."""
-    selected_rows = rows[:max_choices] if max_choices else rows
+    ordered_rows = (
+        optimize_prefix_order(rows=rows, profile=profile, max_choices=max_choices)
+        if optimize_prefix
+        else rows
+    )
+    selected_rows = ordered_rows[:max_choices] if max_choices else ordered_rows
     choices = [
         build_volunteer_choice(row, index + 1)
         for index, row in enumerate(selected_rows)

@@ -361,6 +361,50 @@ def _apply_optional_llm_critic(
         return audit, metadata
 
 
+def _report_text(report) -> str:
+    parts = [
+        getattr(report, "full_markdown", "") or "",
+        getattr(report, "executive_summary", "") or "",
+        getattr(report, "strategy_analysis", "") or "",
+    ]
+    parts.extend(getattr(report, "school_recommendations", []) or [])
+    parts.extend(getattr(report, "risk_warnings", []) or [])
+    return "\n".join(str(part) for part in parts if part)
+
+
+def _missing_key_decision_evidence(report, volunteer_plan) -> list:
+    """Return key prefix choices whose decision evidence is not explained."""
+    if not report or not volunteer_plan:
+        return []
+    text = _report_text(report)
+    evidence_markers = (
+        "机会逻辑",
+        "适配理由",
+        "风险边界",
+        "opportunity_thesis",
+        "student_fit",
+        "downside_guard",
+    )
+    missing = []
+    for choice in volunteer_plan.choices:
+        if not getattr(choice, "is_key_prefix", False):
+            continue
+        cards = getattr(choice, "market_evidence_cards", []) or []
+        decision_cards = [
+            card
+            for card in cards
+            if card.get("signal_type") in {"opportunity_thesis", "student_fit", "downside_guard"}
+        ]
+        if not decision_cards:
+            continue
+        claims = [str(card.get("claim") or "") for card in decision_cards]
+        has_marker = any(marker in text for marker in evidence_markers)
+        has_claim = any(claim and claim[:40] in text for claim in claims)
+        if not has_marker and not has_claim:
+            missing.append(choice)
+    return missing
+
+
 def audit_fast_loop(report, matrix, profile, retry_count) -> AuditResult:
     """审计快思考循环（改进版 - 移除强制通过）"""
     if not report or not matrix or not profile:
@@ -408,6 +452,16 @@ def audit_fast_loop(report, matrix, profile, retry_count) -> AuditResult:
                 f"整张志愿表累计投档命中概率偏低（{volunteer_plan.expected_admission_prob:.1%}）",
                 "建议：补充更可靠的保底专业组，避免只优化前几个机会项"
             )
+
+        missing_decision_evidence = _missing_key_decision_evidence(report, volunteer_plan)
+        if missing_decision_evidence and audit.status == AuditStatus.PASS and retry_count < 3:
+            audit.status = AuditStatus.REJECT_LOGIC
+            audit.add_issue(
+                f"{len(missing_decision_evidence)} key prefix choices have decision evidence cards, "
+                "but the report does not explain their opportunity thesis, student fit, or downside guard.",
+                "Recommendation: regenerate the report and use decision_evidence_cards as the explanation spine."
+            )
+            audit.reroute_to = "report_agent"
 
     # 审计1：保底校概率（降低到90%，更实际）
     safe_rows = [r for r in matrix.major_group_rows if r.strategy_tag.value == "safe"]

@@ -6,6 +6,7 @@ from evaluation.ablation_2025 import (
     build_markdown_ablation_report,
     run_ablation_backtest_records,
 )
+from evaluation.baselines import build_baseline_plan
 from evaluation.schemas import ActualMajorGroupOutcome
 from models.game_matrix import MajorGroupRow, MajorOption, StrategyTag, VolatilityLevel
 from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
@@ -16,10 +17,10 @@ def _profile() -> UserProfile:
     return UserProfile(
         score=620,
         rank=12000,
-        subject_group="物理",
-        preferred_cities=["广州"],
-        preferred_majors=["计算机"],
-        blacklist_majors=["土木"],
+        subject_group="physics",
+        preferred_cities=["Guangzhou"],
+        preferred_majors=["computer"],
+        blacklist_majors=["civil"],
         risk_tolerance=RiskTolerance.BALANCED,
         school_major_preference=SchoolMajorPreference.BALANCED,
     )
@@ -34,6 +35,12 @@ def _row(
     tag: StrategyTag,
     utility: float,
     major: str,
+    arbitrage_score: float = 0.0,
+    front_major_arbitrage_score: float = 0.0,
+    front_major_hit_prob: float = 0.0,
+    relative_lift: float = 0.0,
+    market_discount_score: float = 0.0,
+    rebound_risk: float = 0.0,
 ) -> MajorGroupRow:
     option = MajorOption(
         school_code=code,
@@ -41,8 +48,8 @@ def _row(
         major_group_code=group,
         major_name=major,
         user_utility=utility,
-        is_preferred="计算机" in major,
-        is_blacklisted="土木" in major,
+        is_preferred="computer" in major,
+        is_blacklisted="civil" in major,
     )
     return MajorGroupRow(
         school_name=school,
@@ -65,6 +72,12 @@ def _row(
         major_utility_min=utility,
         strategy_tag=tag,
         comprehensive_score=utility,
+        arbitrage_score=arbitrage_score,
+        front_major_arbitrage_score=front_major_arbitrage_score,
+        front_major_hit_prob=front_major_hit_prob,
+        relative_lift=relative_lift,
+        market_discount_score=market_discount_score,
+        rebound_risk=rebound_risk,
     )
 
 
@@ -72,39 +85,39 @@ def test_ablation_backtest_compares_full_plan_against_baselines():
     profile = _profile()
     rows = [
         _row(
-            school="A大学",
+            school="A University",
             code="10001",
             group="201",
             prob=0.64,
             tag=StrategyTag.TARGET,
             utility=0.95,
-            major="计算机类",
+            major="computer science",
         ),
         _row(
-            school="B大学",
+            school="B University",
             code="10002",
             group="202",
             prob=0.95,
             tag=StrategyTag.SAFE,
             utility=0.20,
-            major="土木类",
+            major="civil engineering",
         ),
         _row(
-            school="C大学",
+            school="C University",
             code="10003",
             group="203",
             prob=0.52,
             tag=StrategyTag.RUSH,
             utility=0.80,
-            major="软件工程",
+            major="software engineering",
         ),
     ]
     full_plan = build_volunteer_plan(rows, profile, max_choices=3)
     record = {
         "case_id": "case_001",
         "user_rank": 12000,
-        "preferred_majors": ["计算机"],
-        "blacklist_majors": ["土木"],
+        "preferred_majors": ["computer"],
+        "blacklist_majors": ["civil"],
         "plan": full_plan.model_dump(),
         "candidate_rows": [row.model_dump() for row in rows],
         "user_profile": profile.model_dump(),
@@ -112,24 +125,24 @@ def test_ablation_backtest_compares_full_plan_against_baselines():
     actual = [
         ActualMajorGroupOutcome(
             school_code="10001",
-            school_name="A大学",
+            school_name="A University",
             major_group_code="201",
             actual_group_min_rank=12500,
-            major_min_ranks={"计算机类": 12300},
+            major_min_ranks={"computer science": 12300},
         ),
         ActualMajorGroupOutcome(
             school_code="10002",
-            school_name="B大学",
+            school_name="B University",
             major_group_code="202",
             actual_group_min_rank=18000,
-            major_min_ranks={"土木类": 18000},
+            major_min_ranks={"civil engineering": 18000},
         ),
         ActualMajorGroupOutcome(
             school_code="10003",
-            school_name="C大学",
+            school_name="C University",
             major_group_code="203",
             actual_group_min_rank=11000,
-            major_min_ranks={"软件工程": 10800},
+            major_min_ranks={"software engineering": 10800},
         ),
     ]
 
@@ -152,6 +165,73 @@ def test_ablation_backtest_compares_full_plan_against_baselines():
     assert "`probability_only`" in report
 
 
+def test_arbitrage_ablation_variants_expose_signal_families():
+    profile = _profile()
+    safe_non_arbitrage = _row(
+        school="Safe University",
+        code="20001",
+        group="301",
+        prob=0.92,
+        tag=StrategyTag.SAFE,
+        utility=0.58,
+        major="general major",
+        arbitrage_score=0.05,
+        front_major_arbitrage_score=0.02,
+        front_major_hit_prob=0.15,
+    )
+    brand_discount = _row(
+        school="Brand University",
+        code="20002",
+        group="302",
+        prob=0.62,
+        tag=StrategyTag.TARGET,
+        utility=0.70,
+        major="cold brand major",
+        arbitrage_score=0.86,
+        relative_lift=0.72,
+        market_discount_score=0.88,
+    )
+    front_major = _row(
+        school="Front University",
+        code="20003",
+        group="303",
+        prob=0.66,
+        tag=StrategyTag.TARGET,
+        utility=0.82,
+        major="computer science",
+        arbitrage_score=0.54,
+        front_major_arbitrage_score=0.90,
+        front_major_hit_prob=0.94,
+        relative_lift=0.30,
+    )
+    rows = [safe_non_arbitrage, brand_discount, front_major]
+
+    no_arbitrage = build_baseline_plan(
+        rows=rows,
+        profile=profile,
+        baseline="no_arbitrage",
+        max_choices=3,
+    )
+    arbitrage_only = build_baseline_plan(
+        rows=rows,
+        profile=profile,
+        baseline="arbitrage_only",
+        max_choices=3,
+    )
+    front_major_boost = build_baseline_plan(
+        rows=rows,
+        profile=profile,
+        baseline="front_major_boost",
+        max_choices=3,
+    )
+
+    assert no_arbitrage.choices[0].school_code == "20001"
+    assert arbitrage_only.choices[0].school_code == "20002"
+    assert front_major_boost.choices[0].school_code == "20003"
+    assert front_major_boost.choices[0].front_major_hit_prob == 0.94
+
+
 if __name__ == "__main__":
     test_ablation_backtest_compares_full_plan_against_baselines()
+    test_arbitrage_ablation_variants_expose_signal_families()
     print("2025 ablation smoke tests passed")

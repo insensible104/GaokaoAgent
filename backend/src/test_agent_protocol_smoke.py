@@ -6,9 +6,11 @@ from models.game_matrix import GameMatrix, MajorGroupRow, StrategyTag, Volatilit
 from models.intent import LoopType
 from models.report import ReportDraft
 from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
-from agents.critic_agent_enhanced import critic_agent_node
+from models.audit_result import AuditStatus
+from recommendation.major_choice_planner import build_volunteer_plan
+from agents.critic_agent_enhanced import audit_fast_loop, critic_agent_node
 from agents.deep_research_agent import deep_research_agent_node
-from agents.report_agent import report_agent_node
+from agents.report_agent import _format_recommendation, _row_decision_evidence_payload, report_agent_node
 
 
 def _make_row(name: str, tag: StrategyTag, prob: float) -> MajorGroupRow:
@@ -60,6 +62,103 @@ def test_report_failure_emits_protocol_message() -> None:
     assert result["agent_messages"], "report agent should emit protocol failure message"
 
 
+def test_report_recommendation_includes_decision_evidence_cards() -> None:
+    row = _make_row("Evidence大学", StrategyTag.TARGET, 0.72)
+    row.market_evidence_cards = [
+        {
+            "signal_type": "opportunity_thesis",
+            "claim": "Primary leak mechanism is low attention; arbitrage_score=0.61.",
+            "value": 0.61,
+            "confidence": 0.72,
+        },
+        {
+            "signal_type": "student_fit",
+            "claim": "Student fit is driven by school/tier lift; acceptability=0.84.",
+            "value": 0.68,
+            "confidence": 0.72,
+        },
+        {
+            "signal_type": "downside_guard",
+            "claim": "Downside guard: tail_risk=0.18, rebound_risk=0.22, blacklist=False.",
+            "value": 0.18,
+            "confidence": 0.78,
+        },
+    ]
+
+    text = _format_recommendation(row)
+
+    assert "机会逻辑" in text
+    assert "适配理由" in text
+    assert "风险边界" in text
+    assert "arbitrage_score=0.61" in text
+
+
+def test_report_payload_includes_decision_evidence_cards() -> None:
+    row = _make_row("Payload大学", StrategyTag.TARGET, 0.72)
+    row.market_evidence_cards = [
+        {
+            "signal_type": "opportunity_thesis",
+            "claim": "Primary leak mechanism is low attention; arbitrage_score=0.61.",
+            "value": 0.61,
+            "confidence": 0.72,
+        },
+        {
+            "signal_type": "student_fit",
+            "claim": "Student fit is driven by school/tier lift; acceptability=0.84.",
+            "value": 0.68,
+            "confidence": 0.72,
+        },
+    ]
+
+    payload = _row_decision_evidence_payload(row)
+
+    assert payload["decision_evidence_cards"]
+    assert payload["decision_evidence_cards"][0]["signal_type"] == "opportunity_thesis"
+
+
+def test_critic_rejects_key_prefix_report_missing_decision_evidence() -> None:
+    opportunity = _make_row("Evidence大学", StrategyTag.TARGET, 0.72)
+    opportunity.market_evidence_cards = [
+        {
+            "signal_type": "opportunity_thesis",
+            "claim": "Primary leak mechanism is low attention; arbitrage_score=0.61.",
+            "value": 0.61,
+            "confidence": 0.72,
+        },
+        {
+            "signal_type": "student_fit",
+            "claim": "Student fit is driven by school/tier lift; acceptability=0.84.",
+            "value": 0.68,
+            "confidence": 0.72,
+        },
+        {
+            "signal_type": "downside_guard",
+            "claim": "Downside guard: tail_risk=0.18, rebound_risk=0.22, blacklist=False.",
+            "value": 0.18,
+            "confidence": 0.78,
+        },
+    ]
+    safe = _make_row("Safe大学", StrategyTag.SAFE, 0.96)
+    rows = [opportunity, safe]
+    plan = build_volunteer_plan(rows, _profile())
+    matrix = GameMatrix(major_group_rows=rows, volunteer_plan=plan)
+    matrix.calculate_statistics()
+    report = ReportDraft(
+        executive_summary="summary",
+        strategy_analysis="analysis",
+        school_recommendations=["Evidence大学 only probability text"],
+        risk_warnings=["basic warning"],
+        regret_value=100,
+    )
+    report.generate_markdown()
+
+    audit = audit_fast_loop(report, matrix, _profile(), retry_count=0)
+
+    assert audit.status == AuditStatus.REJECT_LOGIC
+    assert audit.reroute_to == "report_agent"
+    assert any("decision evidence" in issue for issue in audit.issues)
+
+
 def test_critic_emits_protocol_message_on_pass() -> None:
     matrix = GameMatrix(
         major_group_rows=[
@@ -95,5 +194,8 @@ def test_critic_emits_protocol_message_on_pass() -> None:
 if __name__ == "__main__":
     test_deep_research_failure_emits_protocol_message()
     test_report_failure_emits_protocol_message()
+    test_report_recommendation_includes_decision_evidence_cards()
+    test_report_payload_includes_decision_evidence_cards()
+    test_critic_rejects_key_prefix_report_missing_decision_evidence()
     test_critic_emits_protocol_message_on_pass()
     print("agent protocol smoke tests passed")

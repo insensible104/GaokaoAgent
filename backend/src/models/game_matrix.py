@@ -120,6 +120,27 @@ class VolunteerChoice(BaseModel):
     pain_point_flags: List[str] = Field(default_factory=list)
     market_behavior_notes: List[str] = Field(default_factory=list)
     tradeoff_summary: str = ""
+    arbitrage_score: float = Field(default=0.0, ge=0, le=1)
+    front_major_arbitrage_score: float = Field(default=0.0, ge=0, le=1)
+    relative_lift: float = Field(default=0.0, ge=0, le=1)
+    market_discount_score: float = Field(default=0.0, ge=0, le=1)
+    personal_acceptability: float = Field(default=0.0, ge=0, le=1)
+    sacrifice_cost: float = Field(default=0.0, ge=0, le=1)
+    assignment_opportunity: float = Field(default=0.0, ge=0, le=1)
+    front_major_hit_prob: float = Field(default=0.0, ge=0, le=1)
+    rebound_risk: float = Field(default=0.0, ge=0, le=1)
+    opportunity_types: List[str] = Field(default_factory=list)
+    opportunity_pools: List[str] = Field(default_factory=list)
+    arbitrage_breakdown: Dict[str, float] = Field(default_factory=dict)
+    market_evidence_cards: List[Dict[str, Any]] = Field(default_factory=list)
+    market_evidence_strength: float = Field(default=0.0, ge=0, le=1)
+    publicity_heat_score: float = Field(default=0.0, ge=0, le=1)
+    publicity_rebound_risk: float = Field(default=0.0, ge=0, le=1)
+    segment_demand_score: float = Field(default=0.0, ge=0, le=1)
+    low_attention_signal: float = Field(default=0.0, ge=0, le=1)
+    segment_rebound_risk: float = Field(default=0.0, ge=0, le=1)
+    best_fit_archetypes: List[str] = Field(default_factory=list)
+    segment_demand_breakdown: Dict[str, float] = Field(default_factory=dict)
 
 
 class VolunteerPlan(BaseModel):
@@ -320,6 +341,27 @@ class MajorGroupRow(BaseModel):
     pain_point_flags: List[str] = Field(default_factory=list, description="User pain points triggered by this row")
     market_behavior_notes: List[str] = Field(default_factory=list, description="Parallel-volunteer market behavior notes")
     tradeoff_summary: str = Field(default="", description="One-line tradeoff explanation")
+    arbitrage_score: float = Field(default=0.0, ge=0, le=1, description="Personalized arbitrage score")
+    front_major_arbitrage_score: float = Field(default=0.0, ge=0, le=1, description="Front-major arbitrage score")
+    relative_lift: float = Field(default=0.0, ge=0, le=1, description="Lift versus same-rank baseline")
+    market_discount_score: float = Field(default=0.0, ge=0, le=1, description="Market discount score")
+    personal_acceptability: float = Field(default=0.0, ge=0, le=1, description="Student-specific acceptability")
+    sacrifice_cost: float = Field(default=0.0, ge=0, le=1, description="Student-specific sacrifice cost")
+    assignment_opportunity: float = Field(default=0.0, ge=0, le=1, description="Within-group assignment opportunity")
+    front_major_hit_prob: float = Field(default=0.0, ge=0, le=1, description="Estimated front-major hit probability")
+    rebound_risk: float = Field(default=0.0, ge=0, le=1, description="Risk that a known leak rebounds")
+    opportunity_types: List[str] = Field(default_factory=list, description="Detected arbitrage mechanisms")
+    opportunity_pools: List[str] = Field(default_factory=list, description="Portfolio pools this row can enter")
+    arbitrage_breakdown: Dict[str, float] = Field(default_factory=dict, description="Auditable arbitrage score terms")
+    market_evidence_cards: List[Dict[str, Any]] = Field(default_factory=list, description="Auditable market evidence cards")
+    market_evidence_strength: float = Field(default=0.0, ge=0, le=1, description="Confidence of available public evidence")
+    publicity_heat_score: float = Field(default=0.0, ge=0, le=1, description="Publicity or counselor-promotion heat signal")
+    publicity_rebound_risk: float = Field(default=0.0, ge=0, le=1, description="Risk that a known opportunity rebounds after publicity")
+    segment_demand_score: float = Field(default=0.0, ge=0, le=1, description="Demand predicted by student/family archetype simulation")
+    low_attention_signal: float = Field(default=0.0, ge=0, le=1, description="How hidden the opportunity remains after publicity effects")
+    segment_rebound_risk: float = Field(default=0.0, ge=0, le=1, description="Rebound risk estimated from segment demand and publicity")
+    best_fit_archetypes: List[str] = Field(default_factory=list, description="Student/family archetypes most able to absorb sacrifices")
+    segment_demand_breakdown: Dict[str, float] = Field(default_factory=dict, description="Per-archetype demand-fit scores")
 
     # 策略标签
     strategy_tag: StrategyTag
@@ -333,6 +375,38 @@ class MajorGroupRow(BaseModel):
 
     # 用户选择状态（前端交互用）
     is_selected: bool = Field(default=False, description="用户是否选择此专业组")
+
+    def apply_arbitrage_result(self, result: Any) -> None:
+        """Attach a quantitative arbitrage result to this major-group row."""
+        self.arbitrage_score = result.arbitrage_score
+        self.front_major_arbitrage_score = result.front_major_arbitrage_score
+        self.relative_lift = result.relative_lift
+        self.market_discount_score = result.market_discount_score
+        self.personal_acceptability = result.personal_acceptability
+        self.sacrifice_cost = result.sacrifice_cost
+        self.assignment_opportunity = result.assignment_opportunity
+        self.front_major_hit_prob = result.front_major_hit_prob
+        self.rebound_risk = result.rebound_risk
+        self.opportunity_types = list(result.opportunity_types)
+        self.arbitrage_breakdown = dict(result.breakdown)
+        self.opportunity_pools = self._infer_opportunity_pools()
+
+    def _infer_opportunity_pools(self) -> List[str]:
+        """Route this row into coarse opportunity pools for portfolio planning."""
+        pools: List[str] = []
+        if self.front_major_arbitrage_score >= 0.10 and self.front_major_hit_prob >= 0.40:
+            pools.append("front_major_arbitrage_pool")
+        if self.arbitrage_score >= 0.55 and self.relative_lift >= 0.20:
+            pools.append("relative_tier_lift_pool")
+        if self.market_discount_score >= 0.35 and self.personal_acceptability >= 0.65:
+            pools.append("market_discount_pool")
+        if self.strategy_tag == StrategyTag.SAFE or self.admission_prob >= 0.85:
+            pools.append("safe_anchor_pool")
+        elif self.strategy_tag == StrategyTag.TARGET:
+            pools.append("target_core_pool")
+        elif not pools:
+            pools.append("rush_opportunity_pool")
+        return pools
 
 
 class GameRow(BaseModel):

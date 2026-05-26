@@ -19,6 +19,12 @@ DEFAULT_ABLATION_VARIANTS: list[str] = [
     "history_tight_rank",
     "safe_first",
     "no_tradeoff_policy",
+    "no_arbitrage",
+    "arbitrage_only",
+    "front_major_boost",
+    "segment_market",
+    "guarded_arbitrage",
+    "prefix_optimizer",
 ]
 DELTA_METRICS = [
     "success_rate",

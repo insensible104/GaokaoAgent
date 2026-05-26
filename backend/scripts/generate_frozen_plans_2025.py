@@ -44,6 +44,7 @@ from recommendation.major_choice_planner import (
 )
 from recommendation.major_utility import score_major_options
 from recommendation.policy_config import TAIL_RISK_SCORE_PENALTY_WEIGHT
+from recommendation.arbitrage_adapter import score_major_group_arbitrage
 from recommendation.school_signal import score_school_major_signal
 from recommendation.tradeoff_policy import score_tradeoff
 from rl.runtime_policy import RLRuntimePolicy
@@ -53,6 +54,22 @@ from utils.city_mapping import calculate_city_preference_score, get_school_city
 SUBJECTS = ["物理", "历史"]
 PHYSICS_RANKS = [1800, 4500, 8000, 12000, 18000, 26000, 38000, 55000, 76000, 98000, 130000, 180000]
 HISTORY_RANKS = [900, 2200, 4500, 8000, 12000, 18000, 28000, 42000, 60000, 78000, 98000, 130000]
+PHYSICS_EXTRA_RANK_BANDS = [
+    (1500, 6000),
+    (6000, 15000),
+    (15000, 30000),
+    (30000, 60000),
+    (60000, 100000),
+    (100000, 190000),
+]
+HISTORY_EXTRA_RANK_BANDS = [
+    (800, 5000),
+    (5000, 15000),
+    (15000, 30000),
+    (30000, 60000),
+    (60000, 100000),
+    (100000, 140000),
+]
 
 PREFERENCE_TEMPLATES = {
     "物理": [
@@ -87,35 +104,55 @@ def _score_for_rank(data_dir: Path, subject_group: str, rank: int) -> int:
 def generate_profiles(*, data_dir: Path, num_cases: int, seed: int) -> list[tuple[str, UserProfile]]:
     rng = random.Random(seed)
     cases: list[tuple[str, UserProfile]] = []
-    rank_grid = {"物理": PHYSICS_RANKS, "历史": HISTORY_RANKS}
+    rank_grid = {SUBJECTS[0]: PHYSICS_RANKS, SUBJECTS[1]: HISTORY_RANKS}
+    seen: set[tuple[str, int]] = set()
+
+    def add_case(subject_group: str, rank: int, template_index: int, suffix: str = "") -> None:
+        key = (subject_group, rank)
+        if key in seen:
+            return
+        seen.add(key)
+        cities, majors, blacklist, risk, preference = PREFERENCE_TEMPLATES[subject_group][
+            template_index % len(PREFERENCE_TEMPLATES[subject_group])
+        ]
+        score = _score_for_rank(data_dir, subject_group, rank)
+        cases.append(
+            (
+                f"{subject_group}_rank_{rank:06d}{suffix}",
+                UserProfile(
+                    score=score,
+                    rank=rank,
+                    subject_group=subject_group,
+                    preferred_cities=list(cities),
+                    preferred_majors=list(majors),
+                    blacklist_majors=list(blacklist),
+                    risk_tolerance=risk,
+                    school_major_preference=preference,
+                    preference_confidence=0.72,
+                    regret_sensitivity=0.65 if risk != RiskTolerance.AGGRESSIVE else 0.45,
+                ),
+            )
+        )
 
     for subject_group in SUBJECTS:
         for idx, rank in enumerate(rank_grid[subject_group]):
-            cities, majors, blacklist, risk, preference = PREFERENCE_TEMPLATES[subject_group][
-                idx % len(PREFERENCE_TEMPLATES[subject_group])
-            ]
-            score = _score_for_rank(data_dir, subject_group, rank)
-            cases.append(
-                (
-                    f"{subject_group}_rank_{rank:06d}",
-                    UserProfile(
-                        score=score,
-                        rank=rank,
-                        subject_group=subject_group,
-                        preferred_cities=list(cities),
-                        preferred_majors=list(majors),
-                        blacklist_majors=list(blacklist),
-                        risk_tolerance=risk,
-                        school_major_preference=preference,
-                        preference_confidence=0.72,
-                        regret_sensitivity=0.65 if risk != RiskTolerance.AGGRESSIVE else 0.45,
-                    ),
-                )
-            )
+            add_case(subject_group, rank, idx)
+
+    extra_bands = {
+        SUBJECTS[0]: PHYSICS_EXTRA_RANK_BANDS,
+        SUBJECTS[1]: HISTORY_EXTRA_RANK_BANDS,
+    }
+    extra_index = 0
+    while len(cases) < num_cases:
+        subject_group = SUBJECTS[extra_index % len(SUBJECTS)]
+        bands = extra_bands[subject_group]
+        low, high = bands[(extra_index // len(SUBJECTS)) % len(bands)]
+        rank = rng.randint(low, high)
+        add_case(subject_group, rank, extra_index, suffix="_sample")
+        extra_index += 1
 
     rng.shuffle(cases)
     return cases[:num_cases]
-
 
 def _strategy_tag(raw: str) -> StrategyTag:
     try:
@@ -282,6 +319,12 @@ def build_candidate_rows(
         row.pain_point_flags = tradeoff.pain_point_flags
         row.market_behavior_notes = tradeoff.market_behavior_notes
         row.tradeoff_summary = tradeoff.summary
+        score_major_group_arbitrage(
+            row=row,
+            profile=profile,
+            school_major_score=school_signal.average_score / 100.0,
+            city_preference_score=city_score,
+        )
         row.recommendation_role = f"{row.recommendation_role}:{tradeoff.score_band}"
         rows.append(row)
 
@@ -311,6 +354,16 @@ def build_frozen_record(
         }
 
     plan = build_volunteer_plan(final_rows, profile, max_choices=max_choices)
+    candidate_by_key = {
+        (str(row.school_code), row.school_name, str(row.major_group_code)): row
+        for row in candidate_rows
+    }
+    for row in final_rows:
+        candidate_by_key.setdefault(
+            (str(row.school_code), row.school_name, str(row.major_group_code)),
+            row,
+        )
+    ablation_candidate_rows = list(candidate_by_key.values())
     return {
         "case_id": case_id,
         "user_rank": profile.rank,
@@ -319,12 +372,12 @@ def build_frozen_record(
         "generation_metadata": {
             "method": "fast_historical_probability_runtime_policy",
             "uses_actual_2025": False,
-            "candidate_rows": len(candidate_rows),
+            "candidate_rows": len(ablation_candidate_rows),
             "plan_choices": len(plan.choices),
             "optimization_summary": optimization_summary,
         },
         "user_profile": profile.model_dump(mode="json"),
-        "candidate_rows": [row.model_dump(mode="json") for row in candidate_rows],
+        "candidate_rows": [row.model_dump(mode="json") for row in ablation_candidate_rows],
         "plan": plan.model_dump(mode="json"),
     }
 

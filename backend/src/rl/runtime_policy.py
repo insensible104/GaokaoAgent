@@ -290,15 +290,37 @@ class RLRuntimePolicy:
         safety_component = (1.0 - params.risk_tolerance) * row.admission_prob
         prestige_component = params.prestige_weight * row.comprehensive_score
         quality_component = (1.0 - params.prestige_weight) * prob_fit
+        arbitrage_component = (
+            0.14 * row.arbitrage_score
+            + 0.16 * row.front_major_arbitrage_score
+            + 0.06 * row.front_major_hit_prob
+            + 0.06 * row.segment_demand_score
+            + 0.03 * row.low_attention_signal
+            + (0.06 if "front_major_arbitrage_pool" in row.opportunity_pools else 0.0)
+            + (0.04 if "relative_tier_lift_pool" in row.opportunity_pools else 0.0)
+        )
+        rebound_penalty = max(row.rebound_risk, row.segment_rebound_risk) * 0.07
         risk_penalty = row.adjustment_risk * (0.15 + (1.0 - params.risk_tolerance) * 0.1)
+        tail_penalty = row.tail_assignment_risk * (0.10 + (1.0 - params.risk_tolerance) * 0.08)
+        guard_penalty = 0.0
+        if row.tail_assignment_risk > 0.55:
+            guard_penalty += 0.12
+        if max(row.rebound_risk, row.segment_rebound_risk) > 0.55:
+            guard_penalty += 0.08
+        if row.major_utility_mean < 0.45:
+            guard_penalty += 0.06
         blacklist_penalty = 0.12 if row.is_blacklist_risk else 0.0
 
         return (
             prestige_component
             + quality_component
             + safety_component
+            + arbitrage_component
             + (0.10 * (1.0 - row.adjustment_risk))
             - risk_penalty
+            - tail_penalty
+            - rebound_penalty
+            - guard_penalty
             - blacklist_penalty
             - diversity_penalty
         )

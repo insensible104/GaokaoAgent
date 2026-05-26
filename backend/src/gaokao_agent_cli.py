@@ -45,6 +45,9 @@ DEFAULT_SMOKE_TESTS = [
     "test_orchestration_trl_utils_smoke.py",
     "test_backtest_2025_smoke.py",
     "test_ablation_2025_smoke.py",
+    "test_market_evidence_smoke.py",
+    "test_market_simulation_smoke.py",
+    "test_prefix_optimizer_smoke.py",
 ]
 
 

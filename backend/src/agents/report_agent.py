@@ -25,9 +25,11 @@ Definitions:
 - score_band: rank-band policy that decides whether school, major, city, safety, or upside should dominate.
 - pain_point_flags: user-facing anxieties such as sliding risk, wasted score, tail-major regret, city mismatch, and herding crowding.
 - market_behavior_notes: parallel-volunteer game signals, including crowded obvious choices, small-quota lottery opportunities, and mixed-group bait risk.
+- decision_evidence_cards: opportunity_thesis / student_fit / downside_guard cards that explain why others may miss it, why this student can take it, and what can go wrong.
 
 The report must highlight high first_hit_prob rows, explain shadowed rows as backup only, and warn when a high first_hit_prob row also has high tail_assignment_risk.
 Also explain why a row is ranked there through score_band, pain_point_flags, and market_behavior_notes instead of only restating admission probability.
+When decision_evidence_cards are present, use them as the primary explanation spine for that recommendation.
 """
 
 
@@ -48,6 +50,25 @@ def _compact_tradeoff_note(row) -> str:
     return " | " + " | ".join(parts)
 
 
+def _compact_decision_evidence_note(row) -> str:
+    """Format decision-grade evidence cards for the recommendation line."""
+    cards = getattr(row, "market_evidence_cards", []) or []
+    if not cards:
+        return ""
+
+    label_by_type = {
+        "opportunity_thesis": "机会逻辑",
+        "student_fit": "适配理由",
+        "downside_guard": "风险边界",
+    }
+    selected = []
+    for signal_type, label in label_by_type.items():
+        card = next((item for item in cards if item.get("signal_type") == signal_type), None)
+        if card and card.get("claim"):
+            selected.append(f"{label}: {card['claim']}")
+    return "；".join(selected)
+
+
 def _row_tradeoff_payload(row) -> dict:
     return {
         "score_band": getattr(row, "score_band", ""),
@@ -55,6 +76,27 @@ def _row_tradeoff_payload(row) -> dict:
         "pain_point_flags": getattr(row, "pain_point_flags", []) or [],
         "market_behavior_notes": getattr(row, "market_behavior_notes", []) or [],
         "tradeoff_summary": getattr(row, "tradeoff_summary", ""),
+    }
+
+
+def _row_decision_evidence_payload(row) -> dict:
+    cards = getattr(row, "market_evidence_cards", []) or []
+    decision_types = {"opportunity_thesis", "student_fit", "downside_guard"}
+    decision_cards = [
+        card
+        for card in cards
+        if card.get("signal_type") in decision_types
+    ]
+    return {
+        "arbitrage_score": getattr(row, "arbitrage_score", 0.0),
+        "front_major_arbitrage_score": getattr(row, "front_major_arbitrage_score", 0.0),
+        "market_discount_score": getattr(row, "market_discount_score", 0.0),
+        "personal_acceptability": getattr(row, "personal_acceptability", 0.0),
+        "sacrifice_cost": getattr(row, "sacrifice_cost", 0.0),
+        "publicity_rebound_risk": getattr(row, "publicity_rebound_risk", 0.0),
+        "segment_rebound_risk": getattr(row, "segment_rebound_risk", 0.0),
+        "market_evidence_strength": getattr(row, "market_evidence_strength", 0.0),
+        "decision_evidence_cards": decision_cards[:3],
     }
 
 
@@ -78,8 +120,9 @@ def _format_recommendation(row) -> str:
     tradeoff_note = _compact_tradeoff_note(row)
     if tradeoff_note:
         major_info = f"{major_info} [{tradeoff_note}]"
+    evidence_note = _compact_decision_evidence_note(row)
     prefix = f"第{choice_index}志愿 " if choice_index else ""
-    return (
+    base = (
         f"{prefix}{row.school_name} {major_info} "
         f"(单点投档概率 {admission_prob:.1%}, 首命中概率 {first_hit_prob:.1%}, "
         f"前序失败概率 {survival_before_prob:.1%}, 累计命中 {cumulative_hit_prob:.1%}, "
@@ -87,6 +130,7 @@ def _format_recommendation(row) -> str:
         f"专业1-6：{'、'.join(suggested_names[:6])}, "
         f"调剂建议 {adjustment_advice}, 尾部风险 {tail_risk:.0%})"
     ).strip()
+    return f"{base}；{evidence_note}" if evidence_note else base
     return (
         f"{row.school_name} {major_info} "
         f"(录取概率 {row.admission_prob:.1%}, 策略 {row.strategy_tag.value}, "
@@ -330,6 +374,7 @@ def report_agent_node(state: SupervisorState) -> dict:
                     for major in getattr(row, "suggested_major_choices", [])[:6]
                 ],
                 **_row_tradeoff_payload(row),
+                **_row_decision_evidence_payload(row),
             }
             for row in data_source
         ],

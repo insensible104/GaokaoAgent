@@ -25,6 +25,7 @@ from recommendation.major_choice_planner import (
 from recommendation.major_utility import score_major_options
 from recommendation.school_signal import score_school_major_signal
 from recommendation.tradeoff_policy import score_tradeoff
+from recommendation.arbitrage_adapter import score_major_group_arbitrage
 from utils.agent_bus import publish_agent_message, remember
 from utils.city_mapping import get_school_city, calculate_city_preference_score
 from rl.rank_gradient_strategy import RankGradientStrategy
@@ -405,6 +406,12 @@ def game_agent_node(state: SupervisorState) -> dict:
         row.pain_point_flags = tradeoff_result.pain_point_flags
         row.market_behavior_notes = tradeoff_result.market_behavior_notes
         row.tradeoff_summary = tradeoff_result.summary
+        score_major_group_arbitrage(
+            row=row,
+            profile=profile,
+            school_major_score=avg_comprehensive_score / 100.0,
+            city_preference_score=city_preference_score,
+        )
         row.recommendation_role = (
             f"{row.recommendation_role}:{tradeoff_result.score_band}"
             if row.recommendation_role
@@ -606,13 +613,13 @@ def game_agent_node(state: SupervisorState) -> dict:
                 # 如果还是失败，就完全跳过控制台输出
                 pass
 
-    volunteer_plan = build_volunteer_plan(final_groups, profile)
+    volunteer_plan = build_volunteer_plan(final_groups, profile, optimize_prefix=True)
 
     # 创建博弈矩阵
     game_matrix = GameMatrix(
         major_group_rows=final_groups,
         agentic_rl_used=optimization_summary.get("checkpoint_loaded", False),
-        selection_method="pareto+runtime_rl+portfolio_optimization",
+        selection_method="pareto+runtime_rl+portfolio_optimization+prefix_optimizer",
         optimization_summary=optimization_summary,
         volunteer_plan=volunteer_plan,
     )
