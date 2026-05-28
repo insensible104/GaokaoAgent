@@ -117,6 +117,9 @@ def build_volunteer_choice(row, choice_index: int) -> VolunteerChoice:
         segment_rebound_risk=getattr(row, "segment_rebound_risk", 0.0),
         best_fit_archetypes=list(getattr(row, "best_fit_archetypes", []) or []),
         segment_demand_breakdown=dict(getattr(row, "segment_demand_breakdown", {}) or {}),
+        plan_change_score=getattr(row, "plan_change_score", 0.0),
+        plan_change_types=list(getattr(row, "plan_change_types", []) or []),
+        plan_change_evidence=list(getattr(row, "plan_change_evidence", []) or []),
     )
 
 

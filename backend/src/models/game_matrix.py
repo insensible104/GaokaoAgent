@@ -141,6 +141,9 @@ class VolunteerChoice(BaseModel):
     segment_rebound_risk: float = Field(default=0.0, ge=0, le=1)
     best_fit_archetypes: List[str] = Field(default_factory=list)
     segment_demand_breakdown: Dict[str, float] = Field(default_factory=dict)
+    plan_change_score: float = Field(default=0.0, ge=0, le=1)
+    plan_change_types: List[str] = Field(default_factory=list)
+    plan_change_evidence: List[str] = Field(default_factory=list)
 
 
 class VolunteerPlan(BaseModel):
@@ -362,6 +365,9 @@ class MajorGroupRow(BaseModel):
     segment_rebound_risk: float = Field(default=0.0, ge=0, le=1, description="Rebound risk estimated from segment demand and publicity")
     best_fit_archetypes: List[str] = Field(default_factory=list, description="Student/family archetypes most able to absorb sacrifices")
     segment_demand_breakdown: Dict[str, float] = Field(default_factory=dict, description="Per-archetype demand-fit scores")
+    plan_change_score: float = Field(default=0.0, ge=0, le=1, description="Opportunity signal from enrollment-plan changes")
+    plan_change_types: List[str] = Field(default_factory=list, description="Enrollment-plan change mechanisms")
+    plan_change_evidence: List[str] = Field(default_factory=list, description="Auditable enrollment-plan change evidence")
 
     # 策略标签
     strategy_tag: StrategyTag

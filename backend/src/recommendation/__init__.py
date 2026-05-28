@@ -13,6 +13,7 @@ from .arbitrage_model import (
 from .arbitrage_adapter import score_major_group_arbitrage
 from .bundle_risk import analyze_bundle_risk
 from .major_choice_planner import build_volunteer_plan, choose_six_majors
+from .plan_change_signals import attach_plan_change_signals
 from .major_utility import score_major_options
 from .market_evidence import (
     EvidenceCard,

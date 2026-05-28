@@ -49,6 +49,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_market_simulation_smoke.py",
     "test_prefix_optimizer_smoke.py",
     "test_enrollment_diff_smoke.py",
+    "test_plan_change_signals_smoke.py",
 ]
 
 

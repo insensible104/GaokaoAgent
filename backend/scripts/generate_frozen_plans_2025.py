@@ -42,7 +42,9 @@ from recommendation.major_choice_planner import (
     build_volunteer_plan,
     choose_six_majors,
 )
+from recommendation.enrollment_diff import EnrollmentDiffEvent
 from recommendation.major_utility import score_major_options
+from recommendation.plan_change_signals import attach_plan_change_signals
 from recommendation.policy_config import TAIL_RISK_SCORE_PENALTY_WEIGHT
 from recommendation.arbitrage_adapter import score_major_group_arbitrage
 from recommendation.school_signal import score_school_major_signal
@@ -85,6 +87,39 @@ PREFERENCE_TEMPLATES = {
         (["珠海", "广州"], ["会计", "财务管理"], ["市场营销"], RiskTolerance.AGGRESSIVE, SchoolMajorPreference.BALANCED),
     ],
 }
+
+
+def load_plan_change_events_from_json(path: str | Path | None) -> list[EnrollmentDiffEvent]:
+    """Load enrollment-plan diff events generated before freezing plans."""
+    if not path:
+        return []
+    diff_path = Path(path)
+    if not diff_path.exists():
+        raise FileNotFoundError(f"Plan-change diff JSON not found: {diff_path}")
+    payload = json.loads(diff_path.read_text(encoding="utf-8"))
+    events_payload = payload.get("events") if isinstance(payload, dict) else payload
+    if not isinstance(events_payload, list):
+        raise ValueError("Plan-change diff JSON must contain an `events` list.")
+
+    events: list[EnrollmentDiffEvent] = []
+    for event in events_payload:
+        if not isinstance(event, dict):
+            continue
+        events.append(
+            EnrollmentDiffEvent(
+                change_type=str(event.get("change_type") or ""),
+                school_code=str(event.get("school_code") or ""),
+                school_name=str(event.get("school_name") or ""),
+                subject_group=str(event.get("subject_group") or ""),
+                major_group_code=str(event.get("major_group_code") or ""),
+                major_code=str(event.get("major_code") or ""),
+                major_name=str(event.get("major_name") or ""),
+                before=event.get("before"),
+                after=event.get("after"),
+                evidence=str(event.get("evidence") or ""),
+            )
+        )
+    return events
 
 
 def _score_for_rank(data_dir: Path, subject_group: str, rank: int) -> int:
@@ -176,6 +211,7 @@ def build_candidate_rows(
     enrollment_loader: EnrollmentPlanLoader,
     target_count: int,
     min_probability: float,
+    plan_change_events: list[EnrollmentDiffEvent] | None = None,
 ) -> list[MajorGroupRow]:
     major_groups = engine.search_major_groups(
         user_rank=int(profile.rank or 0),
@@ -328,7 +364,21 @@ def build_candidate_rows(
         row.recommendation_role = f"{row.recommendation_role}:{tradeoff.score_band}"
         rows.append(row)
 
-    return sorted(rows, key=lambda item: item.comprehensive_score, reverse=True)
+    if plan_change_events:
+        attach_plan_change_signals(
+            rows,
+            plan_change_events,
+            subject_group=profile.subject_group,
+        )
+
+    return sorted(
+        rows,
+        key=lambda item: (
+            item.comprehensive_score + item.plan_change_score * 0.04,
+            item.comprehensive_score,
+        ),
+        reverse=True,
+    )
 
 
 def build_frozen_record(
@@ -397,6 +447,10 @@ def main() -> None:
     parser.add_argument("--target-count", type=int, default=120)
     parser.add_argument("--max-choices", type=int, default=30)
     parser.add_argument("--min-probability", type=float, default=0.08)
+    parser.add_argument(
+        "--plan-change-diff-json",
+        help="Optional enrollment diff JSON generated from prediction-time plan/history data.",
+    )
     args = parser.parse_args()
 
     data_dir = Path(_resolve_runtime_data_dir())
@@ -406,6 +460,9 @@ def main() -> None:
     print(f"[frozen] prediction data dir: {data_dir}")
     engine = GaokaoQuantEngine(data_dir=str(data_dir))
     enrollment_loader = EnrollmentPlanLoader(data_dir=str(data_dir))
+    plan_change_events = load_plan_change_events_from_json(args.plan_change_diff_json)
+    if plan_change_events:
+        print(f"[frozen] loaded plan-change events: {len(plan_change_events)}")
     profiles = generate_profiles(data_dir=data_dir, num_cases=args.num_cases, seed=args.seed)
 
     records: list[dict] = []
@@ -418,6 +475,7 @@ def main() -> None:
             enrollment_loader=enrollment_loader,
             target_count=args.target_count,
             min_probability=args.min_probability,
+            plan_change_events=plan_change_events,
         )
         if len(rows) < 5:
             skipped.append({"case_id": case_id, "reason": "too_few_candidates", "candidate_rows": len(rows)})
@@ -444,6 +502,7 @@ def main() -> None:
         "max_choices": args.max_choices,
         "min_probability": args.min_probability,
         "uses_actual_2025": False,
+        "plan_change_events": len(plan_change_events),
     }
     summary_path = output_path.with_suffix(".summary.json")
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")

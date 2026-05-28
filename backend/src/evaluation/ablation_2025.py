@@ -25,6 +25,7 @@ DEFAULT_ABLATION_VARIANTS: list[str] = [
     "segment_market",
     "guarded_arbitrage",
     "prefix_optimizer",
+    "plan_change_guarded",
 ]
 DELTA_METRICS = [
     "success_rate",

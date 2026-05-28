@@ -21,6 +21,7 @@ BaselineName = Literal[
     "segment_market",
     "guarded_arbitrage",
     "prefix_optimizer",
+    "plan_change_guarded",
 ]
 
 
@@ -151,6 +152,30 @@ def build_baseline_plan(
             profile=profile,
             max_choices=max_choices,
         )
+    elif baseline == "plan_change_guarded":
+        def plan_change_guarded_score(row: MajorGroupRow) -> float:
+            risk_penalty = 0.0
+            if row.tail_assignment_risk > 0.55:
+                risk_penalty += 0.34
+            if row.major_utility_mean < 0.45:
+                risk_penalty += 0.12
+            if row.is_blacklist_risk:
+                risk_penalty += 0.24
+            if row.rebound_risk > 0.55 or row.segment_rebound_risk > 0.55:
+                risk_penalty += 0.12
+            return (
+                row.admission_prob * 0.34
+                + row.major_utility_mean * 0.20
+                + row.plan_change_score * 0.24
+                + row.arbitrage_score * 0.08
+                + row.front_major_arbitrage_score * 0.06
+                + row.quota_stability_score * 0.05
+                + row.low_attention_signal * 0.03
+                - row.tail_assignment_risk * 0.24
+                - risk_penalty
+            )
+
+        ordered = sorted(rows, key=plan_change_guarded_score, reverse=True)
     else:
         raise ValueError(f"Unknown baseline: {baseline}")
 
