@@ -99,6 +99,9 @@ def main() -> int:
                 return status
 
     if args.actual_outcomes and args.plans_jsonl:
+        backtest_summary = output_dir / "backtest_2025_summary.json"
+        calibration_summary = output_dir / "quant_calibration_summary.json"
+        ablation_summary = output_dir / "ablation_2025_summary.json"
         status = run_stage(
             "backtest_2025",
             [
@@ -108,9 +111,29 @@ def main() -> int:
                 "--plans-jsonl",
                 args.plans_jsonl,
                 "--output",
-                str(output_dir / "backtest_2025_summary.json"),
+                str(backtest_summary),
                 "--results-jsonl",
                 str(output_dir / "backtest_2025_results.jsonl"),
+            ],
+        )
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
+        status = run_stage(
+            "quant_calibration_2025",
+            [
+                "quant-calibrate-2025",
+                "--actual-outcomes",
+                args.actual_outcomes,
+                "--plans-jsonl",
+                args.plans_jsonl,
+                "--output",
+                str(calibration_summary),
+                "--choice-rows-jsonl",
+                str(output_dir / "quant_calibration_choices.jsonl"),
+                "--report-md",
+                str(output_dir / "quant_calibration_report.md"),
             ],
         )
         if status != 0:
@@ -127,7 +150,7 @@ def main() -> int:
                     "--plans-jsonl",
                     args.plans_jsonl,
                     "--output",
-                    str(output_dir / "ablation_2025_summary.json"),
+                    str(ablation_summary),
                     "--results-jsonl",
                     str(output_dir / "ablation_2025_results.jsonl"),
                     "--report-md",
@@ -137,6 +160,24 @@ def main() -> int:
             if status != 0:
                 _write_manifest(output_dir / "manifest.json", manifest)
                 return status
+
+        audit_args = [
+            "improvement-audit",
+            "--backtest-summary",
+            str(backtest_summary),
+            "--calibration-summary",
+            str(calibration_summary),
+            "--output",
+            str(output_dir / "improvement_audit.json"),
+            "--report-md",
+            str(output_dir / "improvement_audit.md"),
+        ]
+        if args.run_ablation:
+            audit_args.extend(["--ablation-summary", str(ablation_summary)])
+        status = run_stage("improvement_audit", audit_args)
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
 
     _write_manifest(output_dir / "manifest.json", manifest)
     print(f"saved experiment manifest -> {output_dir / 'manifest.json'}")

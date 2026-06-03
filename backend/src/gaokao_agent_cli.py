@@ -17,6 +17,7 @@ from evaluation.ablation_2025 import (
 )
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
+from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
 from rl.orchestration_data_pipeline import (
@@ -51,6 +52,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_orchestration_trl_utils_smoke.py",
     "test_backtest_2025_smoke.py",
     "test_quant_calibration_smoke.py",
+    "test_improvement_audit_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
     "test_market_simulation_smoke.py",
@@ -73,6 +75,10 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _write_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
@@ -269,6 +275,31 @@ def cmd_quant_calibrate_2025(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_improvement_audit(args: argparse.Namespace) -> int:
+    backtest_summary = _read_json(Path(args.backtest_summary)) if args.backtest_summary else None
+    calibration_summary = _read_json(Path(args.calibration_summary)) if args.calibration_summary else None
+    ablation_summary = _read_json(Path(args.ablation_summary)) if args.ablation_summary else None
+    if not any((backtest_summary, calibration_summary, ablation_summary)):
+        raise ValueError("Provide at least one of --backtest-summary, --calibration-summary, or --ablation-summary.")
+
+    result = build_improvement_audit(
+        backtest_summary=backtest_summary,
+        calibration_summary=calibration_summary,
+        ablation_summary=ablation_summary,
+    )
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_improvement_audit(result), encoding="utf-8")
+        print(f"saved improvement audit report -> {report_path}")
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved improvement audit summary -> {args.output}")
+    else:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -335,6 +366,17 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--choice-rows-jsonl", help="Choice-level calibration rows JSONL output path.")
     calibrate.add_argument("--report-md", help="Markdown calibration report output path.")
     calibrate.set_defaults(func=cmd_quant_calibrate_2025)
+
+    audit = subparsers.add_parser(
+        "improvement-audit",
+        help="Convert experiment metrics into prioritized self-improvement tasks.",
+    )
+    audit.add_argument("--backtest-summary", help="JSON produced by backtest-2025 --output.")
+    audit.add_argument("--calibration-summary", help="JSON produced by quant-calibrate-2025 --output.")
+    audit.add_argument("--ablation-summary", help="JSON produced by ablate-2025 --output.")
+    audit.add_argument("--output", help="Improvement audit JSON output path.")
+    audit.add_argument("--report-md", help="Markdown improvement audit output path.")
+    audit.set_defaults(func=cmd_improvement_audit)
 
     return parser
 

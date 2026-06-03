@@ -20,7 +20,9 @@ rollout
 build-pairwise
 eval-orchestration
 backtest-2025
+quant-calibrate-2025
 ablate-2025
+improvement-audit
 ```
 
 ## Smoke Checks
@@ -74,6 +76,26 @@ Run:
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py backtest-2025 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\backtest_2025_summary.json --results-jsonl logs\backtest_2025_results.jsonl
 ```
 
+## Quant Calibration
+
+Calibration checks whether prediction-time probabilities and quant risk bands
+match post-hoc outcomes. This is the main loop for making the recommender more
+like an agency-grade decision system instead of a narrative generator.
+
+Run:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-calibrate-2025 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\quant_calibration_summary.json --choice-rows-jsonl logs\quant_calibration_choices.jsonl --report-md logs\quant_calibration_report.md
+```
+
+Use the report to inspect:
+
+- probability-bucket calibration
+- quant-score bucket calibration
+- deterministic risk-band monotonicity
+- first-hit probability calibration
+- tail-assignment and wasted-score rates by bucket
+
 ## 2025 Ablation
 
 Ablation uses the same post-hoc 2025 labels, but rebuilds baseline plans from
@@ -100,6 +122,27 @@ safe_first
 no_tradeoff_policy
 ```
 
+## Self-Improvement Audit
+
+The improvement audit converts experiment metrics into prioritized engineering
+work. It keeps the project aligned to the mission: make volunteer planning more
+accessible while approaching the quality of top agencies and high-trust
+counselors.
+
+Run after backtest and calibration:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py improvement-audit --backtest-summary logs\backtest_2025_summary.json --calibration-summary logs\quant_calibration_summary.json --ablation-summary logs\ablation_2025_summary.json --output logs\improvement_audit.json --report-md logs\improvement_audit.md
+```
+
+The audit flags:
+
+- P0 blockers before agency-grade claims
+- calibration gaps that need probability correction
+- risk-band monotonicity failures
+- baseline variants that beat the full system
+- next actions for the next model iteration
+
 ## One-Shot Suite
 
 Use this when you want one command to create an experiment folder:
@@ -121,6 +164,10 @@ profiles:
 backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --output-dir logs\experiments\run_001 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --run-ablation
 ```
 
+When actual outcomes and frozen plans are provided, the suite also writes
+`quant_calibration_summary.json`, `quant_calibration_report.md`,
+`improvement_audit.json`, and `improvement_audit.md`.
+
 ## Claim-Evidence Mapping
 
 Use these outputs for project claims:
@@ -128,8 +175,9 @@ Use these outputs for project claims:
 | Claim | Evidence artifact |
 | --- | --- |
 | Recommendation core is backtestable | `backtest_2025_summary.json`, `backtest_2025_results.jsonl` |
+| Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |
 | Tradeoff/re-ranking choices improve 2025 outcomes | `ablation_2025_summary.json`, `ablation_2025_report.md` |
-
+| The next iteration is metric-driven | `improvement_audit.json`, `improvement_audit.md` |
