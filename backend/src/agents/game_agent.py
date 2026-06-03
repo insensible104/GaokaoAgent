@@ -33,6 +33,14 @@ from rl.runtime_policy import RLRuntimePolicy
 from engines.pareto_optimizer import compute_pareto_frontier, Objective
 
 
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
+
+
+def _normalize_percent_score(value: float) -> float:
+    return _clamp01(value / 100.0)
+
+
 def _resolve_runtime_data_dir() -> str:
     """Find prediction-time admissions data without reading post-hoc outcome labels."""
     candidate_dirs = [
@@ -390,17 +398,17 @@ def game_agent_node(state: SupervisorState) -> dict:
             risk_reasons=bundle_risk.risk_reasons,
             audit_flags=bundle_risk.audit_flags,
             # 修复问题1：使用comprehensive_score字段存储综合评分
-            comprehensive_score=final_score / 100.0,  # 归一化到0-1范围
+            comprehensive_score=_normalize_percent_score(final_score),  # 归一化到0-1范围
             sentiment_score=0.0  # 保留舆情字段，暂未使用
         )
 
         tradeoff_result = score_tradeoff(
             row=row,
             profile=profile,
-            school_major_score=avg_comprehensive_score / 100.0,
+            school_major_score=_normalize_percent_score(avg_comprehensive_score),
             city_preference_score=city_preference_score,
         )
-        row.comprehensive_score = tradeoff_result.final_score
+        row.comprehensive_score = _clamp01(tradeoff_result.final_score)
         row.score_band = tradeoff_result.score_band
         row.tradeoff_breakdown = tradeoff_result.breakdown
         row.pain_point_flags = tradeoff_result.pain_point_flags
@@ -409,7 +417,7 @@ def game_agent_node(state: SupervisorState) -> dict:
         score_major_group_arbitrage(
             row=row,
             profile=profile,
-            school_major_score=avg_comprehensive_score / 100.0,
+            school_major_score=_normalize_percent_score(avg_comprehensive_score),
             city_preference_score=city_preference_score,
         )
         row.recommendation_role = (

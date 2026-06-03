@@ -56,7 +56,7 @@ def route_after_report(state: SupervisorState) -> str:
 def route_after_critic(state: SupervisorState) -> str:
     """Read the next action selected by the supervisor policy."""
     next_action = state.get("next_action")
-    return END if next_action == END else (next_action or END)
+    return END if next_action in (END, "END") else (next_action or END)
 
 
 def _build_policy_update(state: SupervisorState, decision) -> dict:
@@ -236,4 +236,3 @@ def create_dual_loop_graph() -> StateGraph:
 
 
 supervisor_graph = create_dual_loop_supervisor()
-

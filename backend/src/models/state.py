@@ -11,6 +11,11 @@ from .agent_communication import AgentMessage, AgentMemoryEntry, DeliberationSum
 from .intent import IntentClassification, LoopType
 
 
+def keep_latest(_left, right):
+    """Use the latest non-empty scalar value when parallel graph branches write."""
+    return right if right not in (None, "") else _left
+
+
 class SupervisorState(TypedDict):
     """Supervisor 统一状态（双循环架构）"""
     messages: Annotated[list, add_messages]
@@ -58,7 +63,7 @@ class SupervisorState(TypedDict):
     recommended_next_action: Optional[str]  # Deliberation output for supervisor policy
 
     # === 控制流 ===
-    current_agent: str  # 当前活跃的 Agent
+    current_agent: Annotated[str, keep_latest]  # 当前活跃的 Agent
     retry_count: int    # 回退重试次数
     human_approved: bool  # 人工是否已确认
     max_loops: int  # 最大循环次数（防止无限循环）

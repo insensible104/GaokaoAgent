@@ -36,6 +36,8 @@ DEFAULT_SMOKE_TESTS = [
     "test_encoding_smoke.py",
     "test_backend_api_status_smoke.py",
     "test_prediction_data_boundary_smoke.py",
+    "test_user_profile_null_defaults_smoke.py",
+    "test_game_agent_score_bounds_smoke.py",
     "test_tradeoff_policy_smoke.py",
     "test_volunteer_plan_schema_smoke.py",
     "test_first_hit_prefix_smoke.py",

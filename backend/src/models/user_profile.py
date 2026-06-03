@@ -1,6 +1,6 @@
 """用户画像数据模型"""
-from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+from pydantic import BaseModel, Field, model_validator
+from typing import Any, List, Dict, Optional
 from enum import Enum
 
 
@@ -105,6 +105,31 @@ class UserProfile(BaseModel):
         None,
         description="如 {'数学': 145, '英语': 138}"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_null_defaults(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+
+        for key in (
+            "preferred_cities",
+            "excluded_cities",
+            "preferred_majors",
+            "blacklist_majors",
+            "stated_misconceptions",
+            "emotional_concerns",
+            "family_pressure_points",
+            "preference_assumptions",
+        ):
+            if data.get(key) is None:
+                data[key] = []
+
+        if data.get("medical_restrictions") is None:
+            data["medical_restrictions"] = {}
+
+        return data
 
     class Config:
         json_schema_extra = {

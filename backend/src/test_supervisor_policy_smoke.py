@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from langgraph.graph import END
+
 from models.audit_result import AuditResult, AuditStatus
 from models.game_matrix import GameMatrix, MajorGroupRow, MajorOption, StrategyTag, VolatilityLevel
 from models.intent import IntentClassification, IntentType, LoopType
 from models.user_profile import UserProfile
 from recommendation.major_choice_planner import build_volunteer_plan
+from graph.dual_loop_supervisor import route_after_critic
 from rl.supervisor_policy import HeuristicSupervisorPolicy, compute_episode_summary
 
 
@@ -190,6 +193,10 @@ def test_repeated_critic_failure_triggers_root_cause_research() -> None:
     assert decision.selected_action == "deep_research"
 
 
+def test_route_after_critic_maps_business_end_to_langgraph_end() -> None:
+    assert route_after_critic({"next_action": "END"}) == END
+
+
 def test_episode_summary_reward_is_bounded() -> None:
     state = _base_state()
     state["report_draft"] = object()
@@ -272,6 +279,7 @@ if __name__ == "__main__":
     test_key_prefix_tail_risk_triggers_research()
     test_key_prefix_market_game_triggers_research()
     test_repeated_critic_failure_triggers_root_cause_research()
+    test_route_after_critic_maps_business_end_to_langgraph_end()
     test_episode_summary_reward_is_bounded()
     test_protocol_violation_penalizes_episode_reward()
     test_market_game_penalizes_episode_reward()
