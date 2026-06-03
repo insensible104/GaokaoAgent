@@ -273,19 +273,23 @@ def _audit_tuning(tuning: dict[str, Any]) -> list[dict[str, Any]]:
     if not best or not baseline:
         return findings
 
-    brier_delta = _float(best, "brier_score") - _float(baseline, "brier_score")
-    objective_delta = _float(best, "objective") - _float(baseline, "objective")
+    best_eval = best.get("holdout") or best
+    baseline_eval = baseline.get("holdout") or tuning.get("holdout_baseline") or baseline
+    split = "holdout" if best.get("holdout") and baseline_eval else "train"
+    brier_delta = _float(best_eval, "brier_score") - _float(baseline_eval, "brier_score")
+    objective_delta = _float(best_eval, "objective") - _float(baseline_eval, "objective")
     if brier_delta <= -0.015 or objective_delta <= -0.020:
         findings.append(
             _finding(
                 severity="P2",
                 area="quant_tuning",
-                finding="离线权重搜索找到优于当前概率口径的候选配置",
+                finding=f"离线权重搜索在 {split} 上找到优于当前概率口径的候选配置",
                 target="candidate must improve on held-out frozen-plan split before runtime adoption",
-                recommendation="把 best 权重加入下一轮 holdout 回测/校准，不要直接线上替换。",
+                recommendation="把 best 权重加入下一轮独立 frozen-plan 回测/校准，不要直接线上替换。",
                 evidence={
                     "best_name": best.get("name"),
                     "best_weights": best.get("weights"),
+                    "split": split,
                     "brier_delta": round(brier_delta, 6),
                     "objective_delta": round(objective_delta, 6),
                 },

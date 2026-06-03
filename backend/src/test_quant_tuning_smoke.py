@@ -62,6 +62,51 @@ def test_quant_tuning_can_improve_over_raw_probability() -> None:
     assert "Top Candidates" in markdown
 
 
+def test_quant_tuning_reports_case_level_holdout() -> None:
+    rows = []
+    for case_id in ("case_1", "case_2", "case_3", "case_4"):
+        rows.extend(
+            [
+                {
+                    "case_id": case_id,
+                    "predicted_prob": 0.80,
+                    "quant_score": 0.20,
+                    "rank_buffer_score": 0.20,
+                    "history_stability_score": 0.40,
+                    "data_confidence_score": 0.50,
+                    "trend_score": 0.50,
+                    "group_admitted": False,
+                },
+                {
+                    "case_id": case_id,
+                    "predicted_prob": 0.30,
+                    "quant_score": 0.90,
+                    "rank_buffer_score": 0.85,
+                    "history_stability_score": 0.80,
+                    "data_confidence_score": 0.80,
+                    "trend_score": 0.70,
+                    "group_admitted": True,
+                },
+            ]
+        )
+
+    result = tune_quant_probability_blends(
+        choice_rows=rows,
+        step=0.20,
+        min_prob_weight=0.40,
+        holdout_fraction=0.25,
+        top_k=3,
+    )
+
+    assert result["search"]["split_method"] == "case_id"
+    assert result["train_choice_count"] == 6
+    assert result["holdout_choice_count"] == 2
+    assert result["best"]["holdout"]["brier_score"] < result["holdout_baseline"]["brier_score"]
+    markdown = build_markdown_quant_tuning_report(result)
+    assert "Holdout choices: 2" in markdown
+
+
 if __name__ == "__main__":
     test_quant_tuning_can_improve_over_raw_probability()
+    test_quant_tuning_reports_case_level_holdout()
     print("quant tuning smoke tests passed")

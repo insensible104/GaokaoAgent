@@ -21,6 +21,7 @@ FEATURES = [
 ]
 DEFAULT_STEP = 0.20
 MIN_PROB_WEIGHT = 0.40
+DEFAULT_HOLDOUT_FRACTION = 0.25
 
 
 def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
@@ -94,6 +95,33 @@ def _score_candidate(rows: Sequence[dict[str, Any]], weights: dict[str, float], 
     }
 
 
+def _candidate_key(weights: dict[str, float]) -> tuple[tuple[str, float], ...]:
+    return tuple(sorted((key, round(value, 6)) for key, value in weights.items() if value > 0))
+
+
+def _split_train_holdout(
+    rows: Sequence[dict[str, Any]],
+    *,
+    holdout_fraction: float,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+    if holdout_fraction <= 0.0:
+        return list(rows), [], "disabled"
+
+    case_ids = sorted({str(row.get("case_id") or "") for row in rows if row.get("case_id")})
+    if len(case_ids) >= 4:
+        holdout_count = max(1, min(len(case_ids) - 1, round(len(case_ids) * holdout_fraction)))
+        holdout_cases = set(case_ids[-holdout_count:])
+        train = [row for row in rows if str(row.get("case_id") or "") not in holdout_cases]
+        holdout = [row for row in rows if str(row.get("case_id") or "") in holdout_cases]
+        return train, holdout, "case_id"
+
+    if len(rows) >= 8:
+        holdout_count = max(1, min(len(rows) - 1, round(len(rows) * holdout_fraction)))
+        return list(rows[:-holdout_count]), list(rows[-holdout_count:]), "row_order"
+
+    return list(rows), [], "insufficient_rows"
+
+
 def _weight_grid(*, step: float, min_prob_weight: float) -> list[dict[str, float]]:
     units = int(round(1.0 / step))
     if units <= 0:
@@ -136,6 +164,7 @@ def tune_quant_probability_blends(
     choice_rows: Sequence[dict[str, Any]],
     step: float = DEFAULT_STEP,
     min_prob_weight: float = MIN_PROB_WEIGHT,
+    holdout_fraction: float = DEFAULT_HOLDOUT_FRACTION,
     top_k: int = 10,
 ) -> dict[str, Any]:
     """Search transparent probability/scorecard blends on calibration rows."""
@@ -153,16 +182,27 @@ def tune_quant_probability_blends(
             "warning": "No usable choice rows were provided.",
         }
 
-    baseline = _score_candidate(rows, {"predicted_prob": 1.0}, name="current_probability_only")
+    train_rows, holdout_rows, split_method = _split_train_holdout(
+        rows,
+        holdout_fraction=holdout_fraction,
+    )
+    baseline = _score_candidate(train_rows, {"predicted_prob": 1.0}, name="current_probability_only")
     scored_by_key: dict[tuple[tuple[str, float], ...], dict[str, Any]] = {}
     for name, weights in _named_baselines():
-        scored = _score_candidate(rows, weights, name=name)
-        scored_by_key[tuple(sorted(scored["weights"].items()))] = scored
+        scored = _score_candidate(train_rows, weights, name=name)
+        scored_by_key[_candidate_key(scored["weights"])] = scored
     for weights in _weight_grid(step=step, min_prob_weight=min_prob_weight):
-        scored = _score_candidate(rows, weights)
-        scored_by_key[tuple(sorted(scored["weights"].items()))] = scored
+        scored = _score_candidate(train_rows, weights)
+        scored_by_key[_candidate_key(scored["weights"])] = scored
 
     scored = sorted(scored_by_key.values(), key=lambda item: (item["objective"], item["brier_score"]))
+    holdout_baseline = (
+        _score_candidate(holdout_rows, {"predicted_prob": 1.0}, name="current_probability_only")
+        if holdout_rows
+        else None
+    )
+    if holdout_baseline:
+        baseline["holdout"] = holdout_baseline
     for index, candidate in enumerate(scored, 1):
         if not candidate.get("name"):
             candidate["name"] = f"grid_candidate_{index:03d}"
@@ -174,23 +214,43 @@ def tune_quant_probability_blends(
             float(candidate["objective"]) - float(baseline["objective"]),
             6,
         )
+        if holdout_rows:
+            holdout_score = _score_candidate(
+                holdout_rows,
+                candidate["weights"],
+                name=str(candidate.get("name") or ""),
+            )
+            holdout_score["brier_delta_vs_current"] = round(
+                float(holdout_score["brier_score"]) - float(holdout_baseline["brier_score"]),
+                6,
+            )
+            holdout_score["objective_delta_vs_current"] = round(
+                float(holdout_score["objective"]) - float(holdout_baseline["objective"]),
+                6,
+            )
+            candidate["holdout"] = holdout_score
 
     best = scored[0]
     return {
         "choice_count": len(rows),
+        "train_choice_count": len(train_rows),
+        "holdout_choice_count": len(holdout_rows),
         "feature_names": FEATURES,
         "search": {
             "step": step,
             "min_prob_weight": min_prob_weight,
+            "holdout_fraction": holdout_fraction,
+            "split_method": split_method,
             "candidate_count": len(scored),
             "objective": "brier + 0.35 * abs_calibration + 0.20 * bucket_abs_calibration",
         },
         "baseline": baseline,
+        "holdout_baseline": holdout_baseline,
         "best": best,
         "top_candidates": scored[:top_k],
         "deployment_note": (
-            "Use these weights as candidates only. Validate on a separate frozen-plan split "
-            "before changing runtime scoring or report probabilities."
+            "Use these weights as candidates only. Prefer candidates that improve holdout metrics; "
+            "validate again on a later frozen-plan split before changing runtime scoring."
         ),
     }
 
@@ -201,6 +261,8 @@ def build_markdown_quant_tuning_report(result: dict[str, Any]) -> str:
         "# Quant Probability Tuning Report",
         "",
         f"Choices: {result.get('choice_count', 0)}",
+        f"Train choices: {result.get('train_choice_count', 0)}",
+        f"Holdout choices: {result.get('holdout_choice_count', 0)}",
         "",
         result.get("deployment_note", ""),
         "",
@@ -211,38 +273,43 @@ def build_markdown_quant_tuning_report(result: dict[str, Any]) -> str:
         [
             "## Summary",
             "",
-            "| Model | Objective | Brier | Abs Calib Err | Bucket Calib Err | Weights |",
-            "| --- | ---: | ---: | ---: | ---: | --- |",
+            "| Model | Split | Objective | Brier | Abs Calib Err | Bucket Calib Err | Weights |",
+            "| --- | --- | ---: | ---: | ---: | ---: | --- |",
         ]
     )
     for label, row in [("baseline", baseline), ("best", best)]:
         if not row:
             continue
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    f"`{label}:{row.get('name', '')}`",
-                    f"{float(row.get('objective', 0.0)):.3f}",
-                    f"{float(row.get('brier_score', 0.0)):.3f}",
-                    f"{float(row.get('absolute_calibration_error', 0.0)):.1%}",
-                    f"{float(row.get('bucket_absolute_calibration_error', 0.0)):.1%}",
-                    "`" + str(row.get("weights", {})) + "`",
-                ]
+        for split, split_row in [("train", row), ("holdout", row.get("holdout"))]:
+            if not split_row:
+                continue
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        f"`{label}:{row.get('name', '')}`",
+                        split,
+                        f"{float(split_row.get('objective', 0.0)):.3f}",
+                        f"{float(split_row.get('brier_score', 0.0)):.3f}",
+                        f"{float(split_row.get('absolute_calibration_error', 0.0)):.1%}",
+                        f"{float(split_row.get('bucket_absolute_calibration_error', 0.0)):.1%}",
+                        "`" + str(row.get("weights", {})) + "`",
+                    ]
+                )
+                + " |"
             )
-            + " |"
-        )
 
     lines.extend(
         [
             "",
             "## Top Candidates",
             "",
-            "| Rank | Name | Objective | Brier Delta | Objective Delta | Weights |",
+            "| Rank | Name | Train Objective | Holdout Objective | Holdout Brier Delta | Weights |",
             "| ---: | --- | ---: | ---: | ---: | --- |",
         ]
     )
     for index, row in enumerate(result.get("top_candidates", []) or [], 1):
+        holdout = row.get("holdout") or {}
         lines.append(
             "| "
             + " | ".join(
@@ -250,8 +317,8 @@ def build_markdown_quant_tuning_report(result: dict[str, Any]) -> str:
                     str(index),
                     f"`{row.get('name', '')}`",
                     f"{float(row.get('objective', 0.0)):.3f}",
-                    f"{float(row.get('brier_delta_vs_current', 0.0)):.3f}",
-                    f"{float(row.get('objective_delta_vs_current', 0.0)):.3f}",
+                    f"{float(holdout.get('objective', 0.0)):.3f}" if holdout else "",
+                    f"{float(holdout.get('brier_delta_vs_current', 0.0)):.3f}" if holdout else "",
                     "`" + str(row.get("weights", {})) + "`",
                 ]
             )

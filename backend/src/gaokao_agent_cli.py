@@ -283,6 +283,7 @@ def cmd_quant_tune(args: argparse.Namespace) -> int:
         choice_rows=choice_rows,
         step=args.step,
         min_prob_weight=args.min_prob_weight,
+        holdout_fraction=args.holdout_fraction,
         top_k=args.top_k,
     )
     if args.report_md:
@@ -402,6 +403,7 @@ def build_parser() -> argparse.ArgumentParser:
     tune.add_argument("--choice-rows-jsonl", required=True, help="JSONL produced by quant-calibrate-2025.")
     tune.add_argument("--step", type=float, default=0.20, help="Grid step for feature weights.")
     tune.add_argument("--min-prob-weight", type=float, default=0.40, help="Minimum weight kept on admission probability.")
+    tune.add_argument("--holdout-fraction", type=float, default=0.25, help="Case-level holdout fraction for validation.")
     tune.add_argument("--top-k", type=int, default=10)
     tune.add_argument("--output", help="Quant tuning JSON output path.")
     tune.add_argument("--report-md", help="Markdown quant tuning report output path.")

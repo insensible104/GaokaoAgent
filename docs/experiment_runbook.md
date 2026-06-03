@@ -107,7 +107,7 @@ weights.
 Run:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-tune --choice-rows-jsonl logs\quant_calibration_choices.jsonl --output logs\quant_tuning_summary.json --report-md logs\quant_tuning_report.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-tune --choice-rows-jsonl logs\quant_calibration_choices.jsonl --holdout-fraction 0.25 --output logs\quant_tuning_summary.json --report-md logs\quant_tuning_report.md
 ```
 
 The objective is:
@@ -115,6 +115,10 @@ The objective is:
 ```text
 brier + 0.35 * absolute_calibration_error + 0.20 * bucket_absolute_calibration_error
 ```
+
+The tuner selects weights on the training split and reports holdout metrics
+when there are enough cases. A candidate should not be adopted unless it also
+improves the holdout split and a later independent frozen-plan run.
 
 ## 2025 Ablation
 
