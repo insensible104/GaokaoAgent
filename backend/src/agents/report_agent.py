@@ -69,6 +69,25 @@ def _compact_decision_evidence_note(row) -> str:
     return "；".join(selected)
 
 
+def _compact_quant_note(row) -> str:
+    band = getattr(row, "deterministic_risk_band", "")
+    quant_score = getattr(row, "quant_score", 0.0)
+    confidence = getattr(row, "data_confidence_score", 0.0)
+    evidence = getattr(row, "quant_evidence", []) or []
+    if not band and not evidence:
+        return ""
+    parts = []
+    if band:
+        parts.append(f"量化风险档={band}")
+    if quant_score:
+        parts.append(f"量化分={quant_score:.2f}")
+    if confidence:
+        parts.append(f"数据置信={confidence:.2f}")
+    if evidence:
+        parts.append(evidence[0])
+    return "；".join(parts)
+
+
 def _row_tradeoff_payload(row) -> dict:
     return {
         "score_band": getattr(row, "score_band", ""),
@@ -101,7 +120,7 @@ def _row_decision_evidence_payload(row) -> dict:
 
 
 def _append_key_decision_evidence(draft: ReportDraft, matrix) -> ReportDraft:
-    """Ensure key-prefix evidence cards are visible in the delivered report."""
+    """Ensure key-prefix decision and quant evidence are visible in the delivered report."""
     volunteer_plan = getattr(matrix, "volunteer_plan", None)
     if not volunteer_plan:
         return draft
@@ -121,6 +140,10 @@ def _append_key_decision_evidence(draft: ReportDraft, matrix) -> ReportDraft:
         "downside_guard": "风险边界",
     }
     appended = []
+    row_lookup = {
+        (str(getattr(row, "school_code", "")), str(getattr(row, "major_group_code", ""))): row
+        for row in getattr(matrix, "major_group_rows", []) or getattr(matrix, "rows", []) or []
+    }
     for choice in volunteer_plan.choices:
         if not getattr(choice, "is_key_prefix", False):
             continue
@@ -131,6 +154,13 @@ def _append_key_decision_evidence(draft: ReportDraft, matrix) -> ReportDraft:
             if card and card.get("claim"):
                 claim = str(card["claim"])
                 claims.append(f"{label}: {claim}")
+        source_row = row_lookup.get(
+            (str(getattr(choice, "school_code", "")), str(getattr(choice, "major_group_code", ""))),
+            choice,
+        )
+        quant_note = _compact_quant_note(source_row)
+        if quant_note:
+            claims.append(f"量化校验: {quant_note}")
         if not claims:
             continue
         if any(claim[:40] in existing_text for claim in claims):
@@ -170,6 +200,7 @@ def _format_recommendation(row) -> str:
     if tradeoff_note:
         major_info = f"{major_info} [{tradeoff_note}]"
     evidence_note = _compact_decision_evidence_note(row)
+    quant_note = _compact_quant_note(row)
     prefix = f"第{choice_index}志愿 " if choice_index else ""
     base = (
         f"{prefix}{row.school_name} {major_info} "
@@ -179,7 +210,8 @@ def _format_recommendation(row) -> str:
         f"专业1-6：{'、'.join(suggested_names[:6])}, "
         f"调剂建议 {adjustment_advice}, 尾部风险 {tail_risk:.0%})"
     ).strip()
-    return f"{base}；{evidence_note}" if evidence_note else base
+    notes = [note for note in (quant_note, evidence_note) if note]
+    return f"{base}；{'；'.join(notes)}" if notes else base
     return (
         f"{row.school_name} {major_info} "
         f"(录取概率 {row.admission_prob:.1%}, 策略 {row.strategy_tag.value}, "
@@ -411,6 +443,13 @@ def report_agent_node(state: SupervisorState) -> dict:
                 "adjustment_advice": getattr(getattr(row, "adjustment_advice", None), "value", "cautious"),
                 "worst_case_major": getattr(row, "worst_case_major", None),
                 "bundle_type": getattr(getattr(row, "bundle_type", None), "value", "unknown"),
+                "quant_score": getattr(row, "quant_score", 0.0),
+                "rank_buffer_score": getattr(row, "rank_buffer_score", 0.0),
+                "history_stability_score": getattr(row, "history_stability_score", 0.0),
+                "data_confidence_score": getattr(row, "data_confidence_score", 0.0),
+                "trend_score": getattr(row, "trend_score", 0.0),
+                "deterministic_risk_band": getattr(row, "deterministic_risk_band", ""),
+                "quant_evidence": getattr(row, "quant_evidence", []) or [],
                 "major_group": getattr(row, "major_group_code", ""),
                 "major_list": getattr(row, "major_list", []),
                 "suggested_major_choices": [

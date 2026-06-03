@@ -144,6 +144,13 @@ class VolunteerChoice(BaseModel):
     plan_change_score: float = Field(default=0.0, ge=0, le=1)
     plan_change_types: List[str] = Field(default_factory=list)
     plan_change_evidence: List[str] = Field(default_factory=list)
+    quant_score: float = Field(default=0.0, ge=0, le=1)
+    rank_buffer_score: float = Field(default=0.0, ge=0, le=1)
+    history_stability_score: float = Field(default=0.0, ge=0, le=1)
+    data_confidence_score: float = Field(default=0.0, ge=0, le=1)
+    trend_score: float = Field(default=0.0, ge=0, le=1)
+    deterministic_risk_band: str = ""
+    quant_evidence: List[str] = Field(default_factory=list)
 
 
 class VolunteerPlan(BaseModel):
@@ -368,6 +375,13 @@ class MajorGroupRow(BaseModel):
     plan_change_score: float = Field(default=0.0, ge=0, le=1, description="Opportunity signal from enrollment-plan changes")
     plan_change_types: List[str] = Field(default_factory=list, description="Enrollment-plan change mechanisms")
     plan_change_evidence: List[str] = Field(default_factory=list, description="Auditable enrollment-plan change evidence")
+    quant_score: float = Field(default=0.0, ge=0, le=1, description="Deterministic quant score from rank buffer, stability, and confidence")
+    rank_buffer_score: float = Field(default=0.0, ge=0, le=1, description="Normalized score for predicted rank buffer")
+    history_stability_score: float = Field(default=0.0, ge=0, le=1, description="Historical cutoff stability score")
+    data_confidence_score: float = Field(default=0.0, ge=0, le=1, description="Confidence in available historical data")
+    trend_score: float = Field(default=0.0, ge=0, le=1, description="Recent admissions trend score")
+    deterministic_risk_band: str = Field(default="", description="Explainable deterministic risk band")
+    quant_evidence: List[str] = Field(default_factory=list, description="Human-readable quant evidence lines")
 
     # 策略标签
     strategy_tag: StrategyTag

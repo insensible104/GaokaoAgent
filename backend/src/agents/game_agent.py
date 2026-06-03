@@ -26,6 +26,7 @@ from recommendation.major_utility import score_major_options
 from recommendation.school_signal import score_school_major_signal
 from recommendation.tradeoff_policy import score_tradeoff
 from recommendation.arbitrage_adapter import score_major_group_arbitrage
+from recommendation.quant_scorecard import build_quant_scorecard
 from utils.agent_bus import publish_agent_message, remember
 from utils.city_mapping import get_school_city, calculate_city_preference_score
 from rl.rank_gradient_strategy import RankGradientStrategy
@@ -472,6 +473,20 @@ def game_agent_node(state: SupervisorState) -> dict:
             # 中等波动
             volatility_level = VolatilityLevel.MEDIUM
 
+        quota_stability = quota_stability_score(quota)
+        variance_opportunity = variance_opportunity_score(
+            quota,
+            bundle_risk.major_utility_dispersion,
+        )
+        quant_scorecard = build_quant_scorecard(
+            hist_data=hist_data,
+            user_rank=profile.rank,
+            min_rank_pred=min_rank_pred,
+            rank_ci_lower=rank_ci_lower,
+            rank_ci_upper=rank_ci_upper,
+            quota_stability=quota_stability,
+        )
+
         # 创建专业组推荐行（增强版：包含更多元数据）
         row = MajorGroupRow(
             school_name=school,
@@ -490,11 +505,8 @@ def game_agent_node(state: SupervisorState) -> dict:
             volatility=volatility_level,  # 基于蒙特卡洛结果的波动性判断
             quota=quota if quota > 0 else None,
             quota_bucket=quota_bucket(quota),
-            quota_stability_score=quota_stability_score(quota),
-            variance_opportunity_score=variance_opportunity_score(
-                quota,
-                bundle_risk.major_utility_dispersion,
-            ),
+            quota_stability_score=quota_stability,
+            variance_opportunity_score=variance_opportunity,
             adjustment_risk=bundle_risk.tail_assignment_risk,
             worst_case_major=bundle_risk.worst_case_major,
             is_blacklist_risk=is_blacklist_risk,  # 修复：实际检查黑名单
@@ -510,6 +522,13 @@ def game_agent_node(state: SupervisorState) -> dict:
             recommendation_role=f"{strategy_value}:{school_signal.tradeoff_label}",
             risk_reasons=bundle_risk.risk_reasons,
             audit_flags=bundle_risk.audit_flags,
+            quant_score=quant_scorecard.quant_score,
+            rank_buffer_score=quant_scorecard.rank_buffer_score,
+            history_stability_score=quant_scorecard.history_stability_score,
+            data_confidence_score=quant_scorecard.data_confidence_score,
+            trend_score=quant_scorecard.trend_score,
+            deterministic_risk_band=quant_scorecard.deterministic_risk_band,
+            quant_evidence=quant_scorecard.evidence,
             # 修复问题1：使用comprehensive_score字段存储综合评分
             comprehensive_score=_normalize_percent_score(final_score),  # 归一化到0-1范围
             sentiment_score=0.0  # 保留舆情字段，暂未使用
@@ -521,9 +540,19 @@ def game_agent_node(state: SupervisorState) -> dict:
             school_major_score=_normalize_percent_score(avg_comprehensive_score),
             city_preference_score=city_preference_score,
         )
-        row.comprehensive_score = _clamp01(tradeoff_result.final_score)
+        row.comprehensive_score = _clamp01(
+            tradeoff_result.final_score * 0.85
+            + quant_scorecard.quant_score * 0.15
+        )
         row.score_band = tradeoff_result.score_band
-        row.tradeoff_breakdown = tradeoff_result.breakdown
+        row.tradeoff_breakdown = {
+            **tradeoff_result.breakdown,
+            "quant_score": quant_scorecard.quant_score,
+            "rank_buffer_score": quant_scorecard.rank_buffer_score,
+            "history_stability_score": quant_scorecard.history_stability_score,
+            "data_confidence_score": quant_scorecard.data_confidence_score,
+            "trend_score": quant_scorecard.trend_score,
+        }
         row.pain_point_flags = tradeoff_result.pain_point_flags
         row.market_behavior_notes = tradeoff_result.market_behavior_notes
         row.tradeoff_summary = tradeoff_result.summary

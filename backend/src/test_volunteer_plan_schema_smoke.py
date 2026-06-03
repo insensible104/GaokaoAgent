@@ -85,6 +85,13 @@ def main():
         audit_flags=risk.audit_flags,
         strategy_tag=StrategyTag.TARGET,
         comprehensive_score=0.66,
+        quant_score=0.71,
+        rank_buffer_score=0.78,
+        history_stability_score=0.64,
+        data_confidence_score=0.69,
+        trend_score=0.55,
+        deterministic_risk_band="solid_target",
+        quant_evidence=["位次缓冲 +2724 名，约 1.10 个不确定性宽度"],
     )
 
     plan = build_volunteer_plan([row], profile)
@@ -96,10 +103,12 @@ def main():
     assert choice.major_group_code == "214"
     assert 1 <= len(choice.major_choices) <= 6
     assert choice.worst_case_major == "土木类"
+    assert choice.quant_score == 0.71
+    assert choice.deterministic_risk_band == "solid_target"
+    assert "位次缓冲" in choice.quant_evidence[0]
 
     print("volunteer plan schema smoke test passed")
 
 
 if __name__ == "__main__":
     main()
-

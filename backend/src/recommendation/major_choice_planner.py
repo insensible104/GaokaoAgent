@@ -120,6 +120,13 @@ def build_volunteer_choice(row, choice_index: int) -> VolunteerChoice:
         plan_change_score=getattr(row, "plan_change_score", 0.0),
         plan_change_types=list(getattr(row, "plan_change_types", []) or []),
         plan_change_evidence=list(getattr(row, "plan_change_evidence", []) or []),
+        quant_score=getattr(row, "quant_score", 0.0),
+        rank_buffer_score=getattr(row, "rank_buffer_score", 0.0),
+        history_stability_score=getattr(row, "history_stability_score", 0.0),
+        data_confidence_score=getattr(row, "data_confidence_score", 0.0),
+        trend_score=getattr(row, "trend_score", 0.0),
+        deterministic_risk_band=getattr(row, "deterministic_risk_band", ""),
+        quant_evidence=list(getattr(row, "quant_evidence", []) or []),
     )
 
 
