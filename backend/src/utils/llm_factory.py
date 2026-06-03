@@ -20,7 +20,7 @@ def get_llm(temperature: float = 0.7):
     Returns:
         LLM 实例（SimpleOllamaClient 或 ChatOpenAI）
     """
-    provider = os.environ.get("LLM_PROVIDER", "cloud").lower()
+    provider = os.environ.get("LLM_PROVIDER", "cloud").strip().lower()
 
     print(f"[INFO] LLM Provider: {provider}")
 
@@ -32,6 +32,34 @@ def get_llm(temperature: float = 0.7):
 
         # Use simple ollama client (fixes 502 error with langchain-ollama)
         return SimpleOllamaClient(base_url=base_url, model=model, temperature=temperature)
+    elif provider == "deepseek":
+        api_key = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("AI_API_KEY")
+        base_url = (
+            os.environ.get("DEEPSEEK_BASE_URL")
+            or os.environ.get("AI_BASE_URL")
+            or "https://api.deepseek.com"
+        )
+        model = (
+            os.environ.get("DEEPSEEK_MODEL")
+            or os.environ.get("AI_MODEL")
+            or "deepseek-chat"
+        )
+
+        if not api_key:
+            raise ValueError(
+                "DEEPSEEK_API_KEY not set in .env file. "
+                "Set DEEPSEEK_API_KEY or change LLM_PROVIDER to 'local'."
+            )
+
+        print(f"[INFO] Using DeepSeek: {model} @ {base_url}")
+
+        return ChatOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            model=model,
+            temperature=temperature,
+            timeout=120,
+        )
     else:
         api_key = os.environ.get("QWEN_API_KEY")
         base_url = os.environ.get("OPENAI_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
