@@ -41,6 +41,105 @@ def _normalize_percent_score(value: float) -> float:
     return _clamp01(value / 100.0)
 
 
+def _major_keyword_score(majors, preferred_majors) -> float:
+    if not preferred_majors:
+        return 0.0
+    major_text = " ".join(str(major) for major in (majors or []))
+    if not major_text:
+        return 0.0
+    hits = sum(1 for keyword in preferred_majors if keyword and keyword in major_text)
+    return min(1.0, hits / max(len(preferred_majors), 1))
+
+
+def _cheap_candidate_priority(group, profile) -> float:
+    """Rank candidates before expensive probability simulation."""
+    min_rank = float(group.get("min_rank", profile.rank) or profile.rank)
+    rank_distance = abs(min_rank - profile.rank)
+    rank_closeness = 1.0 - min(rank_distance / max(float(profile.rank), 5000.0), 2.0) / 2.0
+    city_score = calculate_city_preference_score(
+        city=get_school_city(str(group.get("school", ""))),
+        preferred_cities=profile.preferred_cities,
+        excluded_cities=profile.excluded_cities,
+    )
+    major_score = _major_keyword_score(group.get("major", []), profile.preferred_majors)
+    quota = float(group.get("quota", 0) or 0)
+    quota_signal = min(0.4, quota / 500.0)
+    return major_score * 2.0 + city_score * 1.1 + rank_closeness * 1.2 + quota_signal
+
+
+def _take_priority_rows(df: pd.DataFrame, count: int, profile) -> pd.DataFrame:
+    if count <= 0 or df.empty:
+        return df.head(0)
+    ranked = df.copy()
+    ranked["_precision_priority"] = ranked.apply(
+        lambda row: _cheap_candidate_priority(row, profile),
+        axis=1,
+    )
+    ranked = ranked.sort_values(
+        ["_precision_priority", "min_rank"],
+        ascending=[False, True],
+    )
+    return ranked.head(count).drop(columns=["_precision_priority"], errors="ignore")
+
+
+def _limit_precision_candidates(
+    major_groups: pd.DataFrame,
+    profile,
+    *,
+    total_recommend: int,
+    max_candidates: int | None = None,
+) -> pd.DataFrame:
+    """Limit expensive Monte Carlo work with stratified, preference-aware sampling."""
+    if major_groups.empty:
+        return major_groups
+
+    if max_candidates is None:
+        max_candidates = int(os.getenv(
+            "GAOKAO_MAX_PRECISION_CANDIDATES",
+            str(max(180, total_recommend * 12)),
+        ))
+
+    max_candidates = max(total_recommend * 4, max_candidates)
+    if len(major_groups) <= max_candidates:
+        return major_groups
+
+    ranked = major_groups.copy()
+    ranked["_rank_diff"] = ranked["min_rank"].astype(float) - float(profile.rank)
+    near_window = max(3000, int(profile.rank * 0.25))
+
+    rush_rows = ranked[ranked["_rank_diff"] < -near_window]
+    target_rows = ranked[
+        (ranked["_rank_diff"] >= -near_window)
+        & (ranked["_rank_diff"] <= near_window * 2)
+    ]
+    safe_rows = ranked[ranked["_rank_diff"] > near_window * 2]
+
+    rush_quota = int(max_candidates * 0.30)
+    target_quota = int(max_candidates * 0.35)
+    safe_quota = max_candidates - rush_quota - target_quota
+
+    selected_parts = [
+        _take_priority_rows(rush_rows, rush_quota, profile),
+        _take_priority_rows(target_rows, target_quota, profile),
+        _take_priority_rows(safe_rows, safe_quota, profile),
+    ]
+    selected = pd.concat(selected_parts, ignore_index=False)
+    selected_indexes = set(selected.index.tolist())
+
+    if len(selected) < max_candidates:
+        remainder = ranked[~ranked.index.isin(selected_indexes)]
+        selected = pd.concat(
+            [
+                selected,
+                _take_priority_rows(remainder, max_candidates - len(selected), profile),
+            ],
+            ignore_index=False,
+        )
+
+    selected = selected.drop(columns=["_rank_diff"], errors="ignore")
+    return selected.sort_values("min_rank").head(max_candidates)
+
+
 def _resolve_runtime_data_dir() -> str:
     """Find prediction-time admissions data without reading post-hoc outcome labels."""
     candidate_dirs = [
@@ -129,6 +228,20 @@ def game_agent_node(state: SupervisorState) -> dict:
             "debug_logs": ["[WARN] Game Agent: 未找到匹配的专业组"],
             "messages": [AIMessage(content="抱歉，未找到符合您位次的专业组")]
         }
+
+    recommend_config = gradient_strategy.get_recommended_volunteer_count(profile.rank)
+    total_recommend = recommend_config["total"]
+    original_candidate_count = len(major_groups)
+    major_groups = _limit_precision_candidates(
+        major_groups,
+        profile,
+        total_recommend=total_recommend,
+    )
+    if len(major_groups) < original_candidate_count:
+        print(
+            f"[INFO] 精算候选限流: {original_candidate_count} → {len(major_groups)} "
+            f"(偏好/位次分层保留)"
+        )
 
     print(f"[OK] 找到 {len(major_groups)} 个候选专业组")
     print(f"[进度] 正在计算录取概率（蒙特卡洛模拟，10K次采样）...")
@@ -482,8 +595,6 @@ def game_agent_node(state: SupervisorState) -> dict:
     candidate_pool = pareto_non_safe_rows + safe_schools_preserved
 
     print("[进度] 正在应用运行时RL策略与志愿组合优化...")
-    recommend_config = gradient_strategy.get_recommended_volunteer_count(profile.rank)
-    total_recommend = recommend_config["total"]
 
     runtime_rl = RLRuntimePolicy()
     final_groups, optimization_summary = runtime_rl.select_candidates(

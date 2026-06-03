@@ -100,6 +100,55 @@ def _row_decision_evidence_payload(row) -> dict:
     }
 
 
+def _append_key_decision_evidence(draft: ReportDraft, matrix) -> ReportDraft:
+    """Ensure key-prefix evidence cards are visible in the delivered report."""
+    volunteer_plan = getattr(matrix, "volunteer_plan", None)
+    if not volunteer_plan:
+        return draft
+
+    existing_text = "\n".join(
+        [
+            draft.full_markdown or "",
+            draft.executive_summary or "",
+            draft.strategy_analysis or "",
+            "\n".join(draft.school_recommendations or []),
+            "\n".join(draft.risk_warnings or []),
+        ]
+    )
+    required_types = {
+        "opportunity_thesis": "机会逻辑",
+        "student_fit": "适配理由",
+        "downside_guard": "风险边界",
+    }
+    appended = []
+    for choice in volunteer_plan.choices:
+        if not getattr(choice, "is_key_prefix", False):
+            continue
+        cards = getattr(choice, "market_evidence_cards", []) or []
+        claims = []
+        for signal_type, label in required_types.items():
+            card = next((item for item in cards if item.get("signal_type") == signal_type), None)
+            if card and card.get("claim"):
+                claim = str(card["claim"])
+                claims.append(f"{label}: {claim}")
+        if not claims:
+            continue
+        if any(claim[:40] in existing_text for claim in claims):
+            continue
+        appended.append(
+            (
+                f"关键志愿解释 - 第{choice.choice_index}志愿 {choice.school_name}"
+                f"{choice.major_group_code}专业组："
+                + "；".join(claims)
+            )
+        )
+
+    if appended:
+        draft.school_recommendations.extend(appended[:5])
+        draft.generate_markdown()
+    return draft
+
+
 def _format_recommendation(row) -> str:
     major_info = getattr(row, "major_group_code", "") or getattr(row, "major_name", "")
     suggested = getattr(row, "suggested_major_choices", None) or getattr(row, "major_choices", None) or []
@@ -393,6 +442,7 @@ def report_agent_node(state: SupervisorState) -> dict:
         if not draft.school_recommendations:
             raise ValueError("LLM returned empty school_recommendations")
         draft.generate_markdown()
+        draft = _append_key_decision_evidence(draft, matrix)
         warning_count = len(draft.risk_warnings)
         recommendation_count = len(draft.school_recommendations)
         return {
@@ -430,6 +480,7 @@ def report_agent_node(state: SupervisorState) -> dict:
         }
     except Exception as exc:
         fallback_draft = _build_fallback_report(profile, matrix, data_source)
+        fallback_draft = _append_key_decision_evidence(fallback_draft, matrix)
         recommendation_count = len(fallback_draft.school_recommendations)
         warning_count = len(fallback_draft.risk_warnings)
         return {
@@ -462,4 +513,3 @@ def report_agent_node(state: SupervisorState) -> dict:
             "debug_logs": [f"[WARN] Report Agent: fallback report generated because {exc}"],
             "messages": [AIMessage(content="Fallback report generated and forwarded to critic.")],
         }
-
