@@ -18,6 +18,7 @@ from evaluation.ablation_2025 import (
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
+from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
 from rl.orchestration_data_pipeline import (
@@ -52,6 +53,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_orchestration_trl_utils_smoke.py",
     "test_backtest_2025_smoke.py",
     "test_quant_calibration_smoke.py",
+    "test_quant_tuning_smoke.py",
     "test_improvement_audit_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
@@ -275,17 +277,43 @@ def cmd_quant_calibrate_2025(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_quant_tune(args: argparse.Namespace) -> int:
+    choice_rows = _read_jsonl(Path(args.choice_rows_jsonl))
+    result = tune_quant_probability_blends(
+        choice_rows=choice_rows,
+        step=args.step,
+        min_prob_weight=args.min_prob_weight,
+        top_k=args.top_k,
+    )
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_quant_tuning_report(result), encoding="utf-8")
+        print(f"saved quant tuning report -> {report_path}")
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved quant tuning summary -> {args.output}")
+    else:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_improvement_audit(args: argparse.Namespace) -> int:
     backtest_summary = _read_json(Path(args.backtest_summary)) if args.backtest_summary else None
     calibration_summary = _read_json(Path(args.calibration_summary)) if args.calibration_summary else None
     ablation_summary = _read_json(Path(args.ablation_summary)) if args.ablation_summary else None
-    if not any((backtest_summary, calibration_summary, ablation_summary)):
-        raise ValueError("Provide at least one of --backtest-summary, --calibration-summary, or --ablation-summary.")
+    tuning_summary = _read_json(Path(args.tuning_summary)) if args.tuning_summary else None
+    if not any((backtest_summary, calibration_summary, ablation_summary, tuning_summary)):
+        raise ValueError(
+            "Provide at least one of --backtest-summary, --calibration-summary, "
+            "--ablation-summary, or --tuning-summary."
+        )
 
     result = build_improvement_audit(
         backtest_summary=backtest_summary,
         calibration_summary=calibration_summary,
         ablation_summary=ablation_summary,
+        tuning_summary=tuning_summary,
     )
     if args.report_md:
         report_path = Path(args.report_md)
@@ -367,6 +395,18 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--report-md", help="Markdown calibration report output path.")
     calibrate.set_defaults(func=cmd_quant_calibrate_2025)
 
+    tune = subparsers.add_parser(
+        "quant-tune",
+        help="Search offline probability/quant-score blend weights from calibration rows.",
+    )
+    tune.add_argument("--choice-rows-jsonl", required=True, help="JSONL produced by quant-calibrate-2025.")
+    tune.add_argument("--step", type=float, default=0.20, help="Grid step for feature weights.")
+    tune.add_argument("--min-prob-weight", type=float, default=0.40, help="Minimum weight kept on admission probability.")
+    tune.add_argument("--top-k", type=int, default=10)
+    tune.add_argument("--output", help="Quant tuning JSON output path.")
+    tune.add_argument("--report-md", help="Markdown quant tuning report output path.")
+    tune.set_defaults(func=cmd_quant_tune)
+
     audit = subparsers.add_parser(
         "improvement-audit",
         help="Convert experiment metrics into prioritized self-improvement tasks.",
@@ -374,6 +414,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--backtest-summary", help="JSON produced by backtest-2025 --output.")
     audit.add_argument("--calibration-summary", help="JSON produced by quant-calibrate-2025 --output.")
     audit.add_argument("--ablation-summary", help="JSON produced by ablate-2025 --output.")
+    audit.add_argument("--tuning-summary", help="JSON produced by quant-tune --output.")
     audit.add_argument("--output", help="Improvement audit JSON output path.")
     audit.add_argument("--report-md", help="Markdown improvement audit output path.")
     audit.set_defaults(func=cmd_improvement_audit)

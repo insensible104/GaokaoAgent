@@ -48,12 +48,22 @@ def test_improvement_audit_prioritizes_blockers() -> None:
                 }
             }
         },
+        tuning_summary={
+            "baseline": {"brier_score": 0.25, "objective": 0.30},
+            "best": {
+                "name": "grid_candidate_001",
+                "weights": {"predicted_prob": 0.6, "quant_score": 0.4},
+                "brier_score": 0.20,
+                "objective": 0.24,
+            },
+        },
     )
 
     assert result["status"] == "blocked_for_agency_grade_claims"
     assert result["severity_counts"]["P0"] >= 1
     assert any("风险档不单调" in item["finding"] for item in result["findings"])
     assert any("safe_first" in item["finding"] for item in result["findings"])
+    assert any(item["area"] == "quant_tuning" for item in result["findings"])
     markdown = build_markdown_improvement_audit(result)
     assert "GaokaoAgent Self-Improvement Audit" in markdown
     assert "高考志愿平权化" in markdown

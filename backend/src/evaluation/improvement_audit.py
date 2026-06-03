@@ -266,6 +266,34 @@ def _audit_ablation(ablation: dict[str, Any]) -> list[dict[str, Any]]:
     return findings
 
 
+def _audit_tuning(tuning: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    best = tuning.get("best") or {}
+    baseline = tuning.get("baseline") or {}
+    if not best or not baseline:
+        return findings
+
+    brier_delta = _float(best, "brier_score") - _float(baseline, "brier_score")
+    objective_delta = _float(best, "objective") - _float(baseline, "objective")
+    if brier_delta <= -0.015 or objective_delta <= -0.020:
+        findings.append(
+            _finding(
+                severity="P2",
+                area="quant_tuning",
+                finding="离线权重搜索找到优于当前概率口径的候选配置",
+                target="candidate must improve on held-out frozen-plan split before runtime adoption",
+                recommendation="把 best 权重加入下一轮 holdout 回测/校准，不要直接线上替换。",
+                evidence={
+                    "best_name": best.get("name"),
+                    "best_weights": best.get("weights"),
+                    "brier_delta": round(brier_delta, 6),
+                    "objective_delta": round(objective_delta, 6),
+                },
+            )
+        )
+    return findings
+
+
 def _sort_findings(findings: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
     return sorted(findings, key=lambda item: (order.get(item["severity"], 9), item["area"], item["finding"]))
@@ -286,6 +314,7 @@ def build_improvement_audit(
     backtest_summary: dict[str, Any] | None = None,
     calibration_summary: dict[str, Any] | None = None,
     ablation_summary: dict[str, Any] | None = None,
+    tuning_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return prioritized self-improvement findings from experiment summaries."""
     findings: list[dict[str, Any]] = []
@@ -295,6 +324,8 @@ def build_improvement_audit(
         findings.extend(_audit_calibration(calibration_summary))
     if ablation_summary:
         findings.extend(_audit_ablation(ablation_summary))
+    if tuning_summary:
+        findings.extend(_audit_tuning(tuning_summary))
     findings = _sort_findings(findings)
     return {
         "mission": "高考志愿平权化：以可负担、可解释、可回测的系统能力逼近头部填报机构和主播。",

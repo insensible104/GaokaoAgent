@@ -21,6 +21,7 @@ build-pairwise
 eval-orchestration
 backtest-2025
 quant-calibrate-2025
+quant-tune
 ablate-2025
 improvement-audit
 ```
@@ -96,6 +97,25 @@ Use the report to inspect:
 - first-hit probability calibration
 - tail-assignment and wasted-score rates by bucket
 
+## Quant Tuning
+
+Quant tuning searches transparent probability/scorecard blends from the
+choice-level calibration rows. Treat its output as candidate parameters only;
+validate candidates on a separate frozen-plan split before changing runtime
+weights.
+
+Run:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-tune --choice-rows-jsonl logs\quant_calibration_choices.jsonl --output logs\quant_tuning_summary.json --report-md logs\quant_tuning_report.md
+```
+
+The objective is:
+
+```text
+brier + 0.35 * absolute_calibration_error + 0.20 * bucket_absolute_calibration_error
+```
+
 ## 2025 Ablation
 
 Ablation uses the same post-hoc 2025 labels, but rebuilds baseline plans from
@@ -132,13 +152,14 @@ counselors.
 Run after backtest and calibration:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py improvement-audit --backtest-summary logs\backtest_2025_summary.json --calibration-summary logs\quant_calibration_summary.json --ablation-summary logs\ablation_2025_summary.json --output logs\improvement_audit.json --report-md logs\improvement_audit.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py improvement-audit --backtest-summary logs\backtest_2025_summary.json --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --output logs\improvement_audit.json --report-md logs\improvement_audit.md
 ```
 
 The audit flags:
 
 - P0 blockers before agency-grade claims
 - calibration gaps that need probability correction
+- tuning candidates that need holdout validation
 - risk-band monotonicity failures
 - baseline variants that beat the full system
 - next actions for the next model iteration
@@ -166,6 +187,7 @@ backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --outpu
 
 When actual outcomes and frozen plans are provided, the suite also writes
 `quant_calibration_summary.json`, `quant_calibration_report.md`,
+`quant_tuning_summary.json`, `quant_tuning_report.md`,
 `improvement_audit.json`, and `improvement_audit.md`.
 
 ## Claim-Evidence Mapping
@@ -176,6 +198,7 @@ Use these outputs for project claims:
 | --- | --- |
 | Recommendation core is backtestable | `backtest_2025_summary.json`, `backtest_2025_results.jsonl` |
 | Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
+| Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |

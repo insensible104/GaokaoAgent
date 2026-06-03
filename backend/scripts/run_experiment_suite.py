@@ -101,6 +101,8 @@ def main() -> int:
     if args.actual_outcomes and args.plans_jsonl:
         backtest_summary = output_dir / "backtest_2025_summary.json"
         calibration_summary = output_dir / "quant_calibration_summary.json"
+        calibration_choices = output_dir / "quant_calibration_choices.jsonl"
+        tuning_summary = output_dir / "quant_tuning_summary.json"
         ablation_summary = output_dir / "ablation_2025_summary.json"
         status = run_stage(
             "backtest_2025",
@@ -131,9 +133,25 @@ def main() -> int:
                 "--output",
                 str(calibration_summary),
                 "--choice-rows-jsonl",
-                str(output_dir / "quant_calibration_choices.jsonl"),
+                str(calibration_choices),
                 "--report-md",
                 str(output_dir / "quant_calibration_report.md"),
+            ],
+        )
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
+        status = run_stage(
+            "quant_tuning",
+            [
+                "quant-tune",
+                "--choice-rows-jsonl",
+                str(calibration_choices),
+                "--output",
+                str(tuning_summary),
+                "--report-md",
+                str(output_dir / "quant_tuning_report.md"),
             ],
         )
         if status != 0:
@@ -167,6 +185,8 @@ def main() -> int:
             str(backtest_summary),
             "--calibration-summary",
             str(calibration_summary),
+            "--tuning-summary",
+            str(tuning_summary),
             "--output",
             str(output_dir / "improvement_audit.json"),
             "--report-md",
