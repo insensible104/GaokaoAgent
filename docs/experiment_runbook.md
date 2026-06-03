@@ -29,6 +29,7 @@ report-quality-audit
 intake-audit
 expectation-packet
 delivery-bundle
+delivery-portfolio-audit
 ```
 
 ## Smoke Checks
@@ -290,6 +291,28 @@ Bundle status can be `blocked`, `needs_revision`, `pending_signoff`, or
 because a final paid-case handoff must include a structural audit of the
 ordered volunteer plan.
 
+## Delivery Portfolio Audit
+
+Delivery portfolio audit aggregates many `delivery_bundle.json` manifests into
+service-quality metrics. Use it after a batch of paid or trial cases to see
+which gate repeatedly blocks delivery.
+
+Run with explicit bundle manifests:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py delivery-portfolio-audit --bundle-json logs\delivery_case_001\delivery_bundle.json logs\delivery_case_002\delivery_bundle.json --output logs\delivery_portfolio_audit.json --report-md logs\delivery_portfolio_audit.md
+```
+
+Run with a glob:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py delivery-portfolio-audit --bundle-glob "logs\delivery_*\delivery_bundle.json" --output logs\delivery_portfolio_audit.json --report-md logs\delivery_portfolio_audit.md
+```
+
+The audit reports ready-to-deliver rate, blocked rate, average intake/plan/report
+scores, top failed gates, repeated next actions, and worst cases. Treat repeated
+failed gates as product work, not one-off customer-service noise.
+
 ## One-Shot Suite
 
 Use this when you want one command to create an experiment folder:
@@ -330,6 +353,7 @@ Use these outputs for project claims:
 | Generated reports meet delivery-quality gates | `report_quality_audit.json`, `report_quality_audit.md` |
 | Client constraints and expectation boundaries are confirmed | `expectation_packet.json`, `expectation_packet.md` |
 | Client-facing delivery is packaged consistently | `delivery_bundle.json`, `delivery_bundle.md` |
+| Batch delivery quality is improving over cases | `delivery_portfolio_audit.json`, `delivery_portfolio_audit.md` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |

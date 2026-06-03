@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ from evaluation.ablation_2025 import (
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
 from evaluation.delivery_bundle import build_delivery_bundle
+from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdown_delivery_portfolio_audit
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
@@ -66,6 +68,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_report_quality_smoke.py",
     "test_expectation_packet_smoke.py",
     "test_delivery_bundle_smoke.py",
+    "test_delivery_portfolio_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
     "test_market_simulation_smoke.py",
@@ -456,6 +459,37 @@ def cmd_delivery_bundle(args: argparse.Namespace) -> int:
     return 0
 
 
+def _read_delivery_bundle_paths(paths: list[str] | None, globs: list[str] | None) -> list[Path]:
+    bundle_paths: list[Path] = []
+    for item in paths or []:
+        bundle_paths.append(Path(item))
+    for pattern in globs or []:
+        bundle_paths.extend(Path(match) for match in sorted(glob.glob(pattern)))
+    unique: dict[str, Path] = {}
+    for path in bundle_paths:
+        unique[str(path)] = path
+    return list(unique.values())
+
+
+def cmd_delivery_portfolio_audit(args: argparse.Namespace) -> int:
+    paths = _read_delivery_bundle_paths(args.bundle_json, args.bundle_glob)
+    if not paths:
+        raise ValueError("Provide at least one --bundle-json or --bundle-glob.")
+    manifests = [_read_json(path) for path in paths]
+    result = audit_delivery_portfolio(manifests)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved delivery portfolio audit json -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_delivery_portfolio_audit(result), encoding="utf-8")
+        print(f"saved delivery portfolio audit markdown -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -603,6 +637,16 @@ def build_parser() -> argparse.ArgumentParser:
     bundle.add_argument("--output-dir", required=True, help="Directory to write delivery bundle artifacts.")
     bundle.add_argument("--case-id", default="", help="Optional case id for the bundle manifest.")
     bundle.set_defaults(func=cmd_delivery_bundle)
+
+    portfolio = subparsers.add_parser(
+        "delivery-portfolio-audit",
+        help="Aggregate many delivery_bundle.json files into service-quality metrics.",
+    )
+    portfolio.add_argument("--bundle-json", nargs="*", help="One or more delivery_bundle.json paths.")
+    portfolio.add_argument("--bundle-glob", nargs="*", help="Glob pattern(s) such as logs/delivery_*/delivery_bundle.json.")
+    portfolio.add_argument("--output", help="Delivery portfolio audit JSON output path.")
+    portfolio.add_argument("--report-md", help="Delivery portfolio Markdown output path.")
+    portfolio.set_defaults(func=cmd_delivery_portfolio_audit)
 
     return parser
 
