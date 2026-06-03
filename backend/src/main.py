@@ -424,16 +424,22 @@ async def get_stats():
     try:
         from engines.quant_engine import GaokaoQuantEngine
 
-        if Path("../data").exists():
-            data_dir = "../data"
-        elif Path("data").exists():
-            data_dir = "data"
-        elif Path("backend/data").exists():
-            data_dir = "backend/data"
-        else:
-            data_dir = "data"
+        candidate_dirs = [
+            BACKEND_ROOT / "data",
+            REPO_ROOT / "backend" / "data",
+            Path.cwd() / "data",
+            REPO_ROOT / "data",
+        ]
+        data_dir = next(
+            (
+                path
+                for path in candidate_dirs
+                if path.exists() and any(path.glob("2024_*.csv"))
+            ),
+            BACKEND_ROOT / "data",
+        )
 
-        engine = GaokaoQuantEngine(data_dir=data_dir)
+        engine = GaokaoQuantEngine(data_dir=str(data_dir))
         return engine.get_statistics()
     except Exception as exc:
         logger.error(f"Stats request failed: {exc}", exc_info=True)

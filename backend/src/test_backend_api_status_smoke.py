@@ -1,6 +1,8 @@
 """Smoke checks for backend API normalization and runtime status helpers."""
 
-from main import QueryRequest, build_user_message, get_runtime_status
+import asyncio
+
+from main import QueryRequest, build_user_message, get_runtime_status, get_stats
 
 
 def test_subject_group_variants_are_normalized_to_chinese_labels():
@@ -53,3 +55,11 @@ def test_runtime_status_exposes_backend_and_agent_capabilities():
     assert status["capabilities"]["multi_agent_deliberation"] is True
     assert status["capabilities"]["critic_audit"] is True
     assert "smoke" in status["entrypoints"]["cli_commands"]
+
+
+def test_stats_endpoint_uses_prediction_history_data():
+    stats = asyncio.run(get_stats())
+
+    assert stats["total_records"] > 0
+    assert 2024 in stats["years"]
+    assert stats["latest_year"] == 2024
