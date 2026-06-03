@@ -20,6 +20,9 @@ TARGETS = {
     "absolute_calibration_error": 0.10,
     "brier_score": 0.18,
     "bucket_abs_calibration_error": 0.15,
+    "intake_readiness_score": 0.72,
+    "plan_quality_score": 0.78,
+    "report_quality_score": 0.78,
 }
 
 RISK_BAND_ORDER = [
@@ -298,6 +301,114 @@ def _audit_tuning(tuning: dict[str, Any]) -> list[dict[str, Any]]:
     return findings
 
 
+def _delivery_severity(status: str, score: float, target: float) -> str:
+    if status in {"blocked", "blocked_missing_core"}:
+        return "P0"
+    if status in {"not_provided", "needs_revision"}:
+        return "P1"
+    if status in {"needs_clarification", "pending_signoff", "needs_confirmation"}:
+        return "P2"
+    if score and score < target:
+        return "P2"
+    return ""
+
+
+def _audit_intake_readiness(intake: dict[str, Any]) -> list[dict[str, Any]]:
+    status = str(intake.get("status") or "unknown")
+    score = _float(intake, "readiness_score")
+    severity = _delivery_severity(status, score, TARGETS["intake_readiness_score"])
+    if not severity:
+        return []
+    blockers = intake.get("core_blockers") or intake.get("missing_items") or []
+    return [
+        _finding(
+            severity=severity,
+            area="intake_readiness",
+            finding=f"问诊完备度未达到推荐前门槛：{status}",
+            target=f"status ready_for_recommendation and readiness_score >= {TARGETS['intake_readiness_score']:.0%}",
+            recommendation="把缺失项转成强制问诊字段；缺分数、位次、选科时禁止生成推荐。",
+            evidence={
+                "status": status,
+                "readiness_score": round(score, 6),
+                "blockers": blockers[:3] if isinstance(blockers, list) else blockers,
+            },
+        )
+    ]
+
+
+def _audit_plan_quality(plan_quality: dict[str, Any]) -> list[dict[str, Any]]:
+    status = str(plan_quality.get("status") or "unknown")
+    score = _float(plan_quality, "total_score")
+    severity = _delivery_severity(status, score, TARGETS["plan_quality_score"])
+    if not severity:
+        return []
+    findings = plan_quality.get("findings") or []
+    return [
+        _finding(
+            severity=severity,
+            area="plan_quality",
+            finding=f"志愿表结构质量未达到交付门槛：{status}",
+            target=f"status pass and total_score >= {TARGETS['plan_quality_score']:.0%}",
+            recommendation="优先修复保底安全垫、冲稳保比例、尾部/调剂风险、黑名单硬边界和关键志愿依据。",
+            evidence={
+                "status": status,
+                "total_score": round(score, 6),
+                "top_findings": findings[:3] if isinstance(findings, list) else findings,
+            },
+        )
+    ]
+
+
+def _audit_report_quality(report_quality: dict[str, Any]) -> list[dict[str, Any]]:
+    status = str(report_quality.get("status") or "unknown")
+    score = _float(report_quality, "total_score")
+    severity = _delivery_severity(status, score, TARGETS["report_quality_score"])
+    if not severity:
+        return []
+    findings = report_quality.get("findings") or []
+    return [
+        _finding(
+            severity=severity,
+            area="report_quality",
+            finding=f"报告交付质量未达到专业交付门槛：{status}",
+            target=f"status pass and total_score >= {TARGETS['report_quality_score']:.0%}",
+            recommendation="补齐学生画像、限制条件、风险解释、推荐依据、执行动作、预期管理和官方复核边界。",
+            evidence={
+                "status": status,
+                "total_score": round(score, 6),
+                "top_findings": findings[:3] if isinstance(findings, list) else findings,
+            },
+        )
+    ]
+
+
+def _audit_delivery_bundle(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    status = str(bundle.get("status") or "unknown")
+    if status == "ready_to_deliver":
+        return []
+    severity = "P0" if status == "blocked" else "P1" if status == "needs_revision" else "P2"
+    gates = bundle.get("delivery_gates") or []
+    failed_gates = [
+        gate
+        for gate in gates
+        if str(gate.get("status") or "") not in {"pass", "ready", "ready_for_recommendation"}
+    ]
+    return [
+        _finding(
+            severity=severity,
+            area="delivery_bundle",
+            finding=f"客户交付包未达到最终交付状态：{status}",
+            target="delivery bundle status ready_to_deliver",
+            recommendation="按交付包 gate 顺序修复 intake、plan quality、expectation signoff 和 report quality。",
+            evidence={
+                "status": status,
+                "failed_gates": failed_gates[:5],
+                "next_actions": bundle.get("next_actions", [])[:5] if isinstance(bundle.get("next_actions"), list) else [],
+            },
+        )
+    ]
+
+
 def _sort_findings(findings: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
     return sorted(findings, key=lambda item: (order.get(item["severity"], 9), item["area"], item["finding"]))
@@ -319,6 +430,10 @@ def build_improvement_audit(
     calibration_summary: dict[str, Any] | None = None,
     ablation_summary: dict[str, Any] | None = None,
     tuning_summary: dict[str, Any] | None = None,
+    intake_audit: dict[str, Any] | None = None,
+    plan_quality_audit: dict[str, Any] | None = None,
+    report_quality_audit: dict[str, Any] | None = None,
+    delivery_bundle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return prioritized self-improvement findings from experiment summaries."""
     findings: list[dict[str, Any]] = []
@@ -330,6 +445,14 @@ def build_improvement_audit(
         findings.extend(_audit_ablation(ablation_summary))
     if tuning_summary:
         findings.extend(_audit_tuning(tuning_summary))
+    if intake_audit:
+        findings.extend(_audit_intake_readiness(intake_audit))
+    if plan_quality_audit:
+        findings.extend(_audit_plan_quality(plan_quality_audit))
+    if report_quality_audit:
+        findings.extend(_audit_report_quality(report_quality_audit))
+    if delivery_bundle:
+        findings.extend(_audit_delivery_bundle(delivery_bundle))
     findings = _sort_findings(findings)
     return {
         "mission": "高考志愿平权化：以可负担、可解释、可回测的系统能力逼近头部填报机构和主播。",

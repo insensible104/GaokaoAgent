@@ -315,10 +315,26 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
     calibration_summary = _read_json(Path(args.calibration_summary)) if args.calibration_summary else None
     ablation_summary = _read_json(Path(args.ablation_summary)) if args.ablation_summary else None
     tuning_summary = _read_json(Path(args.tuning_summary)) if args.tuning_summary else None
-    if not any((backtest_summary, calibration_summary, ablation_summary, tuning_summary)):
+    intake_audit = _read_json(Path(args.intake_audit)) if args.intake_audit else None
+    plan_quality_audit = _read_json(Path(args.plan_quality_audit)) if args.plan_quality_audit else None
+    report_quality_audit = _read_json(Path(args.report_quality_audit)) if args.report_quality_audit else None
+    delivery_bundle = _read_json(Path(args.delivery_bundle)) if args.delivery_bundle else None
+    if not any(
+        (
+            backtest_summary,
+            calibration_summary,
+            ablation_summary,
+            tuning_summary,
+            intake_audit,
+            plan_quality_audit,
+            report_quality_audit,
+            delivery_bundle,
+        )
+    ):
         raise ValueError(
             "Provide at least one of --backtest-summary, --calibration-summary, "
-            "--ablation-summary, or --tuning-summary."
+            "--ablation-summary, --tuning-summary, --intake-audit, "
+            "--plan-quality-audit, --report-quality-audit, or --delivery-bundle."
         )
 
     result = build_improvement_audit(
@@ -326,6 +342,10 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
         calibration_summary=calibration_summary,
         ablation_summary=ablation_summary,
         tuning_summary=tuning_summary,
+        intake_audit=intake_audit,
+        plan_quality_audit=plan_quality_audit,
+        report_quality_audit=report_quality_audit,
+        delivery_bundle=delivery_bundle,
     )
     if args.report_md:
         report_path = Path(args.report_md)
@@ -524,6 +544,10 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--calibration-summary", help="JSON produced by quant-calibrate-2025 --output.")
     audit.add_argument("--ablation-summary", help="JSON produced by ablate-2025 --output.")
     audit.add_argument("--tuning-summary", help="JSON produced by quant-tune --output.")
+    audit.add_argument("--intake-audit", help="JSON produced by intake-audit --output.")
+    audit.add_argument("--plan-quality-audit", help="JSON produced by plan-quality-audit --output.")
+    audit.add_argument("--report-quality-audit", help="JSON produced by report-quality-audit --output.")
+    audit.add_argument("--delivery-bundle", help="JSON produced by delivery-bundle in the output directory.")
     audit.add_argument("--output", help="Improvement audit JSON output path.")
     audit.add_argument("--report-md", help="Markdown improvement audit output path.")
     audit.set_defaults(func=cmd_improvement_audit)

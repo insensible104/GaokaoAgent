@@ -57,6 +57,29 @@ def test_improvement_audit_prioritizes_blockers() -> None:
                 "objective": 0.24,
             },
         },
+        intake_audit={
+            "status": "needs_clarification",
+            "readiness_score": 0.58,
+            "missing_items": [{"dimension": "region_boundary", "missing": ["是否接受省外"]}],
+        },
+        plan_quality_audit={
+            "status": "needs_revision",
+            "total_score": 0.62,
+            "findings": [{"area": "safe_anchor", "recommendation": "补足保底"}],
+        },
+        report_quality_audit={
+            "status": "needs_revision",
+            "total_score": 0.55,
+            "findings": [{"area": "risk_explanation", "recommendation": "补风险解释"}],
+        },
+        delivery_bundle={
+            "status": "needs_revision",
+            "delivery_gates": [
+                {"gate": "plan_quality", "status": "needs_revision"},
+                {"gate": "report_quality", "status": "needs_revision"},
+            ],
+            "next_actions": ["修复志愿表结构质量审计"],
+        },
     )
 
     assert result["status"] == "blocked_for_agency_grade_claims"
@@ -64,6 +87,10 @@ def test_improvement_audit_prioritizes_blockers() -> None:
     assert any("风险档不单调" in item["finding"] for item in result["findings"])
     assert any("safe_first" in item["finding"] for item in result["findings"])
     assert any(item["area"] == "quant_tuning" for item in result["findings"])
+    assert any(item["area"] == "intake_readiness" for item in result["findings"])
+    assert any(item["area"] == "plan_quality" for item in result["findings"])
+    assert any(item["area"] == "report_quality" for item in result["findings"])
+    assert any(item["area"] == "delivery_bundle" for item in result["findings"])
     markdown = build_markdown_improvement_audit(result)
     assert "GaokaoAgent Self-Improvement Audit" in markdown
     assert "高考志愿平权化" in markdown
