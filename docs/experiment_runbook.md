@@ -162,13 +162,14 @@ counselors.
 Run after backtest, calibration, and delivery-gate audits:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py improvement-audit --backtest-summary logs\backtest_2025_summary.json --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --intake-audit logs\intake_audit.json --plan-quality-audit logs\plan_quality_audit.json --report-quality-audit logs\report_quality_audit.json --delivery-bundle logs\delivery_case_001\delivery_bundle.json --output logs\improvement_audit.json --report-md logs\improvement_audit.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py improvement-audit --backtest-summary logs\backtest_2025_summary.json --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --intake-audit logs\intake_audit.json --plan-quality-audit logs\plan_quality_audit.json --report-quality-audit logs\report_quality_audit.json --delivery-bundle logs\delivery_case_001\delivery_bundle.json --delivery-portfolio logs\delivery_portfolio_audit.json --output logs\improvement_audit.json --report-md logs\improvement_audit.md
 ```
 
 The audit flags:
 
 - P0 blockers before agency-grade claims
 - intake-readiness and client-delivery blockers before paid-case delivery
+- portfolio-level delivery blockers such as low ready-to-deliver rate or repeated failed gates
 - volunteer-plan structural gaps such as weak safe anchors or hard-boundary violations
 - generated-report gaps in risk explanation, evidence, actionability, and official review
 - calibration gaps that need probability correction

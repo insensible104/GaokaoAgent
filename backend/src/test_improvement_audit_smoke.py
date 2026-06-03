@@ -80,6 +80,22 @@ def test_improvement_audit_prioritizes_blockers() -> None:
             ],
             "next_actions": ["修复志愿表结构质量审计"],
         },
+        delivery_portfolio={
+            "status": "blocked_for_scale",
+            "case_count": 10,
+            "ready_to_deliver_rate": 0.30,
+            "blocked_rate": 0.20,
+            "top_failed_gates": [
+                {"gate": "plan_quality", "failed_count": 6, "failed_rate": 0.60},
+                {"gate": "report_quality", "failed_count": 3, "failed_rate": 0.30},
+            ],
+            "top_next_actions": [
+                {"action": "根据志愿表结构质量审计调整保底。", "count": 5, "rate": 0.50}
+            ],
+            "worst_cases": [
+                {"case_id": "case-blocked", "status": "blocked", "portfolio_score": 0.2}
+            ],
+        },
     )
 
     assert result["status"] == "blocked_for_agency_grade_claims"
@@ -91,6 +107,8 @@ def test_improvement_audit_prioritizes_blockers() -> None:
     assert any(item["area"] == "plan_quality" for item in result["findings"])
     assert any(item["area"] == "report_quality" for item in result["findings"])
     assert any(item["area"] == "delivery_bundle" for item in result["findings"])
+    assert any(item["area"] == "delivery_portfolio" for item in result["findings"])
+    assert any(item["area"] == "delivery_portfolio_gate" for item in result["findings"])
     markdown = build_markdown_improvement_audit(result)
     assert "GaokaoAgent Self-Improvement Audit" in markdown
     assert "高考志愿平权化" in markdown

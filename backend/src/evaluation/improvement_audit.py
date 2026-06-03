@@ -23,6 +23,8 @@ TARGETS = {
     "intake_readiness_score": 0.72,
     "plan_quality_score": 0.78,
     "report_quality_score": 0.78,
+    "portfolio_ready_to_deliver_rate": 0.80,
+    "portfolio_blocked_rate": 0.05,
 }
 
 RISK_BAND_ORDER = [
@@ -409,6 +411,84 @@ def _audit_delivery_bundle(bundle: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _audit_delivery_portfolio(portfolio: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    case_count = int(portfolio.get("case_count", 0) or 0)
+    if case_count <= 0:
+        findings.append(
+            _finding(
+                severity="P2",
+                area="delivery_portfolio",
+                finding="批量交付审计没有覆盖任何案例",
+                target="delivery portfolio should include at least one delivery bundle",
+                recommendation="收集一批 delivery_bundle.json 后再运行组合审计，避免用单案感受判断服务质量。",
+                evidence={"case_count": case_count, "status": portfolio.get("status")},
+            )
+        )
+        return findings
+
+    ready_rate = _float(portfolio, "ready_to_deliver_rate")
+    blocked_rate = _float(portfolio, "blocked_rate")
+    ready_severity = _severity(
+        "portfolio_ready_to_deliver_rate",
+        ready_rate,
+        TARGETS["portfolio_ready_to_deliver_rate"],
+        higher_is_better=True,
+    )
+    blocked_severity = _severity(
+        "portfolio_blocked_rate",
+        blocked_rate,
+        TARGETS["portfolio_blocked_rate"],
+        higher_is_better=False,
+    )
+    if ready_severity:
+        findings.append(
+            _finding(
+                severity=ready_severity,
+                area="delivery_portfolio",
+                finding="批量交付 ready_to_deliver 比例低于规模化服务目标",
+                target=f"ready_to_deliver_rate >= {TARGETS['portfolio_ready_to_deliver_rate']:.0%}",
+                recommendation="按 top_failed_gates 排序修复高频交付阻断项，并把重复 next actions 转成产品化流程。",
+                evidence={
+                    "case_count": case_count,
+                    "ready_to_deliver_rate": round(ready_rate, 6),
+                    "top_failed_gates": portfolio.get("top_failed_gates", [])[:5],
+                    "top_next_actions": portfolio.get("top_next_actions", [])[:5],
+                },
+            )
+        )
+    if blocked_severity:
+        findings.append(
+            _finding(
+                severity="P0" if blocked_rate >= 0.10 else blocked_severity,
+                area="delivery_portfolio",
+                finding="批量交付 blocked 比例高于规模化服务边界",
+                target=f"blocked_rate <= {TARGETS['portfolio_blocked_rate']:.0%}",
+                recommendation="优先处理核心问诊缺失、志愿表硬边界和严重报告质量问题，避免低质量案例进入客户交付。",
+                evidence={
+                    "case_count": case_count,
+                    "blocked_rate": round(blocked_rate, 6),
+                    "worst_cases": portfolio.get("worst_cases", [])[:5],
+                },
+            )
+        )
+    for gate in portfolio.get("top_failed_gates", [])[:3]:
+        failed_rate = _float(gate, "failed_rate")
+        if failed_rate < 0.20:
+            continue
+        findings.append(
+            _finding(
+                severity="P1" if failed_rate >= 0.40 else "P2",
+                area="delivery_portfolio_gate",
+                finding=f"交付 gate `{gate.get('gate')}` 在批量案例中高频失败",
+                target="single delivery gate failed_rate < 20%",
+                recommendation=f"把 `{gate.get('gate')}` 的失败原因拆成强制输入、自动审计或推荐器约束，降低人工补救成本。",
+                evidence=gate,
+            )
+        )
+    return findings
+
+
 def _sort_findings(findings: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
     return sorted(findings, key=lambda item: (order.get(item["severity"], 9), item["area"], item["finding"]))
@@ -434,6 +514,7 @@ def build_improvement_audit(
     plan_quality_audit: dict[str, Any] | None = None,
     report_quality_audit: dict[str, Any] | None = None,
     delivery_bundle: dict[str, Any] | None = None,
+    delivery_portfolio: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return prioritized self-improvement findings from experiment summaries."""
     findings: list[dict[str, Any]] = []
@@ -453,6 +534,8 @@ def build_improvement_audit(
         findings.extend(_audit_report_quality(report_quality_audit))
     if delivery_bundle:
         findings.extend(_audit_delivery_bundle(delivery_bundle))
+    if delivery_portfolio:
+        findings.extend(_audit_delivery_portfolio(delivery_portfolio))
     findings = _sort_findings(findings)
     return {
         "mission": "高考志愿平权化：以可负担、可解释、可回测的系统能力逼近头部填报机构和主播。",
