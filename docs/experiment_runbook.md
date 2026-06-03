@@ -26,6 +26,7 @@ ablate-2025
 improvement-audit
 report-quality-audit
 expectation-packet
+delivery-bundle
 ```
 
 ## Smoke Checks
@@ -205,6 +206,29 @@ Use this before final recommendation delivery when the family has hard limits
 such as "省内 only", "不接受民办", "不接受中外合作", "专业黑名单", or a strong
 school-vs-major tradeoff preference.
 
+## Delivery Bundle
+
+Delivery bundles package the expectation packet, final report, and report
+quality audit into one client-facing folder. This is the operational delivery
+gate for a paid or high-stakes case.
+
+Run:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py delivery-bundle --profile-json logs\user_profile.json --report-md logs\report.md --output-dir logs\delivery_case_001 --case-id case_001
+```
+
+The bundle writes:
+
+- `expectation_packet.md`
+- `final_report.md`
+- `report_quality_audit.md`
+- `delivery_bundle.md`
+- `delivery_bundle.json`
+
+Bundle status can be `blocked`, `needs_revision`, `pending_signoff`, or
+`ready_to_deliver`.
+
 ## One-Shot Suite
 
 Use this when you want one command to create an experiment folder:
@@ -242,6 +266,7 @@ Use these outputs for project claims:
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
 | Generated reports meet delivery-quality gates | `report_quality_audit.json`, `report_quality_audit.md` |
 | Client constraints and expectation boundaries are confirmed | `expectation_packet.json`, `expectation_packet.md` |
+| Client-facing delivery is packaged consistently | `delivery_bundle.json`, `delivery_bundle.md` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |

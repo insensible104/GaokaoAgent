@@ -17,6 +17,7 @@ from evaluation.ablation_2025 import (
 )
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
+from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
@@ -60,6 +61,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_improvement_audit_smoke.py",
     "test_report_quality_smoke.py",
     "test_expectation_packet_smoke.py",
+    "test_delivery_bundle_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
     "test_market_simulation_smoke.py",
@@ -369,6 +371,23 @@ def cmd_expectation_packet(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_delivery_bundle(args: argparse.Namespace) -> int:
+    profile = UserProfile(**_read_json(Path(args.profile_json)))
+    if args.report_json:
+        report_payload = _read_json(Path(args.report_json))
+    else:
+        report_payload = Path(args.report_md).read_text(encoding="utf-8")
+    manifest = build_delivery_bundle(
+        profile=profile,
+        report_payload=report_payload,
+        output_dir=Path(args.output_dir),
+        case_id=args.case_id or "",
+    )
+    print(f"saved delivery bundle -> {args.output_dir}")
+    print(json.dumps({key: manifest[key] for key in ("case_id", "status")}, ensure_ascii=False))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -480,6 +499,18 @@ def build_parser() -> argparse.ArgumentParser:
     expectation.add_argument("--output", help="Expectation packet JSON output path.")
     expectation.add_argument("--report-md", help="Expectation packet Markdown output path.")
     expectation.set_defaults(func=cmd_expectation_packet)
+
+    bundle = subparsers.add_parser(
+        "delivery-bundle",
+        help="Build a client-facing delivery bundle with expectation packet and report audit.",
+    )
+    bundle.add_argument("--profile-json", required=True, help="UserProfile JSON path.")
+    report_source = bundle.add_mutually_exclusive_group(required=True)
+    report_source.add_argument("--report-md", help="Generated report Markdown path.")
+    report_source.add_argument("--report-json", help="ReportDraft JSON path.")
+    bundle.add_argument("--output-dir", required=True, help="Directory to write delivery bundle artifacts.")
+    bundle.add_argument("--case-id", default="", help="Optional case id for the bundle manifest.")
+    bundle.set_defaults(func=cmd_delivery_bundle)
 
     return parser
 

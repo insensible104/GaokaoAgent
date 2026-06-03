@@ -1,0 +1,197 @@
+"""Build a client-facing delivery bundle for one Gaokao planning case."""
+
+from __future__ import annotations
+
+from pathlib import Path
+import json
+import shutil
+from typing import Any
+
+from evaluation.expectation_packet import (
+    build_expectation_packet,
+    build_markdown_expectation_packet,
+)
+from evaluation.report_quality import (
+    audit_report_quality,
+    build_markdown_report_quality_audit,
+)
+from models.user_profile import UserProfile
+
+
+def _write_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _report_markdown_from_payload(payload: str | dict[str, Any]) -> str:
+    if isinstance(payload, str):
+        return payload
+    if payload.get("full_markdown"):
+        return str(payload["full_markdown"])
+    sections = [
+        f"# {payload.get('title', 'GaokaoAgent 志愿填报战略建议书')}",
+        "",
+        "## 执行摘要",
+        str(payload.get("executive_summary", "")),
+        "",
+        "## 策略分析",
+        str(payload.get("strategy_analysis", "")),
+        "",
+        "## 院校推荐",
+    ]
+    for idx, item in enumerate(payload.get("school_recommendations", []) or [], 1):
+        sections.append(f"{idx}. {item}")
+    if payload.get("risk_warnings"):
+        sections.extend(["", "## 风险警示"])
+        sections.extend(f"- {item}" for item in payload["risk_warnings"])
+    return "\n".join(sections).strip() + "\n"
+
+
+def _expectation_status(packet: dict[str, Any]) -> str:
+    if any(item["status"] == "missing" for item in packet.get("confirmation_items", [])):
+        return "blocked"
+    if packet.get("status") == "needs_confirmation":
+        return "pending_signoff"
+    return "ready"
+
+
+def _bundle_status(expectation_status: str, report_quality: dict[str, Any]) -> str:
+    if expectation_status == "blocked":
+        return "blocked"
+    if report_quality.get("status") != "pass":
+        return "needs_revision"
+    if expectation_status == "pending_signoff":
+        return "pending_signoff"
+    return "ready_to_deliver"
+
+
+def build_delivery_bundle(
+    *,
+    profile: UserProfile,
+    report_payload: str | dict[str, Any],
+    output_dir: Path,
+    case_id: str = "",
+) -> dict[str, Any]:
+    """Write expectation, report, audit, and bundle-index artifacts."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    case_id = case_id or "gaokao_case"
+
+    expectation_packet = build_expectation_packet(profile)
+    expectation_md = build_markdown_expectation_packet(expectation_packet)
+    expectation_json_path = output_dir / "expectation_packet.json"
+    expectation_md_path = output_dir / "expectation_packet.md"
+    _write_json(expectation_json_path, expectation_packet)
+    expectation_md_path.write_text(expectation_md, encoding="utf-8")
+
+    report_md = _report_markdown_from_payload(report_payload)
+    final_report_path = output_dir / "final_report.md"
+    final_report_path.write_text(report_md, encoding="utf-8")
+
+    report_quality = audit_report_quality(report_payload)
+    quality_json_path = output_dir / "report_quality_audit.json"
+    quality_md_path = output_dir / "report_quality_audit.md"
+    _write_json(quality_json_path, report_quality)
+    quality_md_path.write_text(build_markdown_report_quality_audit(report_quality), encoding="utf-8")
+
+    expectation_state = _expectation_status(expectation_packet)
+    status = _bundle_status(expectation_state, report_quality)
+    manifest = {
+        "case_id": case_id,
+        "status": status,
+        "expectation_status": expectation_state,
+        "report_quality_status": report_quality.get("status"),
+        "report_quality_score": report_quality.get("total_score"),
+        "artifacts": [
+            {
+                "id": "expectation_packet",
+                "label": "推荐前预期确认单",
+                "path": expectation_md_path.name,
+                "required": True,
+            },
+            {
+                "id": "final_report",
+                "label": "最终志愿填报建议报告",
+                "path": final_report_path.name,
+                "required": True,
+            },
+            {
+                "id": "report_quality_audit",
+                "label": "报告交付质量审计",
+                "path": quality_md_path.name,
+                "required": True,
+            },
+        ],
+        "delivery_gates": [
+            {
+                "gate": "expectation_packet",
+                "status": expectation_state,
+                "requirement": "学生/家长确认限制条件、风险边界和非承诺条款。",
+            },
+            {
+                "gate": "report_quality",
+                "status": report_quality.get("status"),
+                "requirement": "最终报告必须通过交付质量审计。",
+            },
+        ],
+        "next_actions": _next_actions(expectation_state, report_quality),
+    }
+    manifest_path = output_dir / "delivery_bundle.json"
+    index_path = output_dir / "delivery_bundle.md"
+    _write_json(manifest_path, manifest)
+    index_path.write_text(build_markdown_delivery_bundle(manifest), encoding="utf-8")
+    return manifest
+
+
+def _next_actions(expectation_status: str, report_quality: dict[str, Any]) -> list[str]:
+    actions: list[str] = []
+    if expectation_status == "blocked":
+        actions.append("补齐分数、位次、选科等硬信息后再继续推荐。")
+    elif expectation_status == "pending_signoff":
+        actions.append("让学生和家长签署预期确认单，明确地域、调剂、民办/中外合作和非承诺边界。")
+    if report_quality.get("status") != "pass":
+        actions.append("根据报告质量审计补充限制条件、风险解释、推荐依据和官方复核边界。")
+    if not actions:
+        actions.append("交付材料已准备好，可进入最终人工复核和客户交付。")
+    return actions
+
+
+def build_markdown_delivery_bundle(manifest: dict[str, Any]) -> str:
+    """Build the client-facing delivery bundle index."""
+    lines = [
+        "# GaokaoAgent 服务交付包",
+        "",
+        f"Case: `{manifest.get('case_id', '')}`",
+        f"Status: `{manifest.get('status', 'unknown')}`",
+        f"Report quality: `{manifest.get('report_quality_status', 'unknown')}` "
+        f"({float(manifest.get('report_quality_score') or 0.0):.1%})",
+        "",
+        "## 交付材料",
+        "",
+        "| 材料 | 文件 | 必需 |",
+        "| --- | --- | --- |",
+    ]
+    for item in manifest.get("artifacts", []) or []:
+        lines.append(
+            f"| {item.get('label', '')} | `{item.get('path', '')}` | "
+            f"{'yes' if item.get('required') else 'no'} |"
+        )
+
+    lines.extend(["", "## 交付门槛", "", "| Gate | Status | Requirement |", "| --- | --- | --- |"])
+    for gate in manifest.get("delivery_gates", []) or []:
+        lines.append(
+            f"| `{gate.get('gate', '')}` | `{gate.get('status', '')}` | "
+            f"{gate.get('requirement', '')} |"
+        )
+
+    lines.extend(["", "## 下一步", ""])
+    for idx, action in enumerate(manifest.get("next_actions", []) or [], 1):
+        lines.append(f"{idx}. {action}")
+    return "\n".join(lines) + "\n"
+
+
+def copy_bundle_to(output_dir: Path, target_dir: Path) -> None:
+    """Copy a completed delivery bundle directory to another location."""
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+    shutil.copytree(output_dir, target_dir)
