@@ -23,6 +23,7 @@ from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdo
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
+from evaluation.parallel_worlds import build_markdown_parallel_world_analysis, run_parallel_world_analysis
 from evaluation.plan_quality_audit import audit_plan_quality, build_markdown_plan_quality_audit
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
 from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
@@ -64,6 +65,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_tuning_smoke.py",
     "test_improvement_audit_smoke.py",
     "test_intake_audit_smoke.py",
+    "test_parallel_worlds_smoke.py",
     "test_plan_quality_audit_smoke.py",
     "test_report_quality_smoke.py",
     "test_expectation_packet_smoke.py",
@@ -444,6 +446,23 @@ def cmd_plan_quality_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_parallel_worlds(args: argparse.Namespace) -> int:
+    plan = _read_plan_json(Path(args.plan_json))
+    profile = UserProfile(**_read_json(Path(args.profile_json))) if args.profile_json else None
+    result = run_parallel_world_analysis(plan=plan, profile=profile)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved parallel-world analysis json -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_parallel_world_analysis(result), encoding="utf-8")
+        print(f"saved parallel-world analysis markdown -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_delivery_bundle(args: argparse.Namespace) -> int:
     profile = UserProfile(**_read_json(Path(args.profile_json)))
     plan = _read_plan_json(Path(args.plan_json)) if args.plan_json else None
@@ -629,6 +648,16 @@ def build_parser() -> argparse.ArgumentParser:
     plan_audit.add_argument("--output", help="Plan-quality audit JSON output path.")
     plan_audit.add_argument("--report-md", help="Plan-quality audit Markdown output path.")
     plan_audit.set_defaults(func=cmd_plan_quality_audit)
+
+    parallel_worlds = subparsers.add_parser(
+        "parallel-worlds",
+        help="Stress-test one volunteer plan under explicit parallel-world scenarios.",
+    )
+    parallel_worlds.add_argument("--plan-json", required=True, help="VolunteerPlan JSON path, or a record containing `plan`.")
+    parallel_worlds.add_argument("--profile-json", help="Optional UserProfile JSON path for risk-policy thresholds.")
+    parallel_worlds.add_argument("--output", help="Parallel-world analysis JSON output path.")
+    parallel_worlds.add_argument("--report-md", help="Parallel-world Markdown output path.")
+    parallel_worlds.set_defaults(func=cmd_parallel_worlds)
 
     bundle = subparsers.add_parser(
         "delivery-bundle",

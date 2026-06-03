@@ -25,6 +25,7 @@ quant-tune
 ablate-2025
 improvement-audit
 plan-quality-audit
+parallel-worlds
 report-quality-audit
 intake-audit
 expectation-packet
@@ -204,6 +205,23 @@ Status meanings:
   ordering, risk handling, or evidence before client delivery.
 - `pass`: plan structure meets the deterministic delivery gate.
 
+## Parallel Worlds
+
+Parallel-world analysis stress-tests the same ordered volunteer plan under
+explicit scenario branches. It follows the MiroFish-style idea of making
+assumptions first-class: baseline, rank rebound, crowding heat, tail-major
+worsening, safe-anchor slippage, and hidden-opportunity realization.
+
+Run:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py parallel-worlds --plan-json logs\volunteer_plan.json --profile-json logs\user_profile.json --output logs\parallel_worlds.json --report-md logs\parallel_worlds.md
+```
+
+Use it before final delivery to identify which external assumption breaks the
+plan first. The output includes weighted pass rate, blocked rate, sensitive
+worlds, and tripwires to watch before the real fill-in deadline.
+
 ## Report Quality Audit
 
 Report quality audit checks whether a generated report has the delivery
@@ -351,6 +369,7 @@ Use these outputs for project claims:
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
 | Case intake is complete enough to begin recommendation | `intake_audit.json`, `intake_audit.md` |
 | Volunteer-plan structure meets agency-grade gates | `plan_quality_audit.json`, `plan_quality_audit.md` |
+| Plan robustness across parallel-world assumptions is known | `parallel_worlds.json`, `parallel_worlds.md` |
 | Generated reports meet delivery-quality gates | `report_quality_audit.json`, `report_quality_audit.md` |
 | Client constraints and expectation boundaries are confirmed | `expectation_packet.json`, `expectation_packet.md` |
 | Client-facing delivery is packaged consistently | `delivery_bundle.json`, `delivery_bundle.md` |
