@@ -16,6 +16,7 @@ from evaluation.ablation_2025 import (
     run_ablation_backtest_records,
 )
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
+from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
 from rl.orchestration_data_pipeline import (
@@ -49,6 +50,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_orchestration_data_pipeline_smoke.py",
     "test_orchestration_trl_utils_smoke.py",
     "test_backtest_2025_smoke.py",
+    "test_quant_calibration_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
     "test_market_simulation_smoke.py",
@@ -242,6 +244,31 @@ def cmd_ablate_2025(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_quant_calibrate_2025(args: argparse.Namespace) -> int:
+    actual_outcomes = load_actual_outcomes_csv(args.actual_outcomes, encoding=args.encoding)
+    records = _read_jsonl(Path(args.plans_jsonl))
+    result = run_quant_calibration_records(
+        records=records,
+        actual_outcomes=actual_outcomes,
+    )
+
+    if args.choice_rows_jsonl:
+        _write_jsonl(Path(args.choice_rows_jsonl), result["choice_rows"])
+        print(f"saved choice-level calibration rows -> {args.choice_rows_jsonl}")
+    export_result = {key: value for key, value in result.items() if key != "choice_rows"}
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_calibration_report(result), encoding="utf-8")
+        print(f"saved quant calibration report -> {report_path}")
+    if args.output:
+        _write_json(Path(args.output), export_result)
+        print(f"saved quant calibration summary -> {args.output}")
+    else:
+        print(json.dumps(export_result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -296,6 +323,18 @@ def build_parser() -> argparse.ArgumentParser:
     ablate.add_argument("--results-jsonl", help="Per-case ablation result JSONL output path.")
     ablate.add_argument("--report-md", help="Markdown ablation report output path.")
     ablate.set_defaults(func=cmd_ablate_2025)
+
+    calibrate = subparsers.add_parser(
+        "quant-calibrate-2025",
+        help="Evaluate prediction calibration for frozen quant-scored plans.",
+    )
+    calibrate.add_argument("--actual-outcomes", required=True, help="CSV with actual 2025 group/major outcomes.")
+    calibrate.add_argument("--plans-jsonl", required=True, help="Frozen plan JSONL.")
+    calibrate.add_argument("--encoding", default="utf-8-sig")
+    calibrate.add_argument("--output", help="Calibration summary JSON output path.")
+    calibrate.add_argument("--choice-rows-jsonl", help="Choice-level calibration rows JSONL output path.")
+    calibrate.add_argument("--report-md", help="Markdown calibration report output path.")
+    calibrate.set_defaults(func=cmd_quant_calibrate_2025)
 
     return parser
 
