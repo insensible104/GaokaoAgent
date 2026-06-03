@@ -21,6 +21,7 @@ from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
+from evaluation.plan_quality_audit import audit_plan_quality, build_markdown_plan_quality_audit
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
 from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
 from evaluation.schemas import PlanBacktestResult
@@ -61,6 +62,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_tuning_smoke.py",
     "test_improvement_audit_smoke.py",
     "test_intake_audit_smoke.py",
+    "test_plan_quality_audit_smoke.py",
     "test_report_quality_smoke.py",
     "test_expectation_packet_smoke.py",
     "test_delivery_bundle_smoke.py",
@@ -389,6 +391,32 @@ def cmd_intake_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _read_plan_json(path: Path) -> VolunteerPlan:
+    payload = _read_json(path)
+    if isinstance(payload, dict) and "plan" in payload:
+        payload = payload["plan"]
+    if isinstance(payload, dict) and "volunteer_plan" in payload:
+        payload = payload["volunteer_plan"]
+    return VolunteerPlan(**payload)
+
+
+def cmd_plan_quality_audit(args: argparse.Namespace) -> int:
+    plan = _read_plan_json(Path(args.plan_json))
+    profile = UserProfile(**_read_json(Path(args.profile_json))) if args.profile_json else None
+    result = audit_plan_quality(plan, profile)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved plan quality audit json -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_plan_quality_audit(result), encoding="utf-8")
+        print(f"saved plan quality audit markdown -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_delivery_bundle(args: argparse.Namespace) -> int:
     profile = UserProfile(**_read_json(Path(args.profile_json)))
     if args.report_json:
@@ -526,6 +554,16 @@ def build_parser() -> argparse.ArgumentParser:
     intake.add_argument("--output", help="Intake audit JSON output path.")
     intake.add_argument("--report-md", help="Intake audit Markdown output path.")
     intake.set_defaults(func=cmd_intake_audit)
+
+    plan_audit = subparsers.add_parser(
+        "plan-quality-audit",
+        help="Audit whether an ordered volunteer plan meets agency-grade structure gates.",
+    )
+    plan_audit.add_argument("--plan-json", required=True, help="VolunteerPlan JSON path, or a record containing `plan`.")
+    plan_audit.add_argument("--profile-json", help="Optional UserProfile JSON path for risk-policy thresholds.")
+    plan_audit.add_argument("--output", help="Plan-quality audit JSON output path.")
+    plan_audit.add_argument("--report-md", help="Plan-quality audit Markdown output path.")
+    plan_audit.set_defaults(func=cmd_plan_quality_audit)
 
     bundle = subparsers.add_parser(
         "delivery-bundle",

@@ -24,6 +24,7 @@ quant-calibrate-2025
 quant-tune
 ablate-2025
 improvement-audit
+plan-quality-audit
 report-quality-audit
 intake-audit
 expectation-packet
@@ -172,6 +173,32 @@ The audit flags:
 - baseline variants that beat the full system
 - next actions for the next model iteration
 
+## Plan Quality Audit
+
+Plan quality audit checks the ordered volunteer plan itself, not the wording of
+the final report. It verifies the structural gates expected from an
+agency-grade counselor: overall admission security, safe anchors, risk-policy
+consistent rush/target/safe balance, active key-prefix rows, tail and
+adjustment risk, hard-boundary compliance, and evidence for key choices.
+
+Run on a `VolunteerPlan` JSON:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py plan-quality-audit --plan-json logs\volunteer_plan.json --profile-json logs\user_profile.json --output logs\plan_quality_audit.json --report-md logs\plan_quality_audit.md
+```
+
+`--plan-json` may also point to a frozen record containing a top-level `plan`
+field. Use this audit after recommendation generation and before report
+delivery; use `backtest-2025` later for post-hoc outcome validation.
+
+Status meanings:
+
+- `blocked`: hard-boundary violation or severe structure problem; do not
+  deliver without replacing or re-confirming rows.
+- `needs_revision`: plan is usable for analysis but needs better safety,
+  ordering, risk handling, or evidence before client delivery.
+- `pass`: plan structure meets the deterministic delivery gate.
+
 ## Report Quality Audit
 
 Report quality audit checks whether a generated report has the delivery
@@ -291,6 +318,7 @@ Use these outputs for project claims:
 | Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
 | Case intake is complete enough to begin recommendation | `intake_audit.json`, `intake_audit.md` |
+| Volunteer-plan structure meets agency-grade gates | `plan_quality_audit.json`, `plan_quality_audit.md` |
 | Generated reports meet delivery-quality gates | `report_quality_audit.json`, `report_quality_audit.md` |
 | Client constraints and expectation boundaries are confirmed | `expectation_packet.json`, `expectation_packet.md` |
 | Client-facing delivery is packaged consistently | `delivery_bundle.json`, `delivery_bundle.md` |
