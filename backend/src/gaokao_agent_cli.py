@@ -32,6 +32,7 @@ SRC_DIR = Path(__file__).resolve().parent
 SCRIPTS_DIR = BACKEND_DIR / "scripts"
 
 DEFAULT_SMOKE_TESTS = [
+    "test_import_boundaries_smoke.py",
     "test_encoding_smoke.py",
     "test_backend_api_status_smoke.py",
     "test_prediction_data_boundary_smoke.py",
