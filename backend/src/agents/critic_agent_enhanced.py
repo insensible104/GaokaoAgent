@@ -532,6 +532,7 @@ def audit_fast_loop(report, matrix, profile, retry_count) -> AuditResult:
 def audit_slow_loop(state: SupervisorState, retry_count: int) -> AuditResult:
     """审计慢思考循环"""
     research_report = state.get("research_report")
+    evidence_cards = state.get("research_evidence_cards", []) or []
 
     if not research_report:
         return AuditResult(
@@ -540,9 +541,40 @@ def audit_slow_loop(state: SupervisorState, retry_count: int) -> AuditResult:
             reroute_to="deep_research"
         )
 
-    # 检查信息密度（如果有记录）
-    # 这里简化处理
-    return AuditResult(status=AuditStatus.PASS)
+    if "引用与证据附录" not in research_report:
+        return AuditResult(
+            status=AuditStatus.REJECT_LOGIC,
+            issues=["深度研究报告缺少引用与证据附录"],
+            fix_suggestions=["必须输出结构化来源证据卡和引用附录，不能只给无来源摘要。"],
+            reroute_to="deep_research",
+        )
+
+    if not evidence_cards:
+        return AuditResult(
+            status=AuditStatus.REJECT_LOGIC,
+            issues=["深度研究未返回结构化 evidence cards"],
+            fix_suggestions=["搜索结果必须转换为 EvidenceCard，标注 source_type、confidence 和 usable_for_prediction。"],
+            reroute_to="deep_research",
+        )
+
+    official_cards = [
+        card
+        for card in evidence_cards
+        if str(card.get("source_type") or "") in {"official_or_school", "semi_official_aggregator"}
+    ]
+    usable_cards = [card for card in evidence_cards if card.get("usable_for_prediction")]
+    audit = AuditResult(status=AuditStatus.PASS)
+    if not official_cards:
+        audit.add_issue(
+            "深度研究缺少官方/准官方来源证据卡",
+            "无网或非官方来源只能作为人工核验提纲，最终填报前必须补充院校官网、招生章程、考试院或阳光高考等来源。",
+        )
+    if not usable_cards:
+        audit.add_issue(
+            "当前 evidence cards 均不可直接用于预测",
+            "请把 fallback/社媒信息升级为可核验来源后，再支撑高风险填报建议。",
+        )
+    return audit
 
 
 def audit_multimodal_loop(state: SupervisorState, retry_count: int) -> AuditResult:

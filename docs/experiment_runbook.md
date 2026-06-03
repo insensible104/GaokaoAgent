@@ -67,6 +67,21 @@ Evaluate rollout behavior:
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py eval-orchestration --rollouts logs\orchestration_rollouts.jsonl --output logs\orchestration_eval.json --report-md logs\orchestration_eval.md
 ```
 
+## Deep Research Evidence
+
+Slow-loop research now treats sources as structured evidence, not just prose.
+Search results are converted into `EvidenceCard`-style records with
+`source_type`, `confidence`, `source`, and `usable_for_prediction`. The final
+research report must include a `引用与证据附录`; fallback/no-network cards are
+marked as manual-verification-only and cannot support prediction claims.
+
+Audit rule:
+
+- Missing research report: reject.
+- Missing citation appendix or evidence cards: reject.
+- No official/semi-official source: pass with a warning and require manual
+  official-source review before final fill-in.
+
 ## 2025 Backtest
 
 The 2025 actual results are post-hoc labels. They must not be used during plan
@@ -380,6 +395,7 @@ Use these outputs for project claims:
 | Client constraints and expectation boundaries are confirmed | `expectation_packet.json`, `expectation_packet.md` |
 | Client-facing delivery is packaged consistently | `delivery_bundle.json`, `delivery_bundle.md` |
 | Batch delivery quality is improving over cases | `delivery_portfolio_audit.json`, `delivery_portfolio_audit.md` |
+| External research is auditable and source-aware | `research_evidence_cards`, `引用与证据附录` in `research_report` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |

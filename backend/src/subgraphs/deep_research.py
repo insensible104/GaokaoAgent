@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import os
-from typing import List
+from typing import Any, List
+from urllib.parse import urlparse
 
 from langchain_community.tools.tavily_search import TavilySearchResults
 from pydantic import BaseModel, Field
 
 from models.research_state import DeepResearchState
+from recommendation.market_evidence import EvidenceCard
 from utils.llm_factory import get_llm
 
 
@@ -89,6 +91,73 @@ def _fallback_search_result(question: str) -> str:
         "- 建议优先核查院校官网、招生章程、培养方案、就业质量报告和近年录取数据。\n"
         "- 补充官方来源、时间戳和具体数字后，再进入最终决策。\n"
     )
+
+
+def _source_type_from_url(url: str) -> tuple[str, float]:
+    host = urlparse(url).netloc.lower()
+    if not host:
+        return "unknown", 0.30
+    official_markers = (".edu.cn", ".edu", ".gov.cn", ".gov", "zs.", "admission", "招生")
+    semi_official = ("gaokao", "eol.cn", "chsi.com.cn", "阳光高考", "考试院")
+    if any(marker in host for marker in official_markers):
+        return "official_or_school", 0.86
+    if any(marker.lower() in host for marker in semi_official):
+        return "semi_official_aggregator", 0.72
+    if any(marker in host for marker in ("weixin", "zhihu", "bilibili", "douyin", "toutiao")):
+        return "social_media", 0.42
+    return "web_search", 0.55
+
+
+def _evidence_card_from_search_result(question: str, result: dict[str, Any]) -> EvidenceCard:
+    url = str(result.get("url") or "")
+    title = str(result.get("title") or "Source").strip()
+    content = str(result.get("content") or "").strip()
+    score = result.get("score", 0.0)
+    source_type, base_confidence = _source_type_from_url(url)
+    try:
+        score_value = float(score or 0.0)
+    except (TypeError, ValueError):
+        score_value = 0.0
+    confidence = min(0.95, base_confidence + min(0.08, max(0.0, score_value) * 0.04))
+    claim = content[:220] if content else title
+    return EvidenceCard(
+        signal_type="external_research",
+        source_type=source_type,
+        value=0.65 if source_type in {"official_or_school", "semi_official_aggregator"} else 0.45,
+        confidence=confidence,
+        claim=f"{title}: {claim}",
+        source=url,
+        cutoff_date="runtime_search",
+        usable_for_prediction=source_type in {"official_or_school", "semi_official_aggregator"},
+    )
+
+
+def _fallback_evidence_card(question: str) -> dict:
+    return EvidenceCard(
+        signal_type="research_todo",
+        source_type="manual_verification_required",
+        value=0.0,
+        confidence=0.20,
+        claim=f"Fallback research outline for: {question}. Official source verification is still required.",
+        source="fallback_no_web_search",
+        cutoff_date="runtime_fallback",
+        usable_for_prediction=False,
+    ).to_dict()
+
+
+def _evidence_appendix(cards: List[dict]) -> str:
+    if not cards:
+        return "\n\n## 引用与证据附录\n\n- 当前报告没有结构化证据卡，必须人工补充官方来源后再用于最终决策。\n"
+    lines = ["", "## 引用与证据附录", ""]
+    for index, card in enumerate(cards[:12], 1):
+        usable = "可用于预测" if card.get("usable_for_prediction") else "仅供参考/待核验"
+        source = card.get("source") or "unknown"
+        lines.append(
+            f"{index}. `{card.get('source_type', 'unknown')}` {usable}；"
+            f"confidence={float(card.get('confidence', 0.0)):.2f}；"
+            f"{card.get('claim', '')}；source: {source}"
+        )
+    return "\n".join(lines) + "\n"
 
 
 def _heuristic_information_density(search_results: List[str]) -> float:
@@ -190,6 +259,7 @@ def execute_research(state: DeepResearchState) -> dict:
 
     all_results: List[str] = []
     all_queries: List[str] = []
+    all_evidence_cards: List[dict] = []
 
     for index, question in enumerate(sub_questions, 1):
         all_queries.append(question)
@@ -197,6 +267,7 @@ def execute_research(state: DeepResearchState) -> dict:
             debug_logs.append(f"[EXECUTE]   {index}/{len(sub_questions)} query: {question}")
             if search_tool is None:
                 all_results.append(_fallback_search_result(question))
+                all_evidence_cards.append(_fallback_evidence_card(question))
                 debug_logs.append("[EXECUTE]   fallback result generated")
                 continue
 
@@ -207,15 +278,18 @@ def execute_research(state: DeepResearchState) -> dict:
                 url = result.get("url", "")
                 title = result.get("title", "Source")
                 formatted_results.append(f"- {content} ([{title}]({url}))")
+                all_evidence_cards.append(_evidence_card_from_search_result(question, result).to_dict())
             all_results.append("\n".join(formatted_results))
             debug_logs.append(f"[EXECUTE]   collected {len(results)} results")
         except Exception as exc:
             all_results.append(_fallback_search_result(question))
+            all_evidence_cards.append(_fallback_evidence_card(question))
             debug_logs.append(f"[WARN] Execute fallback for '{question}': {exc}")
 
     return {
         "search_results": all_results,
         "search_queries": all_queries,
+        "research_evidence_cards": all_evidence_cards,
         "debug_logs": debug_logs,
     }
 
@@ -226,6 +300,7 @@ def reflect_research(state: DeepResearchState) -> dict:
 
     research_topic = state.get("research_topic", "")
     search_results = state.get("search_results", [])
+    evidence_cards = state.get("research_evidence_cards", [])
     loop_count = state.get("research_loop_count", 0) + 1
     max_loops = state.get("max_research_loops", 2)
 
@@ -294,7 +369,7 @@ def synthesize_report(state: DeepResearchState) -> dict:
 
     try:
         result = llm.invoke(prompt)
-        report = result.content
+        report = str(result.content).rstrip() + _evidence_appendix(evidence_cards)
         return {
             "research_report": report,
             "debug_logs": [f"[SYNTHESIZE] generated report length={len(report)}"],
@@ -304,7 +379,7 @@ def synthesize_report(state: DeepResearchState) -> dict:
             research_topic,
             search_results,
             state.get("knowledge_gaps", []),
-        )
+        ).rstrip() + _evidence_appendix(evidence_cards)
         return {
             "research_report": fallback,
             "debug_logs": [f"[WARN] Synthesize fell back to structured local report: {exc}"],

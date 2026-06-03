@@ -60,6 +60,7 @@ def deep_research_agent_node(state: SupervisorState) -> dict:
         "sub_questions": [],
         "search_queries": [],
         "search_results": [],
+        "research_evidence_cards": [],
         "is_sufficient": False,
         "knowledge_gaps": [],
         "information_density": 0.0,
@@ -76,12 +77,14 @@ def deep_research_agent_node(state: SupervisorState) -> dict:
         info_density = float(result.get("information_density", 0.0))
         search_queries = result.get("search_queries", [])
         search_results = result.get("search_results", [])
+        evidence_cards = result.get("research_evidence_cards", [])
         debug_logs = result.get("debug_logs", [])
 
         return {
             "research_report": research_report,
             "research_loop_count": loop_count,
             "web_research_results": search_results,
+            "research_evidence_cards": evidence_cards,
             "search_queries": search_queries,
             "loop_history": ["slow"],
             "agent_messages": publish_agent_message(
@@ -100,6 +103,7 @@ def deep_research_agent_node(state: SupervisorState) -> dict:
                     "information_density": round(info_density, 3),
                     "query_count": len(search_queries),
                     "result_count": len(search_results),
+                    "evidence_card_count": len(evidence_cards),
                 },
             )["agent_messages"],
             "agent_memories": remember(

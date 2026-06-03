@@ -15,6 +15,7 @@ class DeepResearchState(TypedDict):
     # Execute 阶段输出
     search_queries: Annotated[list, operator.add]  # 搜索查询历史
     search_results: Annotated[list, operator.add]  # 搜索结果
+    research_evidence_cards: Annotated[list, operator.add]  # 结构化来源证据卡
 
     # Reflect 阶段输出
     is_sufficient: bool  # 信息是否充分

@@ -58,6 +58,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_first_hit_prefix_smoke.py",
     "test_multi_agent_deliberation_smoke.py",
     "test_agent_protocol_smoke.py",
+    "test_deep_research_evidence_smoke.py",
     "test_supervisor_policy_smoke.py",
     "test_orchestration_data_pipeline_smoke.py",
     "test_orchestration_trl_utils_smoke.py",

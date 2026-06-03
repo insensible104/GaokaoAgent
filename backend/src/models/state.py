@@ -39,6 +39,7 @@ class SupervisorState(TypedDict):
     research_topic: Optional[str]  # 研究主题
     search_queries: Annotated[list, operator.add]  # 搜索查询历史
     web_research_results: Annotated[list, operator.add]  # 网络搜索结果
+    research_evidence_cards: Annotated[list, operator.add]  # 结构化来源证据卡
     knowledge_gaps: Annotated[list, operator.add]  # 知识缺口（驱动迭代）
     research_loop_count: int  # 研究循环次数
     research_report: Optional[str]  # 研究报告
