@@ -12,10 +12,12 @@ from evaluation.expectation_packet import (
     build_markdown_expectation_packet,
 )
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
+from evaluation.plan_quality_audit import audit_plan_quality, build_markdown_plan_quality_audit
 from evaluation.report_quality import (
     audit_report_quality,
     build_markdown_report_quality_audit,
 )
+from models.game_matrix import VolunteerPlan
 from models.user_profile import UserProfile
 
 
@@ -56,11 +58,20 @@ def _expectation_status(packet: dict[str, Any]) -> str:
     return "ready"
 
 
-def _bundle_status(intake_status: str, expectation_status: str, report_quality: dict[str, Any]) -> str:
+def _bundle_status(
+    intake_status: str,
+    plan_quality_status: str,
+    expectation_status: str,
+    report_quality: dict[str, Any],
+) -> str:
     if intake_status == "blocked_missing_core":
+        return "blocked"
+    if plan_quality_status == "blocked":
         return "blocked"
     if expectation_status == "blocked":
         return "blocked"
+    if plan_quality_status != "pass":
+        return "needs_revision"
     if report_quality.get("status") != "pass":
         return "needs_revision"
     if expectation_status == "pending_signoff" or intake_status == "needs_clarification":
@@ -73,9 +84,10 @@ def build_delivery_bundle(
     profile: UserProfile,
     report_payload: str | dict[str, Any],
     output_dir: Path,
+    plan: VolunteerPlan | None = None,
     case_id: str = "",
 ) -> dict[str, Any]:
-    """Write expectation, report, audit, and bundle-index artifacts."""
+    """Write intake, plan, expectation, report, audit, and bundle-index artifacts."""
     output_dir.mkdir(parents=True, exist_ok=True)
     case_id = case_id or "gaokao_case"
 
@@ -103,14 +115,18 @@ def build_delivery_bundle(
     _write_json(quality_json_path, report_quality)
     quality_md_path.write_text(build_markdown_report_quality_audit(report_quality), encoding="utf-8")
 
+    plan_quality = _build_plan_quality_artifact(plan, profile, output_dir)
     expectation_state = _expectation_status(expectation_packet)
     intake_state = str(intake_audit.get("status") or "unknown")
-    status = _bundle_status(intake_state, expectation_state, report_quality)
+    plan_quality_state = str(plan_quality.get("status") or "unknown")
+    status = _bundle_status(intake_state, plan_quality_state, expectation_state, report_quality)
     manifest = {
         "case_id": case_id,
         "status": status,
         "intake_status": intake_state,
         "intake_readiness_score": intake_audit.get("readiness_score"),
+        "plan_quality_status": plan_quality_state,
+        "plan_quality_score": plan_quality.get("total_score"),
         "expectation_status": expectation_state,
         "report_quality_status": report_quality.get("status"),
         "report_quality_score": report_quality.get("total_score"),
@@ -125,6 +141,12 @@ def build_delivery_bundle(
                 "id": "expectation_packet",
                 "label": "推荐前预期确认单",
                 "path": expectation_md_path.name,
+                "required": True,
+            },
+            {
+                "id": "plan_quality_audit",
+                "label": "志愿表结构质量审计",
+                "path": plan_quality.get("artifact_path", "plan_quality_audit.md"),
                 "required": True,
             },
             {
@@ -147,6 +169,11 @@ def build_delivery_bundle(
                 "requirement": "分数、位次、选科、地域、专业边界和学校/专业权衡必须完成问诊。",
             },
             {
+                "gate": "plan_quality",
+                "status": plan_quality_state,
+                "requirement": "志愿表必须通过整体安全性、保底、冲稳保结构、尾部风险和硬边界审计。",
+            },
+            {
                 "gate": "expectation_packet",
                 "status": expectation_state,
                 "requirement": "学生/家长确认限制条件、风险边界和非承诺条款。",
@@ -157,7 +184,7 @@ def build_delivery_bundle(
                 "requirement": "最终报告必须通过交付质量审计。",
             },
         ],
-        "next_actions": _next_actions(intake_audit, expectation_state, report_quality),
+        "next_actions": _next_actions(intake_audit, plan_quality, expectation_state, report_quality),
     }
     manifest_path = output_dir / "delivery_bundle.json"
     index_path = output_dir / "delivery_bundle.md"
@@ -166,13 +193,73 @@ def build_delivery_bundle(
     return manifest
 
 
-def _next_actions(intake_audit: dict[str, Any], expectation_status: str, report_quality: dict[str, Any]) -> list[str]:
+def _build_plan_quality_artifact(
+    plan: VolunteerPlan | None,
+    profile: UserProfile,
+    output_dir: Path,
+) -> dict[str, Any]:
+    if plan is None:
+        result = {
+            "status": "not_provided",
+            "total_score": 0.0,
+            "finding_count": 1,
+            "findings": [
+                {
+                    "severity": "P1",
+                    "area": "plan_quality",
+                    "finding": "交付包缺少 VolunteerPlan，无法审计志愿表结构。",
+                    "recommendation": "提供冻结后的 VolunteerPlan JSON，并重新生成交付包。",
+                    "missing": ["VolunteerPlan JSON"],
+                    "evidence": [],
+                }
+            ],
+            "advisor_standard": "Final delivery must include a structured VolunteerPlan quality audit.",
+            "artifact_path": "plan_quality_audit.md",
+        }
+        lines = [
+            "# Volunteer Plan Quality Audit",
+            "",
+            "Status: `not_provided`",
+            "Total score: 0.0%",
+            "",
+            result["advisor_standard"],
+            "",
+            "## Findings",
+            "",
+            "1. `P1` plan_quality: 提供冻结后的 VolunteerPlan JSON，并重新生成交付包。",
+        ]
+        markdown = "\n".join(lines) + "\n"
+    else:
+        result = audit_plan_quality(plan, profile)
+        markdown = build_markdown_plan_quality_audit(result)
+        result["artifact_path"] = "plan_quality_audit.md"
+
+    json_path = output_dir / "plan_quality_audit.json"
+    md_path = output_dir / "plan_quality_audit.md"
+    _write_json(json_path, result)
+    md_path.write_text(markdown, encoding="utf-8")
+    return result
+
+
+def _next_actions(
+    intake_audit: dict[str, Any],
+    plan_quality: dict[str, Any],
+    expectation_status: str,
+    report_quality: dict[str, Any],
+) -> list[str]:
     actions: list[str] = []
     intake_status = intake_audit.get("status")
     if intake_status == "blocked_missing_core":
         actions.append(str(intake_audit.get("minimum_next_step") or "补齐问诊核心信息。"))
     elif intake_status == "needs_clarification":
         actions.append("先完成问诊审计中的必问问题，再冻结推荐输入。")
+    plan_quality_status = plan_quality.get("status")
+    if plan_quality_status == "not_provided":
+        actions.append("提供冻结后的志愿表 JSON，补跑志愿表结构质量审计。")
+    elif plan_quality_status == "blocked":
+        actions.append("先修复志愿表硬边界或严重安全性问题，再进入客户交付。")
+    elif plan_quality_status == "needs_revision":
+        actions.append("根据志愿表结构质量审计调整保底、冲稳保比例、尾部风险或关键志愿依据。")
     if expectation_status == "blocked":
         actions.append("补齐分数、位次、选科等硬信息后再继续推荐。")
     elif expectation_status == "pending_signoff":
@@ -193,6 +280,8 @@ def build_markdown_delivery_bundle(manifest: dict[str, Any]) -> str:
         f"Status: `{manifest.get('status', 'unknown')}`",
         f"Intake readiness: `{manifest.get('intake_status', 'unknown')}` "
         f"({float(manifest.get('intake_readiness_score') or 0.0):.1%})",
+        f"Plan quality: `{manifest.get('plan_quality_status', 'unknown')}` "
+        f"({float(manifest.get('plan_quality_score') or 0.0):.1%})",
         f"Report quality: `{manifest.get('report_quality_status', 'unknown')}` "
         f"({float(manifest.get('report_quality_score') or 0.0):.1%})",
         "",

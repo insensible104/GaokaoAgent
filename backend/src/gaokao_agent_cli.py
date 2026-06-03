@@ -419,6 +419,7 @@ def cmd_plan_quality_audit(args: argparse.Namespace) -> int:
 
 def cmd_delivery_bundle(args: argparse.Namespace) -> int:
     profile = UserProfile(**_read_json(Path(args.profile_json)))
+    plan = _read_plan_json(Path(args.plan_json)) if args.plan_json else None
     if args.report_json:
         report_payload = _read_json(Path(args.report_json))
     else:
@@ -427,6 +428,7 @@ def cmd_delivery_bundle(args: argparse.Namespace) -> int:
         profile=profile,
         report_payload=report_payload,
         output_dir=Path(args.output_dir),
+        plan=plan,
         case_id=args.case_id or "",
     )
     print(f"saved delivery bundle -> {args.output_dir}")
@@ -573,6 +575,7 @@ def build_parser() -> argparse.ArgumentParser:
     report_source = bundle.add_mutually_exclusive_group(required=True)
     report_source.add_argument("--report-md", help="Generated report Markdown path.")
     report_source.add_argument("--report-json", help="ReportDraft JSON path.")
+    bundle.add_argument("--plan-json", help="VolunteerPlan JSON path, or a record containing `plan`.")
     bundle.add_argument("--output-dir", required=True, help="Directory to write delivery bundle artifacts.")
     bundle.add_argument("--case-id", default="", help="Optional case id for the bundle manifest.")
     bundle.set_defaults(func=cmd_delivery_bundle)

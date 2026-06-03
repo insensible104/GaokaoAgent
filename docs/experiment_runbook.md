@@ -259,20 +259,23 @@ school-vs-major tradeoff preference.
 
 ## Delivery Bundle
 
-Delivery bundles package the expectation packet, final report, and report
-quality audit into one client-facing folder. This is the operational delivery
-gate for a paid or high-stakes case.
+Delivery bundles package the intake audit, volunteer-plan quality audit,
+expectation packet, final report, and report quality audit into one
+client-facing folder. This is the operational delivery gate for a paid or
+high-stakes case.
 
 Run:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py delivery-bundle --profile-json logs\user_profile.json --report-md logs\report.md --output-dir logs\delivery_case_001 --case-id case_001
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py delivery-bundle --profile-json logs\user_profile.json --plan-json logs\volunteer_plan.json --report-md logs\report.md --output-dir logs\delivery_case_001 --case-id case_001
 ```
 
 The bundle writes:
 
 - `intake_audit.md`
 - `intake_audit.json`
+- `plan_quality_audit.md`
+- `plan_quality_audit.json`
 - `expectation_packet.md`
 - `final_report.md`
 - `report_quality_audit.md`
@@ -280,7 +283,9 @@ The bundle writes:
 - `delivery_bundle.json`
 
 Bundle status can be `blocked`, `needs_revision`, `pending_signoff`, or
-`ready_to_deliver`.
+`ready_to_deliver`. Missing `--plan-json` is treated as `needs_revision`
+because a final paid-case handoff must include a structural audit of the
+ordered volunteer plan.
 
 ## One-Shot Suite
 

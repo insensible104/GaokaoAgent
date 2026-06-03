@@ -6,7 +6,50 @@ from pathlib import Path
 import tempfile
 
 from evaluation.delivery_bundle import build_delivery_bundle
+from models.game_matrix import AdjustmentAdvice, MajorOption, StrategyTag, VolunteerChoice, VolunteerPlan
 from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
+
+
+def _valid_plan() -> VolunteerPlan:
+    def choice(index: int, prob: float, strategy: StrategyTag) -> VolunteerChoice:
+        return VolunteerChoice(
+            choice_index=index,
+            school_code=f"S{index}",
+            school_name=f"测试大学{index}",
+            major_group_code=f"20{index}",
+            major_choices=[
+                MajorOption(
+                    school_code=f"S{index}",
+                    school_name=f"测试大学{index}",
+                    major_group_code=f"20{index}",
+                    major_name="计算机类",
+                    is_preferred=True,
+                    user_utility=0.85,
+                    major_rank_risk=0.10,
+                )
+            ],
+            obey_adjustment=True,
+            adjustment_advice=AdjustmentAdvice.RECOMMEND,
+            group_admission_prob=prob,
+            expected_major_utility=0.85,
+            tail_assignment_risk=0.08,
+            strategy_tag=strategy,
+            explanation="位次缓冲、概率和专业组结构均已解释。",
+            quant_evidence=["rank_buffer=stable", "data_confidence=0.80"],
+        )
+
+    return VolunteerPlan(
+        province="广东",
+        year=2025,
+        subject_group="物理",
+        user_score=620,
+        user_rank=12000,
+        choices=[
+            choice(1, 0.35, StrategyTag.RUSH),
+            choice(2, 0.55, StrategyTag.TARGET),
+            choice(3, 0.98, StrategyTag.SAFE),
+        ],
+    )
 
 
 def test_delivery_bundle_writes_client_artifacts() -> None:
@@ -44,13 +87,16 @@ def test_delivery_bundle_writes_client_artifacts() -> None:
             profile=profile,
             report_payload=report,
             output_dir=output_dir,
+            plan=_valid_plan(),
             case_id="case-smoke",
         )
 
         assert manifest["case_id"] == "case-smoke"
         assert manifest["status"] == "pending_signoff"
         assert manifest["intake_status"] == "ready_for_recommendation"
+        assert manifest["plan_quality_status"] == "pass"
         assert (output_dir / "intake_audit.md").exists()
+        assert (output_dir / "plan_quality_audit.md").exists()
         assert (output_dir / "expectation_packet.md").exists()
         assert (output_dir / "final_report.md").exists()
         assert (output_dir / "report_quality_audit.md").exists()
@@ -58,6 +104,33 @@ def test_delivery_bundle_writes_client_artifacts() -> None:
         assert "服务交付包" in (output_dir / "delivery_bundle.md").read_text(encoding="utf-8")
 
 
+def test_delivery_bundle_requires_plan_quality_artifact() -> None:
+    profile = UserProfile(
+        score=620,
+        rank=12000,
+        subject_group="物理",
+        preferred_cities=["广州"],
+        preferred_majors=["计算机"],
+        risk_tolerance=RiskTolerance.BALANCED,
+        school_major_preference=SchoolMajorPreference.PRIORITIZE_MAJOR,
+    )
+    report = "位次 12000，620 分，选科物理。推荐 A 大学。概率不是保证，风险需复核，最终以官方招生章程为准。"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        output_dir = Path(temp_dir) / "bundle"
+        manifest = build_delivery_bundle(
+            profile=profile,
+            report_payload=report,
+            output_dir=output_dir,
+            case_id="case-missing-plan",
+        )
+
+        assert manifest["status"] == "needs_revision"
+        assert manifest["plan_quality_status"] == "not_provided"
+        assert (output_dir / "plan_quality_audit.md").exists()
+        assert "VolunteerPlan JSON" in (output_dir / "plan_quality_audit.md").read_text(encoding="utf-8")
+
+
 if __name__ == "__main__":
     test_delivery_bundle_writes_client_artifacts()
+    test_delivery_bundle_requires_plan_quality_artifact()
     print("delivery bundle smoke tests passed")
