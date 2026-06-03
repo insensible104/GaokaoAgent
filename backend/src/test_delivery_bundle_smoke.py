@@ -49,6 +49,8 @@ def test_delivery_bundle_writes_client_artifacts() -> None:
 
         assert manifest["case_id"] == "case-smoke"
         assert manifest["status"] == "pending_signoff"
+        assert manifest["intake_status"] == "ready_for_recommendation"
+        assert (output_dir / "intake_audit.md").exists()
         assert (output_dir / "expectation_packet.md").exists()
         assert (output_dir / "final_report.md").exists()
         assert (output_dir / "report_quality_audit.md").exists()

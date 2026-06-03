@@ -20,6 +20,7 @@ from evaluation.calibration import build_markdown_calibration_report, run_quant_
 from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
+from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
 from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
 from evaluation.schemas import PlanBacktestResult
@@ -59,6 +60,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_calibration_smoke.py",
     "test_quant_tuning_smoke.py",
     "test_improvement_audit_smoke.py",
+    "test_intake_audit_smoke.py",
     "test_report_quality_smoke.py",
     "test_expectation_packet_smoke.py",
     "test_delivery_bundle_smoke.py",
@@ -371,6 +373,22 @@ def cmd_expectation_packet(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_intake_audit(args: argparse.Namespace) -> int:
+    profile = UserProfile(**_read_json(Path(args.profile_json)))
+    result = build_intake_audit(profile)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved intake audit json -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_intake_audit(result), encoding="utf-8")
+        print(f"saved intake audit markdown -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_delivery_bundle(args: argparse.Namespace) -> int:
     profile = UserProfile(**_read_json(Path(args.profile_json)))
     if args.report_json:
@@ -499,6 +517,15 @@ def build_parser() -> argparse.ArgumentParser:
     expectation.add_argument("--output", help="Expectation packet JSON output path.")
     expectation.add_argument("--report-md", help="Expectation packet Markdown output path.")
     expectation.set_defaults(func=cmd_expectation_packet)
+
+    intake = subparsers.add_parser(
+        "intake-audit",
+        help="Audit whether a profile has enough intake information before recommendation.",
+    )
+    intake.add_argument("--profile-json", required=True, help="UserProfile JSON path.")
+    intake.add_argument("--output", help="Intake audit JSON output path.")
+    intake.add_argument("--report-md", help="Intake audit Markdown output path.")
+    intake.set_defaults(func=cmd_intake_audit)
 
     bundle = subparsers.add_parser(
         "delivery-bundle",

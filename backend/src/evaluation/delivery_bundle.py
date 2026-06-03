@@ -11,6 +11,7 @@ from evaluation.expectation_packet import (
     build_expectation_packet,
     build_markdown_expectation_packet,
 )
+from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
 from evaluation.report_quality import (
     audit_report_quality,
     build_markdown_report_quality_audit,
@@ -55,12 +56,14 @@ def _expectation_status(packet: dict[str, Any]) -> str:
     return "ready"
 
 
-def _bundle_status(expectation_status: str, report_quality: dict[str, Any]) -> str:
+def _bundle_status(intake_status: str, expectation_status: str, report_quality: dict[str, Any]) -> str:
+    if intake_status == "blocked_missing_core":
+        return "blocked"
     if expectation_status == "blocked":
         return "blocked"
     if report_quality.get("status") != "pass":
         return "needs_revision"
-    if expectation_status == "pending_signoff":
+    if expectation_status == "pending_signoff" or intake_status == "needs_clarification":
         return "pending_signoff"
     return "ready_to_deliver"
 
@@ -75,6 +78,13 @@ def build_delivery_bundle(
     """Write expectation, report, audit, and bundle-index artifacts."""
     output_dir.mkdir(parents=True, exist_ok=True)
     case_id = case_id or "gaokao_case"
+
+    intake_audit = build_intake_audit(profile)
+    intake_md = build_markdown_intake_audit(intake_audit)
+    intake_json_path = output_dir / "intake_audit.json"
+    intake_md_path = output_dir / "intake_audit.md"
+    _write_json(intake_json_path, intake_audit)
+    intake_md_path.write_text(intake_md, encoding="utf-8")
 
     expectation_packet = build_expectation_packet(profile)
     expectation_md = build_markdown_expectation_packet(expectation_packet)
@@ -94,14 +104,23 @@ def build_delivery_bundle(
     quality_md_path.write_text(build_markdown_report_quality_audit(report_quality), encoding="utf-8")
 
     expectation_state = _expectation_status(expectation_packet)
-    status = _bundle_status(expectation_state, report_quality)
+    intake_state = str(intake_audit.get("status") or "unknown")
+    status = _bundle_status(intake_state, expectation_state, report_quality)
     manifest = {
         "case_id": case_id,
         "status": status,
+        "intake_status": intake_state,
+        "intake_readiness_score": intake_audit.get("readiness_score"),
         "expectation_status": expectation_state,
         "report_quality_status": report_quality.get("status"),
         "report_quality_score": report_quality.get("total_score"),
         "artifacts": [
+            {
+                "id": "intake_audit",
+                "label": "推荐前问诊完备度审计",
+                "path": intake_md_path.name,
+                "required": True,
+            },
             {
                 "id": "expectation_packet",
                 "label": "推荐前预期确认单",
@@ -123,6 +142,11 @@ def build_delivery_bundle(
         ],
         "delivery_gates": [
             {
+                "gate": "intake_audit",
+                "status": intake_state,
+                "requirement": "分数、位次、选科、地域、专业边界和学校/专业权衡必须完成问诊。",
+            },
+            {
                 "gate": "expectation_packet",
                 "status": expectation_state,
                 "requirement": "学生/家长确认限制条件、风险边界和非承诺条款。",
@@ -133,7 +157,7 @@ def build_delivery_bundle(
                 "requirement": "最终报告必须通过交付质量审计。",
             },
         ],
-        "next_actions": _next_actions(expectation_state, report_quality),
+        "next_actions": _next_actions(intake_audit, expectation_state, report_quality),
     }
     manifest_path = output_dir / "delivery_bundle.json"
     index_path = output_dir / "delivery_bundle.md"
@@ -142,8 +166,13 @@ def build_delivery_bundle(
     return manifest
 
 
-def _next_actions(expectation_status: str, report_quality: dict[str, Any]) -> list[str]:
+def _next_actions(intake_audit: dict[str, Any], expectation_status: str, report_quality: dict[str, Any]) -> list[str]:
     actions: list[str] = []
+    intake_status = intake_audit.get("status")
+    if intake_status == "blocked_missing_core":
+        actions.append(str(intake_audit.get("minimum_next_step") or "补齐问诊核心信息。"))
+    elif intake_status == "needs_clarification":
+        actions.append("先完成问诊审计中的必问问题，再冻结推荐输入。")
     if expectation_status == "blocked":
         actions.append("补齐分数、位次、选科等硬信息后再继续推荐。")
     elif expectation_status == "pending_signoff":
@@ -162,6 +191,8 @@ def build_markdown_delivery_bundle(manifest: dict[str, Any]) -> str:
         "",
         f"Case: `{manifest.get('case_id', '')}`",
         f"Status: `{manifest.get('status', 'unknown')}`",
+        f"Intake readiness: `{manifest.get('intake_status', 'unknown')}` "
+        f"({float(manifest.get('intake_readiness_score') or 0.0):.1%})",
         f"Report quality: `{manifest.get('report_quality_status', 'unknown')}` "
         f"({float(manifest.get('report_quality_score') or 0.0):.1%})",
         "",

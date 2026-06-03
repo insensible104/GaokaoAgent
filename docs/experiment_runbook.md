@@ -25,6 +25,7 @@ quant-tune
 ablate-2025
 improvement-audit
 report-quality-audit
+intake-audit
 expectation-packet
 delivery-bundle
 ```
@@ -190,6 +191,29 @@ Run on a `ReportDraft` JSON:
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py report-quality-audit --report-json logs\report_draft.json --output logs\report_quality_audit.json --audit-md logs\report_quality_audit.md
 ```
 
+## Intake Audit
+
+Intake audit is the pre-recommendation gate. It checks whether a family has
+provided enough information to start ranking choices: score, rank, subject
+group, region boundary, major boundary, school-vs-major tradeoff, risk
+tolerance, budget/pathway constraints, preference cognition, and official
+restriction review.
+
+Run:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py intake-audit --profile-json logs\user_profile.json --output logs\intake_audit.json --report-md logs\intake_audit.md
+```
+
+Status meanings:
+
+- `blocked_missing_core`: do not recommend yet; score, rank, or subject-group
+  information is missing.
+- `needs_clarification`: ask the generated clarification questions before
+  freezing the recommendation input.
+- `ready_for_recommendation`: candidate-pool generation can start, while final
+  delivery still requires expectation sign-off and official-data review.
+
 ## Expectation Packet
 
 Expectation packets are pre-recommendation delivery artifacts. They reduce
@@ -220,6 +244,8 @@ backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py delivery-bundle
 
 The bundle writes:
 
+- `intake_audit.md`
+- `intake_audit.json`
 - `expectation_packet.md`
 - `final_report.md`
 - `report_quality_audit.md`
@@ -264,6 +290,7 @@ Use these outputs for project claims:
 | Recommendation core is backtestable | `backtest_2025_summary.json`, `backtest_2025_results.jsonl` |
 | Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
+| Case intake is complete enough to begin recommendation | `intake_audit.json`, `intake_audit.md` |
 | Generated reports meet delivery-quality gates | `report_quality_audit.json`, `report_quality_audit.md` |
 | Client constraints and expectation boundaries are confirmed | `expectation_packet.json`, `expectation_packet.md` |
 | Client-facing delivery is packaged consistently | `delivery_bundle.json`, `delivery_bundle.md` |
