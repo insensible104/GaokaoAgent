@@ -19,6 +19,7 @@ from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
+from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
 from rl.orchestration_data_pipeline import (
@@ -55,6 +56,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_calibration_smoke.py",
     "test_quant_tuning_smoke.py",
     "test_improvement_audit_smoke.py",
+    "test_report_quality_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
     "test_market_simulation_smoke.py",
@@ -329,6 +331,25 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_report_quality_audit(args: argparse.Namespace) -> int:
+    if args.report_json:
+        payload = _read_json(Path(args.report_json))
+    else:
+        payload = Path(args.report_md).read_text(encoding="utf-8")
+    result = audit_report_quality(payload)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved report quality audit summary -> {args.output}")
+    if args.audit_md:
+        audit_path = Path(args.audit_md)
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        audit_path.write_text(build_markdown_report_quality_audit(result), encoding="utf-8")
+        print(f"saved report quality audit report -> {audit_path}")
+    if not args.output and not args.audit_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -420,6 +441,17 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--output", help="Improvement audit JSON output path.")
     audit.add_argument("--report-md", help="Markdown improvement audit output path.")
     audit.set_defaults(func=cmd_improvement_audit)
+
+    report_audit = subparsers.add_parser(
+        "report-quality-audit",
+        help="Audit a generated report for agency-grade delivery completeness.",
+    )
+    source = report_audit.add_mutually_exclusive_group(required=True)
+    source.add_argument("--report-md", help="Generated report Markdown path.")
+    source.add_argument("--report-json", help="ReportDraft JSON path.")
+    report_audit.add_argument("--output", help="Report-quality audit JSON output path.")
+    report_audit.add_argument("--audit-md", help="Markdown report-quality audit output path.")
+    report_audit.set_defaults(func=cmd_report_quality_audit)
 
     return parser
 

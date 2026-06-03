@@ -24,6 +24,7 @@ quant-calibrate-2025
 quant-tune
 ablate-2025
 improvement-audit
+report-quality-audit
 ```
 
 ## Smoke Checks
@@ -168,6 +169,25 @@ The audit flags:
 - baseline variants that beat the full system
 - next actions for the next model iteration
 
+## Report Quality Audit
+
+Report quality audit checks whether a generated report has the delivery
+elements expected from an agency-grade counselor: student context, constraint
+confirmation, risk explanation, recommendation evidence, actionable fill-in
+steps, expectation management, and official-data boundaries.
+
+Run on Markdown:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py report-quality-audit --report-md logs\report.md --output logs\report_quality_audit.json --audit-md logs\report_quality_audit.md
+```
+
+Run on a `ReportDraft` JSON:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py report-quality-audit --report-json logs\report_draft.json --output logs\report_quality_audit.json --audit-md logs\report_quality_audit.md
+```
+
 ## One-Shot Suite
 
 Use this when you want one command to create an experiment folder:
@@ -203,6 +223,7 @@ Use these outputs for project claims:
 | Recommendation core is backtestable | `backtest_2025_summary.json`, `backtest_2025_results.jsonl` |
 | Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
+| Generated reports meet delivery-quality gates | `report_quality_audit.json`, `report_quality_audit.md` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |
