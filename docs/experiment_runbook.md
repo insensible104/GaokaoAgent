@@ -25,6 +25,7 @@ quant-tune
 ablate-2025
 improvement-audit
 report-quality-audit
+expectation-packet
 ```
 
 ## Smoke Checks
@@ -188,6 +189,22 @@ Run on a `ReportDraft` JSON:
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py report-quality-audit --report-json logs\report_draft.json --output logs\report_quality_audit.json --audit-md logs\report_quality_audit.md
 ```
 
+## Expectation Packet
+
+Expectation packets are pre-recommendation delivery artifacts. They reduce
+post-service disputes by making constraints, unknowns, risk tolerance, and
+non-guarantee boundaries explicit before the final plan is accepted.
+
+Input is a `UserProfile` JSON:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py expectation-packet --profile-json logs\user_profile.json --output logs\expectation_packet.json --report-md logs\expectation_packet.md
+```
+
+Use this before final recommendation delivery when the family has hard limits
+such as "省内 only", "不接受民办", "不接受中外合作", "专业黑名单", or a strong
+school-vs-major tradeoff preference.
+
 ## One-Shot Suite
 
 Use this when you want one command to create an experiment folder:
@@ -224,6 +241,7 @@ Use these outputs for project claims:
 | Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
 | Generated reports meet delivery-quality gates | `report_quality_audit.json`, `report_quality_audit.md` |
+| Client constraints and expectation boundaries are confirmed | `expectation_packet.json`, `expectation_packet.md` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |

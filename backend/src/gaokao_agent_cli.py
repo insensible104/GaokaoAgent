@@ -17,11 +17,13 @@ from evaluation.ablation_2025 import (
 )
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
+from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
 from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
+from models.user_profile import UserProfile
 from rl.orchestration_data_pipeline import (
     build_pairwise_preferences,
     load_cases,
@@ -57,6 +59,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_tuning_smoke.py",
     "test_improvement_audit_smoke.py",
     "test_report_quality_smoke.py",
+    "test_expectation_packet_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
     "test_market_simulation_smoke.py",
@@ -350,6 +353,22 @@ def cmd_report_quality_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_expectation_packet(args: argparse.Namespace) -> int:
+    profile = UserProfile(**_read_json(Path(args.profile_json)))
+    packet = build_expectation_packet(profile)
+    if args.output:
+        _write_json(Path(args.output), packet)
+        print(f"saved expectation packet json -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_expectation_packet(packet), encoding="utf-8")
+        print(f"saved expectation packet markdown -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(packet, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -452,6 +471,15 @@ def build_parser() -> argparse.ArgumentParser:
     report_audit.add_argument("--output", help="Report-quality audit JSON output path.")
     report_audit.add_argument("--audit-md", help="Markdown report-quality audit output path.")
     report_audit.set_defaults(func=cmd_report_quality_audit)
+
+    expectation = subparsers.add_parser(
+        "expectation-packet",
+        help="Generate a pre-recommendation expectation and constraint confirmation packet.",
+    )
+    expectation.add_argument("--profile-json", required=True, help="UserProfile JSON path.")
+    expectation.add_argument("--output", help="Expectation packet JSON output path.")
+    expectation.add_argument("--report-md", help="Expectation packet Markdown output path.")
+    expectation.set_defaults(func=cmd_expectation_packet)
 
     return parser
 
