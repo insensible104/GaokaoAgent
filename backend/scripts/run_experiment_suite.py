@@ -173,6 +173,8 @@ def main() -> int:
                     str(output_dir / "ablation_2025_results.jsonl"),
                     "--report-md",
                     str(output_dir / "ablation_2025_report.md"),
+                    "--tuning-summary",
+                    str(tuning_summary),
                 ],
             )
             if status != 0:

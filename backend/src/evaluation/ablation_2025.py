@@ -10,9 +10,11 @@ from evaluation.baselines import BaselineName, build_baseline_plan
 from evaluation.schemas import ActualMajorGroupOutcome, PlanBacktestResult
 from models.game_matrix import MajorGroupRow, VolunteerPlan
 from models.user_profile import UserProfile
+from recommendation.major_choice_planner import build_volunteer_plan
 
 
 AblationVariant = BaselineName | str
+QUANT_TUNED_SHADOW_VARIANT = "quant_tuned_shadow"
 DEFAULT_ABLATION_VARIANTS: list[str] = [
     "full",
     "probability_only",
@@ -88,11 +90,40 @@ def _load_user_profile(record: dict, plan: VolunteerPlan) -> UserProfile:
     )
 
 
+def _row_feature(row: MajorGroupRow, feature: str) -> float:
+    if feature == "predicted_prob":
+        return float(row.admission_prob or 0.0)
+    value = getattr(row, feature, 0.0)
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _build_quant_tuned_shadow_plan(
+    *,
+    rows: list[MajorGroupRow],
+    profile: UserProfile,
+    weights: dict[str, float],
+    max_choices: int | None,
+) -> VolunteerPlan:
+    if not weights:
+        raise ValueError("quant_tuned_shadow requires non-empty tuning weights.")
+    ordered = sorted(
+        rows,
+        key=lambda row: sum(_row_feature(row, feature) * float(weight) for feature, weight in weights.items()),
+        reverse=True,
+    )
+    return build_volunteer_plan(ordered, profile, max_choices=max_choices)
+
+
 def _build_variant_plan(
     *,
     variant: str,
     record: dict,
     full_plan: VolunteerPlan,
+    quant_shadow_weights: dict[str, float] | None = None,
+    quant_shadow_variant_name: str = QUANT_TUNED_SHADOW_VARIANT,
 ) -> VolunteerPlan:
     if variant == "full":
         return full_plan
@@ -104,6 +135,13 @@ def _build_variant_plan(
         )
     profile = _load_user_profile(record, full_plan)
     max_choices = len(full_plan.choices) if full_plan.choices else None
+    if variant == quant_shadow_variant_name:
+        return _build_quant_tuned_shadow_plan(
+            rows=rows,
+            profile=profile,
+            weights=quant_shadow_weights or {},
+            max_choices=max_choices,
+        )
     return build_baseline_plan(
         rows=rows,
         profile=profile,
@@ -124,11 +162,15 @@ def run_ablation_backtest_records(
     records: Sequence[dict],
     actual_outcomes: Iterable[ActualMajorGroupOutcome],
     variants: Sequence[str] | None = None,
+    quant_shadow_weights: dict[str, float] | None = None,
+    quant_shadow_variant_name: str = QUANT_TUNED_SHADOW_VARIANT,
 ) -> dict:
     """Run full and baseline variants through the same 2025 outcome labels."""
     selected_variants = list(variants or DEFAULT_ABLATION_VARIANTS)
     if "full" not in selected_variants:
         selected_variants.insert(0, "full")
+    if quant_shadow_weights and quant_shadow_variant_name not in selected_variants:
+        selected_variants.append(quant_shadow_variant_name)
     actual_outcomes = list(actual_outcomes)
 
     per_variant_results: dict[str, list[PlanBacktestResult]] = defaultdict(list)
@@ -141,6 +183,8 @@ def run_ablation_backtest_records(
                 variant=variant,
                 record=record,
                 full_plan=full_plan,
+                quant_shadow_weights=quant_shadow_weights if variant == quant_shadow_variant_name else None,
+                quant_shadow_variant_name=quant_shadow_variant_name,
             )
             result = run_plan_backtest(
                 plan=plan,
@@ -172,6 +216,14 @@ def run_ablation_backtest_records(
     return {
         "case_count": len(records),
         "variants": selected_variants,
+        "quant_shadow": {
+            "variant": quant_shadow_variant_name if quant_shadow_weights else None,
+            "weights": quant_shadow_weights or {},
+            "note": (
+                "Shadow variants validate quant-tuning weights offline against frozen candidate rows; "
+                "they do not change runtime recommendation weights."
+            ),
+        },
         "summaries": summaries,
         "deltas_vs_full": deltas,
         "per_case": per_case,

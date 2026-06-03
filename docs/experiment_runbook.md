@@ -140,7 +140,7 @@ the same frozen candidate pool. Each JSONL record must include `plan`,
 Run:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py ablate-2025 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\ablation_2025_summary.json --results-jsonl logs\ablation_2025_results.jsonl --report-md logs\ablation_2025_report.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py ablate-2025 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --tuning-summary logs\quant_tuning_summary.json --output logs\ablation_2025_summary.json --results-jsonl logs\ablation_2025_results.jsonl --report-md logs\ablation_2025_report.md
 ```
 
 Default variants:
@@ -152,6 +152,11 @@ history_tight_rank
 safe_first
 no_tradeoff_policy
 ```
+
+When `--tuning-summary` is provided, ablation also adds
+`quant_tuned_shadow`. This variant uses the `quant-tune` best weights to
+reorder frozen candidate rows offline. It is a shadow test only; it does not
+change runtime recommendation weights.
 
 ## Self-Improvement Audit
 
@@ -367,6 +372,7 @@ Use these outputs for project claims:
 | Recommendation core is backtestable | `backtest_2025_summary.json`, `backtest_2025_results.jsonl` |
 | Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |
+| Candidate quant weights improve frozen-plan ordering before runtime adoption | `ablation_2025_summary.json`, `ablation_2025_report.md` with `quant_tuned_shadow` |
 | Case intake is complete enough to begin recommendation | `intake_audit.json`, `intake_audit.md` |
 | Volunteer-plan structure meets agency-grade gates | `plan_quality_audit.json`, `plan_quality_audit.md` |
 | Plan robustness across parallel-world assumptions is known | `parallel_worlds.json`, `parallel_worlds.md` |

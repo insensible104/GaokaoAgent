@@ -41,6 +41,7 @@ def _row(
     relative_lift: float = 0.0,
     market_discount_score: float = 0.0,
     rebound_risk: float = 0.0,
+    quant_score: float = 0.0,
 ) -> MajorGroupRow:
     option = MajorOption(
         school_code=code,
@@ -78,6 +79,7 @@ def _row(
         relative_lift=relative_lift,
         market_discount_score=market_discount_score,
         rebound_risk=rebound_risk,
+        quant_score=quant_score,
     )
 
 
@@ -231,7 +233,72 @@ def test_arbitrage_ablation_variants_expose_signal_families():
     assert front_major_boost.choices[0].front_major_hit_prob == 0.94
 
 
+def test_quant_tuned_shadow_variant_uses_tuning_weights_without_changing_full_plan():
+    profile = _profile()
+    safe_bad = _row(
+        school="Safe Bad University",
+        code="30001",
+        group="401",
+        prob=0.96,
+        tag=StrategyTag.SAFE,
+        utility=0.20,
+        major="civil engineering",
+        quant_score=0.10,
+    )
+    preferred_target = _row(
+        school="Preferred Target University",
+        code="30002",
+        group="402",
+        prob=0.62,
+        tag=StrategyTag.TARGET,
+        utility=0.95,
+        major="computer science",
+        quant_score=0.96,
+    )
+    rows = [safe_bad, preferred_target]
+    full_plan = build_volunteer_plan(rows, profile, max_choices=2)
+    record = {
+        "case_id": "case_shadow",
+        "user_rank": 12000,
+        "preferred_majors": ["computer"],
+        "blacklist_majors": ["civil"],
+        "plan": full_plan.model_dump(),
+        "candidate_rows": [row.model_dump() for row in rows],
+        "user_profile": profile.model_dump(),
+    }
+    actual = [
+        ActualMajorGroupOutcome(
+            school_code="30001",
+            school_name="Safe Bad University",
+            major_group_code="401",
+            actual_group_min_rank=20000,
+            major_min_ranks={"civil engineering": 20000},
+        ),
+        ActualMajorGroupOutcome(
+            school_code="30002",
+            school_name="Preferred Target University",
+            major_group_code="402",
+            actual_group_min_rank=13000,
+            major_min_ranks={"computer science": 12500},
+        ),
+    ]
+
+    result = run_ablation_backtest_records(
+        records=[record],
+        actual_outcomes=actual,
+        variants=["full"],
+        quant_shadow_weights={"quant_score": 1.0},
+    )
+
+    assert result["variants"] == ["full", "quant_tuned_shadow"]
+    assert result["quant_shadow"]["weights"] == {"quant_score": 1.0}
+    assert result["summaries"]["full"]["blacklist_hit_rate"] == 1.0
+    assert result["summaries"]["quant_tuned_shadow"]["preferred_major_hit_rate"] == 1.0
+    assert result["deltas_vs_full"]["quant_tuned_shadow"]["preferred_major_hit_rate"] == 1.0
+
+
 if __name__ == "__main__":
     test_ablation_backtest_compares_full_plan_against_baselines()
     test_arbitrage_ablation_variants_expose_signal_families()
+    test_quant_tuned_shadow_variant_uses_tuning_weights_without_changing_full_plan()
     print("2025 ablation smoke tests passed")

@@ -13,6 +13,7 @@ from typing import Any, Iterable
 
 from evaluation.ablation_2025 import (
     DEFAULT_ABLATION_VARIANTS,
+    QUANT_TUNED_SHADOW_VARIANT,
     build_markdown_ablation_report,
     run_ablation_backtest_records,
 )
@@ -246,10 +247,13 @@ def cmd_backtest_2025(args: argparse.Namespace) -> int:
 def cmd_ablate_2025(args: argparse.Namespace) -> int:
     actual_outcomes = load_actual_outcomes_csv(args.actual_outcomes, encoding=args.encoding)
     records = _read_jsonl(Path(args.plans_jsonl))
+    tuning_summary = _read_json(Path(args.tuning_summary)) if args.tuning_summary else None
+    quant_shadow_weights = _extract_quant_shadow_weights(tuning_summary) if tuning_summary else None
     result = run_ablation_backtest_records(
         records=records,
         actual_outcomes=actual_outcomes,
         variants=args.variants or DEFAULT_ABLATION_VARIANTS,
+        quant_shadow_weights=quant_shadow_weights,
     )
 
     if args.results_jsonl:
@@ -266,6 +270,13 @@ def cmd_ablate_2025(args: argparse.Namespace) -> int:
     else:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
+
+
+def _extract_quant_shadow_weights(tuning_summary: dict[str, Any]) -> dict[str, float]:
+    weights = ((tuning_summary.get("best") or {}).get("weights") or {})
+    if not weights:
+        raise ValueError("Tuning summary does not contain `best.weights` for quant shadow ablation.")
+    return {str(key): float(value) for key, value in weights.items()}
 
 
 def cmd_quant_calibrate_2025(args: argparse.Namespace) -> int:
@@ -562,6 +573,13 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="*",
         default=None,
         help=f"Variants to compare. Default: {' '.join(DEFAULT_ABLATION_VARIANTS)}",
+    )
+    ablate.add_argument(
+        "--tuning-summary",
+        help=(
+            "Optional quant-tune JSON. When provided, adds "
+            f"`{QUANT_TUNED_SHADOW_VARIANT}` as an offline shadow variant."
+        ),
     )
     ablate.add_argument("--output", help="Ablation summary JSON output path.")
     ablate.add_argument("--results-jsonl", help="Per-case ablation result JSONL output path.")
