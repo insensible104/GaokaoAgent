@@ -303,6 +303,129 @@ def _audit_tuning(tuning: dict[str, Any]) -> list[dict[str, Any]]:
     return findings
 
 
+def _audit_failure_mining(failure_mining: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    buckets = {
+        str(row.get("bucket") or ""): row
+        for row in failure_mining.get("failure_buckets", []) or []
+    }
+    failure_rate = _float(failure_mining, "failure_case_rate")
+    if failure_rate >= 0.25:
+        findings.append(
+            _finding(
+                severity="P1",
+                area="failure_mining",
+                finding="回测失败案例占比偏高，aggregate 指标不足以指导下一轮优化",
+                target="failure_case_rate < 25%",
+                recommendation="把 worst_cases 固定为下一轮 replay set，逐案复盘首命中、专业分配和证据链。",
+                evidence={
+                    "failure_case_rate": round(failure_rate, 6),
+                    "worst_cases": failure_mining.get("worst_cases", [])[:5],
+                },
+            )
+        )
+
+    bucket_rules = {
+        "sliding": (
+            "P0",
+            "失败挖掘发现滑档案例",
+            "滑档案例数为 0",
+            "把滑档 worst cases 加入保底锚点回放集，检查 safe_anchor、prefix ordering 和 actual label 覆盖。",
+        ),
+        "blacklist_hit": (
+            "P0",
+            "失败挖掘发现黑名单专业命中案例",
+            "黑名单命中案例数为 0",
+            "把黑名单从排序惩罚升级为硬约束或强制签收确认，并回放相关专业组调剂路径。",
+        ),
+        "tail_assignment": (
+            "P1",
+            "失败挖掘发现尾部调剂案例",
+            "tail_assignment failure bucket 为 0",
+            "重训或调参组内专业分配模型，降低高尾部风险行进入关键前缀的概率。",
+        ),
+        "preferred_major_miss": (
+            "P2",
+            "失败挖掘发现偏好专业未命中案例",
+            "preferred_major_miss bucket 持续下降",
+            "把 front-major hit 和 preferred-major utility 作为独立优化目标，而非只优化院校专业组投档。",
+        ),
+        "wasted_score": (
+            "P2",
+            "失败挖掘发现浪费分案例",
+            "wasted_score bucket 持续下降",
+            "检查过早命中的低效用保底行，调整前缀优化中的 optionality 和 first-hit margin 惩罚。",
+        ),
+        "missing_actual_outcome": (
+            "P1",
+            "失败挖掘发现 actual outcome 标签缺失",
+            "missing_actual_outcome bucket 为 0",
+            "优先修复院校代码/专业组代码归一化和 actual label 覆盖，否则回测指标会被标签缺口污染。",
+        ),
+    }
+    for bucket, (severity, finding, target, recommendation) in bucket_rules.items():
+        row = buckets.get(bucket)
+        if not row:
+            continue
+        count = int(row.get("case_count", 0) or 0)
+        if count <= 0:
+            continue
+        findings.append(
+            _finding(
+                severity=severity,
+                area=f"failure_{bucket}",
+                finding=finding,
+                target=target,
+                recommendation=recommendation,
+                evidence={
+                    "bucket": bucket,
+                    "case_count": count,
+                    "case_rate": row.get("case_rate", 0.0),
+                    "worst_cases": failure_mining.get("worst_cases", [])[:5],
+                },
+            )
+        )
+    return findings
+
+
+def _audit_ablation_failure_deltas(ablation_failure_deltas: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    regressions = ablation_failure_deltas.get("case_regressions") or []
+    if regressions:
+        findings.append(
+            _finding(
+                severity="P1",
+                area="ablation_case_regression",
+                finding="候选策略在部分案例中引入了新的失败类型",
+                target="candidate variants should not introduce critical new case-level failures",
+                recommendation="对 case_regressions 做逐案 replay；若新增滑档、黑名单或尾部调剂，禁止把该 variant 直接吸收入 runtime。",
+                evidence={
+                    "baseline_variant": ablation_failure_deltas.get("baseline_variant"),
+                    "case_regressions": regressions[:8],
+                },
+            )
+        )
+    for variant, buckets in (ablation_failure_deltas.get("variant_failure_deltas") or {}).items():
+        critical = [
+            row
+            for row in buckets
+            if str(row.get("bucket") or "") in {"new_sliding", "new_blacklist_hit", "new_tail_assignment"}
+        ]
+        if not critical:
+            continue
+        findings.append(
+            _finding(
+                severity="P1",
+                area="ablation_failure_delta",
+                finding=f"Variant `{variant}` 引入关键失败桶",
+                target="no new sliding / blacklist / tail-assignment failures versus full",
+                recommendation=f"复盘 `{variant}` 的排序逻辑，仅保留不会制造关键失败的局部信号。",
+                evidence={"variant": variant, "critical_buckets": critical},
+            )
+        )
+    return findings
+
+
 def _delivery_severity(status: str, score: float, target: float) -> str:
     if status in {"blocked", "blocked_missing_core"}:
         return "P0"
@@ -515,6 +638,8 @@ def build_improvement_audit(
     report_quality_audit: dict[str, Any] | None = None,
     delivery_bundle: dict[str, Any] | None = None,
     delivery_portfolio: dict[str, Any] | None = None,
+    failure_mining: dict[str, Any] | None = None,
+    ablation_failure_deltas: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return prioritized self-improvement findings from experiment summaries."""
     findings: list[dict[str, Any]] = []
@@ -536,6 +661,10 @@ def build_improvement_audit(
         findings.extend(_audit_delivery_bundle(delivery_bundle))
     if delivery_portfolio:
         findings.extend(_audit_delivery_portfolio(delivery_portfolio))
+    if failure_mining:
+        findings.extend(_audit_failure_mining(failure_mining))
+    if ablation_failure_deltas:
+        findings.extend(_audit_ablation_failure_deltas(ablation_failure_deltas))
     findings = _sort_findings(findings)
     return {
         "mission": "高考志愿平权化：以可负担、可解释、可回测的系统能力逼近头部填报机构和主播。",

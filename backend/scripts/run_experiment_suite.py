@@ -190,6 +190,8 @@ def main() -> int:
             "improvement-audit",
             "--backtest-summary",
             str(backtest_summary),
+            "--backtest-results-jsonl",
+            str(backtest_results),
             "--calibration-summary",
             str(calibration_summary),
             "--tuning-summary",
@@ -200,7 +202,12 @@ def main() -> int:
             str(output_dir / "improvement_audit.md"),
         ]
         if args.run_ablation:
-            audit_args.extend(["--ablation-summary", str(ablation_summary)])
+            audit_args.extend([
+                "--ablation-summary",
+                str(ablation_summary),
+                "--ablation-results-jsonl",
+                str(ablation_results),
+            ])
         status = run_stage("improvement_audit", audit_args)
         if status != 0:
             _write_manifest(output_dir / "manifest.json", manifest)

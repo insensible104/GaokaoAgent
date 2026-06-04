@@ -385,8 +385,10 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
 
 def cmd_improvement_audit(args: argparse.Namespace) -> int:
     backtest_summary = _read_json(Path(args.backtest_summary)) if args.backtest_summary else None
+    backtest_results = _read_jsonl(Path(args.backtest_results_jsonl)) if args.backtest_results_jsonl else None
     calibration_summary = _read_json(Path(args.calibration_summary)) if args.calibration_summary else None
     ablation_summary = _read_json(Path(args.ablation_summary)) if args.ablation_summary else None
+    ablation_results = _read_jsonl(Path(args.ablation_results_jsonl)) if args.ablation_results_jsonl else None
     tuning_summary = _read_json(Path(args.tuning_summary)) if args.tuning_summary else None
     intake_audit = _read_json(Path(args.intake_audit)) if args.intake_audit else None
     plan_quality_audit = _read_json(Path(args.plan_quality_audit)) if args.plan_quality_audit else None
@@ -396,8 +398,10 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
     if not any(
         (
             backtest_summary,
+            backtest_results,
             calibration_summary,
             ablation_summary,
+            ablation_results,
             tuning_summary,
             intake_audit,
             plan_quality_audit,
@@ -407,8 +411,9 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
         )
     ):
         raise ValueError(
-            "Provide at least one of --backtest-summary, --calibration-summary, "
-            "--ablation-summary, --tuning-summary, --intake-audit, "
+            "Provide at least one of --backtest-summary, --backtest-results-jsonl, "
+            "--calibration-summary, --ablation-summary, --ablation-results-jsonl, "
+            "--tuning-summary, --intake-audit, "
             "--plan-quality-audit, --report-quality-audit, --delivery-bundle, "
             "or --delivery-portfolio."
         )
@@ -423,6 +428,8 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
         report_quality_audit=report_quality_audit,
         delivery_bundle=delivery_bundle,
         delivery_portfolio=delivery_portfolio,
+        failure_mining=mine_backtest_failures(backtest_results) if backtest_results else None,
+        ablation_failure_deltas=mine_ablation_failure_deltas(ablation_results) if ablation_results else None,
     )
     if args.report_md:
         report_path = Path(args.report_md)
@@ -692,8 +699,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Convert experiment metrics into prioritized self-improvement tasks.",
     )
     audit.add_argument("--backtest-summary", help="JSON produced by backtest-2025 --output.")
+    audit.add_argument("--backtest-results-jsonl", help="JSONL produced by backtest-2025 --results-jsonl.")
     audit.add_argument("--calibration-summary", help="JSON produced by quant-calibrate-2025 --output.")
     audit.add_argument("--ablation-summary", help="JSON produced by ablate-2025 --output.")
+    audit.add_argument("--ablation-results-jsonl", help="JSONL produced by ablate-2025 --results-jsonl.")
     audit.add_argument("--tuning-summary", help="JSON produced by quant-tune --output.")
     audit.add_argument("--intake-audit", help="JSON produced by intake-audit --output.")
     audit.add_argument("--plan-quality-audit", help="JSON produced by plan-quality-audit --output.")

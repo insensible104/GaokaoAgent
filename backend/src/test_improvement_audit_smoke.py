@@ -96,6 +96,40 @@ def test_improvement_audit_prioritizes_blockers() -> None:
                 {"case_id": "case-blocked", "status": "blocked", "portfolio_score": 0.2}
             ],
         },
+        failure_mining={
+            "case_count": 3,
+            "failure_case_count": 2,
+            "failure_case_rate": 0.666667,
+            "failure_buckets": [
+                {"bucket": "sliding", "case_count": 1, "case_rate": 0.333333},
+                {"bucket": "blacklist_hit", "case_count": 1, "case_rate": 0.333333},
+                {"bucket": "tail_assignment", "case_count": 1, "case_rate": 0.333333},
+            ],
+            "worst_cases": [
+                {
+                    "case_id": "slide-case",
+                    "failure_reasons": ["sliding"],
+                    "severity_score": 1.0,
+                }
+            ],
+        },
+        ablation_failure_deltas={
+            "baseline_variant": "full",
+            "variant_failure_deltas": {
+                "unsafe_variant": [
+                    {"bucket": "new_blacklist_hit", "case_count": 1},
+                    {"bucket": "new_tail_assignment", "case_count": 1},
+                ]
+            },
+            "case_regressions": [
+                {
+                    "case_id": "case-unsafe",
+                    "variant": "unsafe_variant",
+                    "new_failures": ["blacklist_hit", "tail_assignment"],
+                    "severity_score": 1.65,
+                }
+            ],
+        },
     )
 
     assert result["status"] == "blocked_for_agency_grade_claims"
@@ -109,6 +143,10 @@ def test_improvement_audit_prioritizes_blockers() -> None:
     assert any(item["area"] == "delivery_bundle" for item in result["findings"])
     assert any(item["area"] == "delivery_portfolio" for item in result["findings"])
     assert any(item["area"] == "delivery_portfolio_gate" for item in result["findings"])
+    assert any(item["area"] == "failure_sliding" for item in result["findings"])
+    assert any(item["area"] == "failure_blacklist_hit" for item in result["findings"])
+    assert any(item["area"] == "ablation_case_regression" for item in result["findings"])
+    assert any(item["area"] == "ablation_failure_delta" for item in result["findings"])
     markdown = build_markdown_improvement_audit(result)
     assert "GaokaoAgent Self-Improvement Audit" in markdown
     assert "高考志愿平权化" in markdown
