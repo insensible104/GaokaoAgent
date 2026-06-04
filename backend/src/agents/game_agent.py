@@ -2,6 +2,7 @@
 import os
 import pandas as pd
 from pathlib import Path
+from typing import Any, Sequence
 from langchain_core.messages import AIMessage
 
 from models.state import SupervisorState
@@ -40,6 +41,30 @@ def _clamp01(value: float) -> float:
 
 def _normalize_percent_score(value: float) -> float:
     return _clamp01(value / 100.0)
+
+
+def _extract_research_evidence_cards(state: dict) -> list[dict[str, Any]]:
+    """Read source-aware research cards from supervisor state."""
+    cards = state.get("research_evidence_cards") or []
+    return [dict(card) for card in cards if isinstance(card, dict)]
+
+
+def _score_row_arbitrage(
+    *,
+    row: MajorGroupRow,
+    profile,
+    school_major_score: float,
+    city_preference_score: float,
+    research_evidence_cards: Sequence[dict[str, Any]] | None = None,
+) -> object:
+    """Attach arbitrage signals, optionally using deep-research evidence cards."""
+    return score_major_group_arbitrage(
+        row=row,
+        profile=profile,
+        school_major_score=school_major_score,
+        city_preference_score=city_preference_score,
+        research_evidence_cards=research_evidence_cards,
+    )
 
 
 def _major_keyword_score(majors, preferred_majors) -> float:
@@ -189,6 +214,9 @@ def game_agent_node(state: SupervisorState) -> dict:
             "debug_logs": ["[ERROR] Game Agent: 缺少有效的位次信息"],
             "messages": [AIMessage(content="错误：需要提供您的高考位次才能进行推荐。请告诉我您的全省位次。")]
         }
+    research_evidence_cards = _extract_research_evidence_cards(state)
+    if research_evidence_cards:
+        print(f"[INFO] Game Agent: loaded {len(research_evidence_cards)} research evidence cards for market features")
 
     # 初始化量化引擎 - 智能检测数据目录
     try:
@@ -556,11 +584,12 @@ def game_agent_node(state: SupervisorState) -> dict:
         row.pain_point_flags = tradeoff_result.pain_point_flags
         row.market_behavior_notes = tradeoff_result.market_behavior_notes
         row.tradeoff_summary = tradeoff_result.summary
-        score_major_group_arbitrage(
+        _score_row_arbitrage(
             row=row,
             profile=profile,
             school_major_score=_normalize_percent_score(avg_comprehensive_score),
             city_preference_score=city_preference_score,
+            research_evidence_cards=research_evidence_cards,
         )
         row.recommendation_role = (
             f"{row.recommendation_role}:{tradeoff_result.score_band}"

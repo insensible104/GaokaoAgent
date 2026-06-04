@@ -2,8 +2,14 @@
 
 import pandas as pd
 
-from agents.game_agent import _limit_precision_candidates, _normalize_percent_score
-from models.user_profile import UserProfile
+from agents.game_agent import (
+    _extract_research_evidence_cards,
+    _limit_precision_candidates,
+    _normalize_percent_score,
+    _score_row_arbitrage,
+)
+from models.game_matrix import MajorGroupRow, MajorOption, StrategyTag, VolatilityLevel
+from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
 
 
 def test_normalize_percent_score_clamps_to_schema_range() -> None:
@@ -47,7 +53,76 @@ def test_precision_candidate_limit_keeps_rank_bands() -> None:
     assert any(rank_diffs > 6000)
 
 
+def test_game_agent_arbitrage_helper_consumes_research_evidence_cards() -> None:
+    profile = UserProfile(
+        score=620,
+        rank=12000,
+        subject_group="physics",
+        preferred_majors=["computer"],
+        risk_tolerance=RiskTolerance.BALANCED,
+        school_major_preference=SchoolMajorPreference.BALANCED,
+    )
+    option = MajorOption(
+        school_code="90001",
+        school_name="Evidence University",
+        major_group_code="801",
+        major_name="computer science",
+        plan_quota=12,
+        user_utility=0.85,
+    )
+    row = MajorGroupRow(
+        school_name="Evidence University",
+        school_code="90001",
+        major_group_code="801",
+        major_list=["computer science"],
+        major_count=1,
+        major_options=[option],
+        suggested_major_choices=[option],
+        admission_prob=0.62,
+        min_rank_pred=12500,
+        rank_diff=500,
+        rank_ci_lower=11000,
+        rank_ci_upper=14000,
+        volatility=VolatilityLevel.MEDIUM,
+        adjustment_risk=0.10,
+        tail_assignment_risk=0.10,
+        major_utility_mean=0.85,
+        major_utility_min=0.85,
+        strategy_tag=StrategyTag.TARGET,
+        comprehensive_score=0.72,
+    )
+    state = {
+        "research_evidence_cards": [
+            {
+                "signal_type": "external_research",
+                "source_type": "official_or_school",
+                "value": 0.80,
+                "confidence": 0.90,
+                "claim": "Evidence University 801 招生计划 扩招，院校专业组调整，招生人数增加。",
+                "source": "https://admission.evidence.example/plan",
+                "usable_for_prediction": True,
+            },
+            "bad-card",
+        ]
+    }
+
+    cards = _extract_research_evidence_cards(state)
+    _score_row_arbitrage(
+        row=row,
+        profile=profile,
+        school_major_score=0.75,
+        city_preference_score=1.0,
+        research_evidence_cards=cards,
+    )
+
+    assert len(cards) == 1
+    assert row.plan_change_score > 0
+    assert "research_plan_change" in row.plan_change_types
+    assert any(card["signal_type"] == "plan_change_signal" for card in row.market_evidence_cards)
+
+
 if __name__ == "__main__":
     test_normalize_percent_score_clamps_to_schema_range()
     test_precision_candidate_limit_keeps_rank_bands()
+    test_game_agent_arbitrage_helper_consumes_research_evidence_cards()
     print("game agent score bounds smoke tests passed")
