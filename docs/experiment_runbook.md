@@ -22,6 +22,7 @@ eval-orchestration
 backtest-2025
 quant-calibrate-2025
 quant-tune
+quant-lab-register
 ablate-2025
 improvement-audit
 plan-quality-audit
@@ -172,6 +173,38 @@ When `--tuning-summary` is provided, ablation also adds
 `quant_tuned_shadow`. This variant uses the `quant-tune` best weights to
 reorder frozen candidate rows offline. It is a shadow test only; it does not
 change runtime recommendation weights.
+
+Ablation output also includes a `slice_scoreboard`. This is the main guardrail
+against aggregate-metric traps. Inspect variant performance by subject group,
+rank band, risk tolerance, school-vs-major tradeoff, region constraint, major
+preference / blacklist constraint, major cognition risk, and regret
+sensitivity. Do not promote a variant that improves the aggregate table while
+harming boundary-rank, region-locked, or blacklist-sensitive families.
+
+## QuantLab Registry
+
+QuantLab registration turns separate experiment artifacts into one auditable
+manifest. It records artifact hashes, metric digests, slice availability, and a
+shadow promotion gate.
+
+Run after backtest, calibration, tuning, ablation, and improvement audit:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-lab-register --experiment-id exp_2026_0604_quant_shadow --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --backtest-summary logs\backtest_2025_summary.json --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --improvement-audit logs\improvement_audit.json --output logs\quant_lab_manifest.json --report-md logs\quant_lab_report.md
+```
+
+Promotion gate rule:
+
+```text
+new variant may be promoted only if:
+- success_rate is not worse than full
+- blacklist_hit_rate does not worsen
+- tail_assignment_rate rises by no more than 3 percentage points
+- preferred_major_hit_rate or average_assigned_major_utility improves
+```
+
+The standard experiment suite writes `quant_lab_manifest.json` and
+`quant_lab_report.md` when 2025 outcome labels and frozen plans are provided.
 
 ## Self-Improvement Audit
 

@@ -26,6 +26,11 @@ from evaluation.improvement_audit import build_improvement_audit, build_markdown
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
 from evaluation.parallel_worlds import build_markdown_parallel_world_analysis, run_parallel_world_analysis
 from evaluation.plan_quality_audit import audit_plan_quality, build_markdown_plan_quality_audit
+from evaluation.quant_lab import (
+    build_artifact_manifest,
+    build_markdown_quant_lab_report,
+    build_quant_lab_experiment,
+)
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
 from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
 from evaluation.schemas import PlanBacktestResult
@@ -65,6 +70,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_backtest_2025_smoke.py",
     "test_quant_calibration_smoke.py",
     "test_quant_tuning_smoke.py",
+    "test_quant_lab_smoke.py",
     "test_improvement_audit_smoke.py",
     "test_intake_audit_smoke.py",
     "test_parallel_worlds_smoke.py",
@@ -324,6 +330,48 @@ def cmd_quant_tune(args: argparse.Namespace) -> int:
         print(f"saved quant tuning summary -> {args.output}")
     else:
         print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _read_optional_json(path: str | None) -> dict[str, Any] | None:
+    return _read_json(Path(path)) if path else None
+
+
+def cmd_quant_lab_register(args: argparse.Namespace) -> int:
+    artifacts = build_artifact_manifest(
+        {
+            "plans_jsonl": args.plans_jsonl,
+            "actual_outcomes": args.actual_outcomes,
+            "backtest_summary": args.backtest_summary,
+            "calibration_summary": args.calibration_summary,
+            "tuning_summary": args.tuning_summary,
+            "ablation_summary": args.ablation_summary,
+            "improvement_audit": args.improvement_audit,
+        }
+    )
+    manifest = build_quant_lab_experiment(
+        experiment_id=args.experiment_id,
+        config={
+            "notes": args.notes or "",
+            "source": "gaokao_agent_cli.quant-lab-register",
+        },
+        artifacts=artifacts,
+        backtest_summary=_read_optional_json(args.backtest_summary),
+        calibration_summary=_read_optional_json(args.calibration_summary),
+        tuning_summary=_read_optional_json(args.tuning_summary),
+        ablation_summary=_read_optional_json(args.ablation_summary),
+        improvement_audit=_read_optional_json(args.improvement_audit),
+    )
+    if args.output:
+        _write_json(Path(args.output), manifest)
+        print(f"saved quant lab manifest -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_quant_lab_report(manifest), encoding="utf-8")
+        print(f"saved quant lab report -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(manifest, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -611,6 +659,23 @@ def build_parser() -> argparse.ArgumentParser:
     tune.add_argument("--output", help="Quant tuning JSON output path.")
     tune.add_argument("--report-md", help="Markdown quant tuning report output path.")
     tune.set_defaults(func=cmd_quant_tune)
+
+    quant_lab = subparsers.add_parser(
+        "quant-lab-register",
+        help="Register one quant experiment with artifact hashes, metrics, and promotion gates.",
+    )
+    quant_lab.add_argument("--experiment-id", required=True)
+    quant_lab.add_argument("--plans-jsonl", help="Frozen plan JSONL used by the experiment.")
+    quant_lab.add_argument("--actual-outcomes", help="Actual outcome CSV used post-hoc.")
+    quant_lab.add_argument("--backtest-summary", help="JSON produced by backtest-2025 --output.")
+    quant_lab.add_argument("--calibration-summary", help="JSON produced by quant-calibrate-2025 --output.")
+    quant_lab.add_argument("--tuning-summary", help="JSON produced by quant-tune --output.")
+    quant_lab.add_argument("--ablation-summary", help="JSON produced by ablate-2025 --output.")
+    quant_lab.add_argument("--improvement-audit", help="JSON produced by improvement-audit --output.")
+    quant_lab.add_argument("--notes", default="")
+    quant_lab.add_argument("--output", help="QuantLab manifest JSON output path.")
+    quant_lab.add_argument("--report-md", help="QuantLab Markdown report output path.")
+    quant_lab.set_defaults(func=cmd_quant_lab_register)
 
     audit = subparsers.add_parser(
         "improvement-audit",

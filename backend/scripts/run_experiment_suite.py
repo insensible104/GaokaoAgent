@@ -42,11 +42,14 @@ def main() -> int:
         help="Also run full-vs-baseline 2025 ablations. Frozen records must include candidate_rows and user_profile.",
     )
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--experiment-id", help="Optional stable QuantLab experiment id.")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
+    experiment_id = args.experiment_id or output_dir.name or "latest"
     manifest: dict[str, Any] = {
         "output_dir": str(output_dir),
+        "experiment_id": experiment_id,
         "stages": [],
     }
 
@@ -197,6 +200,36 @@ def main() -> int:
         if args.run_ablation:
             audit_args.extend(["--ablation-summary", str(ablation_summary)])
         status = run_stage("improvement_audit", audit_args)
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
+        quant_lab_args = [
+            "quant-lab-register",
+            "--experiment-id",
+            experiment_id,
+            "--actual-outcomes",
+            args.actual_outcomes,
+            "--plans-jsonl",
+            args.plans_jsonl,
+            "--backtest-summary",
+            str(backtest_summary),
+            "--calibration-summary",
+            str(calibration_summary),
+            "--tuning-summary",
+            str(tuning_summary),
+            "--improvement-audit",
+            str(output_dir / "improvement_audit.json"),
+            "--output",
+            str(output_dir / "quant_lab_manifest.json"),
+            "--report-md",
+            str(output_dir / "quant_lab_report.md"),
+            "--notes",
+            "standard experiment suite",
+        ]
+        if args.run_ablation:
+            quant_lab_args.extend(["--ablation-summary", str(ablation_summary)])
+        status = run_stage("quant_lab_register", quant_lab_args)
         if status != 0:
             _write_manifest(output_dir / "manifest.json", manifest)
             return status

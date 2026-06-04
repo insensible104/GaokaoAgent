@@ -8,6 +8,7 @@ from typing import Iterable, Sequence
 from evaluation.backtest_2025 import run_plan_backtest, summarize_backtests
 from evaluation.baselines import BaselineName, build_baseline_plan
 from evaluation.schemas import ActualMajorGroupOutcome, PlanBacktestResult
+from evaluation.slice_scoreboard import attach_slice_tags_to_per_case, build_slice_scoreboard
 from models.game_matrix import MajorGroupRow, VolunteerPlan
 from models.user_profile import UserProfile
 from recommendation.major_choice_planner import build_volunteer_plan
@@ -203,6 +204,7 @@ def run_ablation_backtest_records(
                 }
             )
 
+    per_case = attach_slice_tags_to_per_case(records=records, per_case=per_case)
     summaries = {
         variant: summarize_backtests(per_variant_results[variant])
         for variant in selected_variants
@@ -226,6 +228,7 @@ def run_ablation_backtest_records(
         },
         "summaries": summaries,
         "deltas_vs_full": deltas,
+        "slice_scoreboard": build_slice_scoreboard(per_case),
         "per_case": per_case,
     }
 
@@ -270,6 +273,34 @@ def build_markdown_ablation_report(result: dict) -> str:
             )
             + " |"
         )
+
+    slice_rows = (result.get("slice_scoreboard") or {}).get("rows") or []
+    if slice_rows:
+        lines.extend(
+            [
+                "",
+                "## Slice Guardrail Preview",
+                "",
+                "| Variant | Slice | Cases | Success | Preferred | Blacklist | Tail |",
+                "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for row in slice_rows[:24]:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        f"`{row.get('variant', '')}`",
+                        f"`{row.get('slice', '')}`",
+                        str(row.get("case_count", 0)),
+                        _pct(float(row.get("success_rate", 0.0))),
+                        _pct(float(row.get("preferred_major_hit_rate", 0.0))),
+                        _pct(float(row.get("blacklist_hit_rate", 0.0))),
+                        _pct(float(row.get("tail_assignment_hit_rate", 0.0))),
+                    ]
+                )
+                + " |"
+            )
 
     if full_summary.get("case_count", 0) == 0:
         lines.extend(["", "No cases were evaluated."])
