@@ -141,6 +141,8 @@ def main() -> int:
         quant_lab_report = output_dir / "quant_lab_report.md"
         claim_readiness = output_dir / "claim_readiness.json"
         claim_readiness_report = output_dir / "claim_readiness.md"
+        claim_readiness_portfolio = output_dir / "claim_readiness_portfolio.json"
+        claim_readiness_portfolio_report = output_dir / "claim_readiness_portfolio.md"
         quant_lab_leaderboard = output_dir / "quant_lab_leaderboard.json"
         quant_lab_leaderboard_report = output_dir / "quant_lab_leaderboard.md"
         status = run_stage(
@@ -323,6 +325,22 @@ def main() -> int:
                 str(claim_readiness),
                 "--report-md",
                 str(claim_readiness_report),
+            ],
+        )
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
+        status = run_stage(
+            "claim_readiness_portfolio",
+            [
+                "claim-readiness-portfolio",
+                "--claim-json",
+                str(claim_readiness),
+                "--output",
+                str(claim_readiness_portfolio),
+                "--report-md",
+                str(claim_readiness_portfolio_report),
             ],
         )
         if status != 0:

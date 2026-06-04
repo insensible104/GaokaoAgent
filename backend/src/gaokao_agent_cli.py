@@ -27,6 +27,10 @@ from evaluation.benchmark_coverage import (
     compare_benchmark_coverage,
 )
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
+from evaluation.claim_portfolio import (
+    build_claim_readiness_portfolio,
+    build_markdown_claim_readiness_portfolio,
+)
 from evaluation.claim_readiness import build_claim_readiness, build_markdown_claim_readiness
 from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdown_delivery_portfolio_audit
@@ -87,6 +91,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_tuning_smoke.py",
     "test_benchmark_coverage_smoke.py",
     "test_claim_readiness_smoke.py",
+    "test_claim_portfolio_smoke.py",
     "test_quant_lab_smoke.py",
     "test_experiment_leaderboard_smoke.py",
     "test_failure_mining_smoke.py",
@@ -492,6 +497,18 @@ def _read_quant_lab_manifest_paths(paths: list[str] | None, patterns: list[str] 
     return list(unique.values())
 
 
+def _read_claim_readiness_paths(paths: list[str] | None, patterns: list[str] | None) -> list[Path]:
+    selected: list[Path] = []
+    for path in paths or []:
+        selected.append(Path(path))
+    for pattern in patterns or []:
+        selected.extend(Path(match) for match in sorted(glob.glob(pattern)))
+    unique: dict[str, Path] = {}
+    for path in selected:
+        unique[str(path)] = path
+    return list(unique.values())
+
+
 def cmd_quant_lab_leaderboard(args: argparse.Namespace) -> int:
     paths = _read_quant_lab_manifest_paths(args.manifest, args.manifest_glob)
     if not paths:
@@ -525,6 +542,25 @@ def cmd_claim_readiness(args: argparse.Namespace) -> int:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(build_markdown_claim_readiness(result), encoding="utf-8")
         print(f"saved claim readiness report -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_claim_readiness_portfolio(args: argparse.Namespace) -> int:
+    paths = _read_claim_readiness_paths(args.claim_json, args.claim_glob)
+    if not paths:
+        raise ValueError("Provide at least one --claim-json or --claim-glob.")
+    reports = [_read_json(path) for path in paths]
+    result = build_claim_readiness_portfolio(reports)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved claim readiness portfolio -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_claim_readiness_portfolio(result), encoding="utf-8")
+        print(f"saved claim readiness portfolio report -> {report_path}")
     if not args.output and not args.report_md:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
@@ -905,6 +941,20 @@ def build_parser() -> argparse.ArgumentParser:
     claim.add_argument("--output", help="Claim readiness JSON output path.")
     claim.add_argument("--report-md", help="Claim readiness Markdown output path.")
     claim.set_defaults(func=cmd_claim_readiness)
+
+    claim_portfolio = subparsers.add_parser(
+        "claim-readiness-portfolio",
+        help="Aggregate many claim_readiness.json files into public-claim review metrics.",
+    )
+    claim_portfolio.add_argument("--claim-json", nargs="*", help="One or more claim_readiness.json paths.")
+    claim_portfolio.add_argument(
+        "--claim-glob",
+        nargs="*",
+        help="Glob pattern(s), such as logs/experiments/*/claim_readiness.json.",
+    )
+    claim_portfolio.add_argument("--output", help="Claim-readiness portfolio JSON output path.")
+    claim_portfolio.add_argument("--report-md", help="Claim-readiness portfolio Markdown output path.")
+    claim_portfolio.set_defaults(func=cmd_claim_readiness_portfolio)
 
     audit = subparsers.add_parser(
         "improvement-audit",

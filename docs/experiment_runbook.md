@@ -289,6 +289,13 @@ public claims:
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py claim-readiness --quant-lab-manifest logs\quant_lab_manifest.json --output logs\claim_readiness.json --report-md logs\claim_readiness.md
 ```
 
+Use the portfolio view when comparing many experiments or preparing any public
+quality claim:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py claim-readiness-portfolio --claim-glob "logs\experiments\*\claim_readiness.json" --output logs\claim_readiness_portfolio.json --report-md logs\claim_readiness_portfolio.md
+```
+
 Use this before any public demo, sales page, interview claim, or family-facing
 quality statement. It blocks agency-grade claims when benchmark coverage,
 backtest size, success/sliding/blacklist/tail metrics, calibration, failure
@@ -576,7 +583,8 @@ When actual outcomes and frozen plans are provided, the suite also writes
 `failure_replay_queue.jsonl`, `failure_replay_queue.json`, and
 `failure_replay_queue.md`, plus `quant_lab_leaderboard.json` and
 `quant_lab_leaderboard.md`, `claim_readiness.json`, and
-`claim_readiness.md`.
+`claim_readiness.md`, plus `claim_readiness_portfolio.json` and
+`claim_readiness_portfolio.md`.
 
 ## Claim-Evidence Mapping
 
@@ -605,3 +613,4 @@ Use these outputs for project claims:
 | Known failures are replayable | `failure_replay_queue.jsonl`, `failure_replay_queue.md` |
 | Multiple experiments can be compared | `quant_lab_leaderboard.json`, `quant_lab_leaderboard.md` |
 | Public quality claims are bounded by evidence | `claim_readiness.json`, `claim_readiness.md` |
+| Public claim readiness is monitored across experiments | `claim_readiness_portfolio.json`, `claim_readiness_portfolio.md` |
