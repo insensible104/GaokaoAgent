@@ -390,10 +390,10 @@ work. It keeps the project aligned to the mission: make volunteer planning more
 accessible while approaching the quality of top agencies and high-trust
 counselors.
 
-Run after backtest, calibration, and delivery-gate audits:
+Run after backtest, calibration, research-evidence, and delivery-gate audits:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py improvement-audit --backtest-summary logs\backtest_2025_summary.json --backtest-results-jsonl logs\backtest_2025_results.jsonl --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --ablation-results-jsonl logs\ablation_2025_results.jsonl --intake-audit logs\intake_audit.json --plan-quality-audit logs\plan_quality_audit.json --report-quality-audit logs\report_quality_audit.json --delivery-bundle logs\delivery_case_001\delivery_bundle.json --delivery-portfolio logs\delivery_portfolio_audit.json --output logs\improvement_audit.json --report-md logs\improvement_audit.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py improvement-audit --backtest-summary logs\backtest_2025_summary.json --backtest-results-jsonl logs\backtest_2025_results.jsonl --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --ablation-results-jsonl logs\ablation_2025_results.jsonl --research-evidence-audit logs\research_evidence_audit.json --intake-audit logs\intake_audit.json --plan-quality-audit logs\plan_quality_audit.json --report-quality-audit logs\report_quality_audit.json --delivery-bundle logs\delivery_case_001\delivery_bundle.json --delivery-portfolio logs\delivery_portfolio_audit.json --output logs\improvement_audit.json --report-md logs\improvement_audit.md
 ```
 
 The audit flags:
@@ -403,6 +403,7 @@ The audit flags:
 - portfolio-level delivery blockers such as low ready-to-deliver rate or repeated failed gates
 - volunteer-plan structural gaps such as weak safe anchors or hard-boundary violations
 - generated-report gaps in risk explanation, evidence, actionability, and official review
+- search/deep-research evidence blocked from quant ingestion
 - calibration gaps that need probability correction
 - tuning candidates that need holdout validation
 - risk-band monotonicity failures

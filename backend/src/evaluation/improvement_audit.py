@@ -25,6 +25,7 @@ TARGETS = {
     "report_quality_score": 0.78,
     "portfolio_ready_to_deliver_rate": 0.80,
     "portfolio_blocked_rate": 0.05,
+    "research_evidence_confidence": 0.55,
 }
 
 RISK_BAND_ORDER = [
@@ -612,6 +613,94 @@ def _audit_delivery_portfolio(portfolio: dict[str, Any]) -> list[dict[str, Any]]
     return findings
 
 
+def _audit_research_evidence(research_evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    status = str(research_evidence.get("status") or "unknown")
+    card_count = int(research_evidence.get("card_count", 0) or 0)
+    usable_prediction_count = int(research_evidence.get("usable_prediction_card_count", 0) or 0)
+    average_confidence = _float(research_evidence, "average_confidence")
+    failed_checks = [
+        row
+        for row in research_evidence.get("checks", []) or []
+        if not row.get("passed")
+    ]
+
+    if card_count <= 0:
+        findings.append(
+            _finding(
+                severity="P0",
+                area="research_evidence",
+                finding="深度调研没有结构化 evidence cards",
+                target="research evidence audit card_count >= 1",
+                recommendation="让搜索/深调链路强制输出 source_type、source、cutoff_date 和 usable_for_prediction。",
+                evidence={"status": status, "card_count": card_count},
+            )
+        )
+        return findings
+
+    if status == "blocked_for_quant_ingestion":
+        findings.append(
+            _finding(
+                severity="P0",
+                area="research_evidence",
+                finding="搜索证据被阻断进入量化特征",
+                target="research evidence status should not be blocked_for_quant_ingestion",
+                recommendation="优先修复社媒/微信/人工 fallback 证据误标为 prediction-ready、缺 source 或缺证据边界的问题。",
+                evidence={
+                    "status": status,
+                    "failed_checks": failed_checks[:5],
+                    "next_required_evidence": research_evidence.get("next_required_evidence", [])[:5],
+                },
+            )
+        )
+    elif status == "reference_only_research":
+        findings.append(
+            _finding(
+                severity="P1",
+                area="research_evidence",
+                finding="搜索证据仅能作为参考，不能支撑量化预测特征",
+                target="at least one official/semi-official card maps to controlled prediction signals",
+                recommendation="补院校官网、招生章程、考试院、阳光高考或官方计划变更证据；微信/主播内容只保留为热度或舆情参考。",
+                evidence={
+                    "status": status,
+                    "source_type_counts": research_evidence.get("source_type_counts", {}),
+                    "controlled_signals": research_evidence.get("controlled_signals", {}),
+                },
+            )
+        )
+    elif status == "limited_prediction_feature":
+        findings.append(
+            _finding(
+                severity="P2",
+                area="research_evidence",
+                finding="官方搜索证据存在，但还不足以稳定进入预测特征",
+                target="research evidence status prediction_feature_ready",
+                recommendation="按 failed checks 补 source、cutoff date、scope terms 和可控 feature 映射。",
+                evidence={
+                    "status": status,
+                    "failed_checks": failed_checks[:5],
+                    "controlled_signals": research_evidence.get("controlled_signals", {}),
+                },
+            )
+        )
+
+    if usable_prediction_count > 0 and average_confidence < TARGETS["research_evidence_confidence"]:
+        findings.append(
+            _finding(
+                severity="P2",
+                area="research_evidence_confidence",
+                finding="预测可用搜索证据的平均置信度偏低",
+                target=f"average_confidence >= {TARGETS['research_evidence_confidence']:.0%}",
+                recommendation="提高官方来源优先级，降低低相关搜索结果权重，并在报告中披露证据截止日期。",
+                evidence={
+                    "average_confidence": round(average_confidence, 6),
+                    "usable_prediction_card_count": usable_prediction_count,
+                },
+            )
+        )
+    return findings
+
+
 def _sort_findings(findings: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
     return sorted(findings, key=lambda item: (order.get(item["severity"], 9), item["area"], item["finding"]))
@@ -638,6 +727,7 @@ def build_improvement_audit(
     report_quality_audit: dict[str, Any] | None = None,
     delivery_bundle: dict[str, Any] | None = None,
     delivery_portfolio: dict[str, Any] | None = None,
+    research_evidence_audit: dict[str, Any] | None = None,
     failure_mining: dict[str, Any] | None = None,
     ablation_failure_deltas: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -661,6 +751,8 @@ def build_improvement_audit(
         findings.extend(_audit_delivery_bundle(delivery_bundle))
     if delivery_portfolio:
         findings.extend(_audit_delivery_portfolio(delivery_portfolio))
+    if research_evidence_audit:
+        findings.extend(_audit_research_evidence(research_evidence_audit))
     if failure_mining:
         findings.extend(_audit_failure_mining(failure_mining))
     if ablation_failure_deltas:

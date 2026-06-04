@@ -631,6 +631,7 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
     report_quality_audit = _read_json(Path(args.report_quality_audit)) if args.report_quality_audit else None
     delivery_bundle = _read_json(Path(args.delivery_bundle)) if args.delivery_bundle else None
     delivery_portfolio = _read_json(Path(args.delivery_portfolio)) if args.delivery_portfolio else None
+    research_evidence_audit = _read_json(Path(args.research_evidence_audit)) if args.research_evidence_audit else None
     if not any(
         (
             backtest_summary,
@@ -644,6 +645,7 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
             report_quality_audit,
             delivery_bundle,
             delivery_portfolio,
+            research_evidence_audit,
         )
     ):
         raise ValueError(
@@ -651,7 +653,7 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
             "--calibration-summary, --ablation-summary, --ablation-results-jsonl, "
             "--tuning-summary, --intake-audit, "
             "--plan-quality-audit, --report-quality-audit, --delivery-bundle, "
-            "or --delivery-portfolio."
+            "--delivery-portfolio, or --research-evidence-audit."
         )
 
     result = build_improvement_audit(
@@ -664,6 +666,7 @@ def cmd_improvement_audit(args: argparse.Namespace) -> int:
         report_quality_audit=report_quality_audit,
         delivery_bundle=delivery_bundle,
         delivery_portfolio=delivery_portfolio,
+        research_evidence_audit=research_evidence_audit,
         failure_mining=mine_backtest_failures(backtest_results) if backtest_results else None,
         ablation_failure_deltas=mine_ablation_failure_deltas(ablation_results) if ablation_results else None,
     )
@@ -1047,6 +1050,7 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--report-quality-audit", help="JSON produced by report-quality-audit --output.")
     audit.add_argument("--delivery-bundle", help="JSON produced by delivery-bundle in the output directory.")
     audit.add_argument("--delivery-portfolio", help="JSON produced by delivery-portfolio-audit --output.")
+    audit.add_argument("--research-evidence-audit", help="JSON produced by research-evidence-audit --output.")
     audit.add_argument("--output", help="Improvement audit JSON output path.")
     audit.add_argument("--report-md", help="Markdown improvement audit output path.")
     audit.set_defaults(func=cmd_improvement_audit)

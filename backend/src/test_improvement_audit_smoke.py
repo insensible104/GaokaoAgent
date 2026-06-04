@@ -96,6 +96,27 @@ def test_improvement_audit_prioritizes_blockers() -> None:
                 {"case_id": "case-blocked", "status": "blocked", "portfolio_score": 0.2}
             ],
         },
+        research_evidence_audit={
+            "status": "blocked_for_quant_ingestion",
+            "card_count": 2,
+            "source_type_counts": {"wechat": 1, "manual_verification_required": 1},
+            "usable_prediction_card_count": 1,
+            "average_confidence": 0.50,
+            "controlled_signals": {"publicity_heat_signal": 0.72},
+            "checks": [
+                {
+                    "name": "social_sources_are_reference_only",
+                    "passed": False,
+                    "severity": "P0",
+                    "evidence": 1,
+                    "target": "0 social/creator cards marked usable_for_prediction",
+                    "blocker_reason": "Social, WeChat, livestream, or creator evidence leaked into prediction use.",
+                }
+            ],
+            "next_required_evidence": [
+                "Social, WeChat, livestream, or creator evidence leaked into prediction use."
+            ],
+        },
         failure_mining={
             "case_count": 3,
             "failure_case_count": 2,
@@ -143,6 +164,8 @@ def test_improvement_audit_prioritizes_blockers() -> None:
     assert any(item["area"] == "delivery_bundle" for item in result["findings"])
     assert any(item["area"] == "delivery_portfolio" for item in result["findings"])
     assert any(item["area"] == "delivery_portfolio_gate" for item in result["findings"])
+    assert any(item["area"] == "research_evidence" for item in result["findings"])
+    assert any(item["area"] == "research_evidence_confidence" for item in result["findings"])
     assert any(item["area"] == "failure_sliding" for item in result["findings"])
     assert any(item["area"] == "failure_blacklist_hit" for item in result["findings"])
     assert any(item["area"] == "ablation_case_regression" for item in result["findings"])
