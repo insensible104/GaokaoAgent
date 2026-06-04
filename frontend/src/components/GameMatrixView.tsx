@@ -28,7 +28,7 @@ export interface MajorGroupRow {
 
 export interface GameMatrix {
   major_group_rows: MajorGroupRow[];  // 专业组推荐
-  rows: any[];  // 旧的单专业模型（保留兼容性）
+  rows: unknown[];  // 旧的单专业模型（保留兼容性）
   total_rush: number;
   total_target: number;
   total_safe: number;
@@ -103,9 +103,12 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix }) 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // 使用专业组数据
-  const dataSource = gameMatrix.major_group_rows && gameMatrix.major_group_rows.length > 0
-    ? gameMatrix.major_group_rows
-    : [];
+  const dataSource = useMemo(
+    () => gameMatrix.major_group_rows && gameMatrix.major_group_rows.length > 0
+      ? gameMatrix.major_group_rows
+      : [],
+    [gameMatrix.major_group_rows]
+  );
   const optimizationSummary = gameMatrix.optimization_summary;
   const portfolioSummary = optimizationSummary?.portfolio;
 

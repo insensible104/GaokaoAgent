@@ -4,11 +4,14 @@ import asyncio
 import logging
 import os
 import pathlib
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
@@ -162,6 +165,54 @@ class QueryResponse(BaseModel):
     deliberation_summaries: Optional[list] = None
 
 
+class DeliveryProfileInput(BaseModel):
+    """Minimal student profile required for internal delivery preflight."""
+
+    score: int = Field(..., ge=0, le=900)
+    rank: Optional[int] = Field(None, ge=1, le=1_000_000)
+    subject_group: str = Field(..., min_length=1)
+    preferred_cities: list[str] = Field(default_factory=list)
+    excluded_cities: list[str] = Field(default_factory=list)
+    preferred_majors: list[str] = Field(default_factory=list)
+    blacklist_majors: list[str] = Field(default_factory=list)
+    risk_tolerance: str = "balanced"
+    school_major_preference: str = "unknown"
+    stated_misconceptions: list[str] = Field(default_factory=list)
+    emotional_concerns: list[str] = Field(default_factory=list)
+    family_pressure_points: list[str] = Field(default_factory=list)
+    preference_assumptions: list[str] = Field(default_factory=list)
+    preference_confidence: float = Field(0.5, ge=0, le=1)
+    major_cognition_risk: float = Field(0.0, ge=0, le=1)
+    regret_sensitivity: float = Field(0.5, ge=0, le=1)
+    medical_restrictions: dict[str, bool] = Field(default_factory=dict)
+    subject_scores: Optional[dict[str, int]] = None
+
+    @field_validator("subject_group", mode="before")
+    @classmethod
+    def normalize_delivery_subject_group(cls, value):
+        """Reuse the public API's subject-group normalization behavior."""
+        return QueryRequest.normalize_subject_group(value)
+
+
+class DeliveryPreviewRequest(BaseModel):
+    """Request payload for internal case-delivery preflight."""
+
+    profile: DeliveryProfileInput
+    report: str = Field(..., min_length=1, max_length=120_000)
+    case_id: Optional[str] = Field(None, max_length=80)
+
+
+class DeliveryPreviewResponse(BaseModel):
+    """Internal delivery preflight response for the frontend workspace."""
+
+    success: bool
+    message: str
+    case_id: str
+    output_dir: str
+    manifest: dict[str, Any]
+    artifacts: dict[str, str]
+
+
 def _to_plain_data(value: Any) -> Any:
     """Convert Pydantic objects and nested containers to JSON-safe values."""
     if value is None:
@@ -180,6 +231,54 @@ def _to_plain_data(value: Any) -> Any:
 def _enum_value(value: Any) -> Any:
     """Return enum values while leaving plain strings untouched."""
     return getattr(value, "value", value)
+
+
+def _safe_case_id(raw_case_id: str | None) -> str:
+    """Build a filesystem-safe, human-readable case id."""
+    if raw_case_id:
+        cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", raw_case_id.strip()).strip("-")
+        if cleaned:
+            return cleaned[:80]
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"case-{timestamp}-{uuid4().hex[:8]}"
+
+
+def _build_delivery_profile(input_profile: DeliveryProfileInput):
+    """Convert API input to the canonical UserProfile model."""
+    from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
+
+    try:
+        risk_tolerance = RiskTolerance(input_profile.risk_tolerance)
+    except ValueError:
+        risk_tolerance = RiskTolerance.BALANCED
+
+    try:
+        school_major_preference = SchoolMajorPreference(
+            input_profile.school_major_preference
+        )
+    except ValueError:
+        school_major_preference = SchoolMajorPreference.UNKNOWN
+
+    return UserProfile(
+        score=input_profile.score,
+        rank=input_profile.rank,
+        subject_group=input_profile.subject_group,
+        preferred_cities=input_profile.preferred_cities,
+        excluded_cities=input_profile.excluded_cities,
+        preferred_majors=input_profile.preferred_majors,
+        blacklist_majors=input_profile.blacklist_majors,
+        risk_tolerance=risk_tolerance,
+        school_major_preference=school_major_preference,
+        stated_misconceptions=input_profile.stated_misconceptions,
+        emotional_concerns=input_profile.emotional_concerns,
+        family_pressure_points=input_profile.family_pressure_points,
+        preference_assumptions=input_profile.preference_assumptions,
+        preference_confidence=input_profile.preference_confidence,
+        major_cognition_risk=input_profile.major_cognition_risk,
+        regret_sensitivity=input_profile.regret_sensitivity,
+        medical_restrictions=input_profile.medical_restrictions,
+        subject_scores=input_profile.subject_scores,
+    )
 
 
 def build_user_message(request: QueryRequest) -> str:
@@ -232,7 +331,13 @@ def get_runtime_status() -> dict[str, Any]:
             "frontend_dist_exists": frontend_dist.exists(),
         },
         "entrypoints": {
-            "api": ["/", "/api/status", "/api/analyze", "/api/stats"],
+            "api": [
+                "/",
+                "/api/status",
+                "/api/analyze",
+                "/api/delivery/preview",
+                "/api/stats",
+            ],
             "cli_commands": [
                 "smoke",
                 "rollout",
@@ -415,6 +520,44 @@ async def analyze_application(request: QueryRequest, req: Request):
                 status_code=500,
                 detail="Internal server error. Please try again later.",
             ) from exc
+        raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
+
+
+@app.post("/api/delivery/preview", response_model=DeliveryPreviewResponse)
+async def preview_delivery_bundle(request: DeliveryPreviewRequest):
+    """Generate an internal delivery preflight bundle for one analyzed case."""
+    try:
+        from evaluation.delivery_bundle import build_delivery_bundle
+
+        case_id = _safe_case_id(request.case_id)
+        output_dir = BACKEND_ROOT / "logs" / "delivery_bundles" / case_id
+        manifest = build_delivery_bundle(
+            profile=_build_delivery_profile(request.profile),
+            report_payload=request.report,
+            output_dir=output_dir,
+            case_id=case_id,
+        )
+        artifact_contents: dict[str, str] = {}
+        for artifact in manifest.get("artifacts", []) or []:
+            path = output_dir / str(artifact.get("path", ""))
+            if path.is_file() and path.suffix == ".md":
+                artifact_contents[str(artifact.get("id", path.stem))] = path.read_text(
+                    encoding="utf-8"
+                )
+
+        status = str(manifest.get("status", "unknown"))
+        return DeliveryPreviewResponse(
+            success=status in {"ready_to_deliver", "pending_signoff", "needs_revision"},
+            message=f"交付预检完成：{status}",
+            case_id=case_id,
+            output_dir=str(output_dir.relative_to(BACKEND_ROOT)),
+            manifest=manifest,
+            artifacts=artifact_contents,
+        )
+    except Exception as exc:
+        logger.error("Delivery preview failed", exc_info=True)
+        if IS_PRODUCTION:
+            raise HTTPException(status_code=500, detail="Unable to build delivery preview") from exc
         raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
 
 

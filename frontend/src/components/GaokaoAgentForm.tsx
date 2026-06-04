@@ -28,8 +28,25 @@ interface GaokaoAgentFormProps {
       history?: number;
       geography?: number;
     };
+    delivery_profile?: {
+      score: number;
+      rank?: number;
+      subject_group: string;
+      preferred_cities: string[];
+      preferred_majors: string[];
+      blacklist_majors: string[];
+      risk_tolerance: string;
+      school_major_preference: string;
+      subject_scores?: Record<string, number>;
+    };
   }) => void;
 }
+
+const splitList = (value: string) =>
+  value
+    .split(/[，,、;；\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 // 修复P2-4: 使用memo优化性能，避免不必要的重渲染
 const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
@@ -71,7 +88,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
     }
     message += `\n风险偏好：${riskTolerance === "conservative" ? "保守" : riskTolerance === "balanced" ? "平衡" : "激进"}`;
 
-    const scores: any = {};
+    const scores: Record<string, number> = {};
     if (chinese) scores.chinese = parseInt(chinese);
     if (math) scores.math = parseInt(math);
     if (english) scores.english = parseInt(english);
@@ -82,12 +99,29 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
     if (history) scores.history = parseInt(history);
     if (geography) scores.geography = parseInt(geography);
 
+    const scoreValue = totalScore ? parseInt(totalScore) : undefined;
+    const rankValue = rank ? parseInt(rank) : undefined;
+    const subjectScores = Object.keys(scores).length > 0 ? scores : undefined;
+
     onSubmit({
       message,
-      score: totalScore ? parseInt(totalScore) : undefined,
-      rank: rank ? parseInt(rank) : undefined,
+      score: scoreValue,
+      rank: rankValue,
       subject_group: subjectGroup,
-      scores: Object.keys(scores).length > 0 ? scores : undefined,
+      scores: subjectScores,
+      delivery_profile: scoreValue
+        ? {
+            score: scoreValue,
+            rank: rankValue,
+            subject_group: subjectGroup,
+            preferred_cities: splitList(preferredCities),
+            preferred_majors: splitList(preferredMajors),
+            blacklist_majors: splitList(blacklistMajors),
+            risk_tolerance: riskTolerance,
+            school_major_preference: "unknown",
+            subject_scores: subjectScores,
+          }
+        : undefined,
     });
   };
 

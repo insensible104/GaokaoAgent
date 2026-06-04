@@ -7,6 +7,7 @@ const ReportView = lazy(() => import("@/components/ReportView").then(module => (
 const LoadingView = lazy(() => import("@/components/LoadingView").then(module => ({ default: module.LoadingView })));
 const ProgressTracker = lazy(() => import("@/components/ProgressTracker").then(module => ({ default: module.ProgressTracker })));
 const GameMatrixView = lazy(() => import("@/components/GameMatrixView").then(module => ({ default: module.GameMatrixView })));
+const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryReview").then(module => ({ default: module.InternalDeliveryReview })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
@@ -20,8 +21,48 @@ interface AnalysisResult {
   intent_type?: string;
   loop_type?: string;
   game_matrix?: GameMatrix | null;
-  user_profile?: any | null;
+  user_profile?: Record<string, unknown> | null;
   debug_logs: string[];
+}
+
+interface DeliveryProfile {
+  score: number;
+  rank?: number;
+  subject_group: string;
+  preferred_cities?: string[];
+  excluded_cities?: string[];
+  preferred_majors?: string[];
+  blacklist_majors?: string[];
+  risk_tolerance?: string;
+  school_major_preference?: string;
+  stated_misconceptions?: string[];
+  emotional_concerns?: string[];
+  family_pressure_points?: string[];
+  preference_assumptions?: string[];
+  preference_confidence?: number;
+  major_cognition_risk?: number;
+  regret_sensitivity?: number;
+  medical_restrictions?: Record<string, boolean>;
+  subject_scores?: Record<string, number>;
+}
+
+interface AnalysisRequest {
+  message: string;
+  score?: number;
+  rank?: number;
+  subject_group?: string;
+  scores?: {
+    chinese?: number;
+    math?: number;
+    english?: number;
+    physics?: number;
+    chemistry?: number;
+    biology?: number;
+    politics?: number;
+    history?: number;
+    geography?: number;
+  };
+  delivery_profile?: DeliveryProfile;
 }
 
 // 修复：创建fetchWithTimeout工具函数
@@ -44,11 +85,72 @@ const fetchWithTimeout = async (
   }
 };
 
+const asStringArray = (value: unknown) =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+
+const asBooleanRecord = (value: unknown): Record<string, boolean> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean")
+  );
+};
+
+const asNumberRecord = (value: unknown): Record<string, number> | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value).filter((entry): entry is [string, number] => typeof entry[1] === "number");
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
+const normalizeDeliveryProfile = (
+  rawProfile: Record<string, unknown> | null | undefined,
+  fallback: DeliveryProfile | null
+): DeliveryProfile | null => {
+  const raw = rawProfile ?? {};
+  const score = Number(raw.score ?? fallback?.score);
+  const subjectGroup = String(raw.subject_group ?? fallback?.subject_group ?? "");
+  if (!score || !subjectGroup) return fallback;
+  const rank = raw.rank ?? fallback?.rank;
+  return {
+    score,
+    rank: rank ? Number(rank) : undefined,
+    subject_group: subjectGroup,
+    preferred_cities: asStringArray(raw.preferred_cities).length
+      ? asStringArray(raw.preferred_cities)
+      : fallback?.preferred_cities ?? [],
+    excluded_cities: asStringArray(raw.excluded_cities).length
+      ? asStringArray(raw.excluded_cities)
+      : fallback?.excluded_cities ?? [],
+    preferred_majors: asStringArray(raw.preferred_majors).length
+      ? asStringArray(raw.preferred_majors)
+      : fallback?.preferred_majors ?? [],
+    blacklist_majors: asStringArray(raw.blacklist_majors).length
+      ? asStringArray(raw.blacklist_majors)
+      : fallback?.blacklist_majors ?? [],
+    risk_tolerance: typeof raw.risk_tolerance === "string" ? raw.risk_tolerance : fallback?.risk_tolerance ?? "balanced",
+    school_major_preference:
+      typeof raw.school_major_preference === "string"
+        ? raw.school_major_preference
+        : fallback?.school_major_preference ?? "unknown",
+    stated_misconceptions: asStringArray(raw.stated_misconceptions),
+    emotional_concerns: asStringArray(raw.emotional_concerns),
+    family_pressure_points: asStringArray(raw.family_pressure_points),
+    preference_assumptions: asStringArray(raw.preference_assumptions),
+    preference_confidence: typeof raw.preference_confidence === "number" ? raw.preference_confidence : 0.5,
+    major_cognition_risk: typeof raw.major_cognition_risk === "number" ? raw.major_cognition_risk : 0,
+    regret_sensitivity: typeof raw.regret_sensitivity === "number" ? raw.regret_sensitivity : 0.5,
+    medical_restrictions: asBooleanRecord(raw.medical_restrictions),
+    subject_scores: asNumberRecord(raw.subject_scores) ?? fallback?.subject_scores,
+  };
+};
+
 function AppContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progressSteps, setProgressSteps] = useState<AgentStep[]>([]);
+  const [deliveryProfile, setDeliveryProfile] = useState<DeliveryProfile | null>(null);
 
   // 修复：添加AbortController ref，用于取消请求
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -63,23 +165,7 @@ function AppContent() {
   }, []);
 
   // 修复P2-4: 使用useCallback避免子组件不必要的重渲染
-  const handleSubmit = useCallback(async (data: {
-    message: string;
-    score?: number;
-    rank?: number;
-    subject_group?: string;
-    scores?: {
-      chinese?: number;
-      math?: number;
-      english?: number;
-      physics?: number;
-      chemistry?: number;
-      biology?: number;
-      politics?: number;
-      history?: number;
-      geography?: number;
-    };
-  }) => {
+  const handleSubmit = useCallback(async (data: AnalysisRequest) => {
     // 修复：开发环境可以保留console.log
     const isDev = import.meta.env.DEV;
     if (isDev) console.log("[DEBUG] Form submitted with data:", data);
@@ -93,6 +179,7 @@ function AppContent() {
     setIsAnalyzing(true);
     setError(null);
     setResult(null);
+    setDeliveryProfile(data.delivery_profile || null);
 
     // 修复：只显示初始状态，等待真实的agent日志
     setProgressSteps([
@@ -114,7 +201,13 @@ function AppContent() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(data),
+          body: JSON.stringify({
+            message: data.message,
+            score: data.score,
+            rank: data.rank,
+            subject_group: data.subject_group,
+            scores: data.scores,
+          }),
           signal: abortControllerRef.current.signal,
         },
         180000 // 修复：增加到180秒（3分钟）超时，给后端足够的处理时间
@@ -140,6 +233,9 @@ function AppContent() {
 
       const analysisResult: AnalysisResult = await response.json();
       if (isDev) console.log("[DEBUG] Analysis result:", analysisResult);
+      if (analysisResult.user_profile) {
+        setDeliveryProfile(normalizeDeliveryProfile(analysisResult.user_profile, data.delivery_profile || null));
+      }
 
       // Parse debug logs into progress steps
       const steps = parseDebugLogsToSteps(analysisResult.debug_logs);
@@ -298,6 +394,7 @@ function AppContent() {
     setResult(null);
     setError(null);
     setProgressSteps([]);
+    setDeliveryProfile(null);
   };
 
   return (
@@ -373,6 +470,11 @@ function AppContent() {
                 ) && (
                   <GameMatrixView gameMatrix={result.game_matrix} />
                 )}
+
+                <InternalDeliveryReview
+                  profile={deliveryProfile}
+                  report={result.report}
+                />
 
                 {/* Report View */}
                 <ReportView
