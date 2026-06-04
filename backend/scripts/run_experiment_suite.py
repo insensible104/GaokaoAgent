@@ -34,6 +34,21 @@ def main() -> int:
     parser.add_argument("--skip-smoke", action="store_true")
     parser.add_argument("--cases", help="Optional orchestration case JSONL.")
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--research-evidence-json",
+        nargs="*",
+        help="Optional JSON file(s) containing research_evidence_cards or raw evidence-card lists.",
+    )
+    parser.add_argument(
+        "--research-evidence-glob",
+        nargs="*",
+        help="Optional glob pattern(s), such as logs/research/*/research_state.json.",
+    )
+    parser.add_argument(
+        "--research-scope-term",
+        nargs="*",
+        help="Optional school, major, or group terms used for scoped research-evidence audit.",
+    )
     parser.add_argument("--actual-outcomes", help="Optional 2025 actual outcome CSV.")
     parser.add_argument("--plans-jsonl", help="Optional frozen plan JSONL for 2025 backtest.")
     parser.add_argument(
@@ -56,6 +71,8 @@ def main() -> int:
     benchmark_coverage_report = output_dir / "benchmark_coverage.md"
     benchmark_coverage_repair = output_dir / "benchmark_coverage_repair_plan.json"
     benchmark_coverage_repair_report = output_dir / "benchmark_coverage_repair_plan.md"
+    research_evidence_audit = output_dir / "research_evidence_audit.json"
+    research_evidence_audit_report = output_dir / "research_evidence_audit.md"
 
     def run_stage(name: str, cli_args: list[str]) -> int:
         status = _run(cli_args, dry_run=args.dry_run)
@@ -104,6 +121,28 @@ def main() -> int:
             if status != 0:
                 _write_manifest(output_dir / "manifest.json", manifest)
                 return status
+
+    if args.research_evidence_json or args.research_evidence_glob:
+        research_args = [
+            "research-evidence-audit",
+            "--output",
+            str(research_evidence_audit),
+            "--report-md",
+            str(research_evidence_audit_report),
+        ]
+        if args.research_evidence_json:
+            research_args.append("--evidence-json")
+            research_args.extend(args.research_evidence_json)
+        if args.research_evidence_glob:
+            research_args.append("--evidence-glob")
+            research_args.extend(args.research_evidence_glob)
+        if args.research_scope_term:
+            research_args.append("--scope-term")
+            research_args.extend(args.research_scope_term)
+        status = run_stage("research_evidence_audit", research_args)
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
 
     if args.plans_jsonl:
         status = run_stage(
@@ -243,6 +282,11 @@ def main() -> int:
                 str(ablation_summary),
                 "--ablation-results-jsonl",
                 str(ablation_results),
+            ])
+        if args.research_evidence_json or args.research_evidence_glob:
+            audit_args.extend([
+                "--research-evidence-audit",
+                str(research_evidence_audit),
             ])
         status = run_stage("improvement_audit", audit_args)
         if status != 0:

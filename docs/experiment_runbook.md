@@ -586,6 +586,13 @@ profiles:
 backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --output-dir logs\experiments\run_001 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --run-ablation
 ```
 
+Add deep-research evidence when search output should be audited and fed into
+the same improvement queue:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --output-dir logs\experiments\run_001 --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --research-evidence-json logs\research_state.json --research-scope-term "Brand Institute" "801"
+```
+
 When actual outcomes and frozen plans are provided, the suite also writes
 `benchmark_coverage.json`, `benchmark_coverage.md`,
 `benchmark_coverage_repair_plan.json`,
@@ -599,6 +606,11 @@ When actual outcomes and frozen plans are provided, the suite also writes
 `quant_lab_leaderboard.md`, `claim_readiness.json`, and
 `claim_readiness.md`, plus `claim_readiness_portfolio.json` and
 `claim_readiness_portfolio.md`.
+
+When `--research-evidence-json` or `--research-evidence-glob` is provided, the
+suite also writes `research_evidence_audit.json` and
+`research_evidence_audit.md`, then passes that audit into
+`improvement_audit.json`.
 
 ## Claim-Evidence Mapping
 
