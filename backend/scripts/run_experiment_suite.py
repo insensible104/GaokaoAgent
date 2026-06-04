@@ -109,6 +109,9 @@ def main() -> int:
         tuning_summary = output_dir / "quant_tuning_summary.json"
         ablation_summary = output_dir / "ablation_2025_summary.json"
         ablation_results = output_dir / "ablation_2025_results.jsonl"
+        replay_queue = output_dir / "failure_replay_queue.jsonl"
+        replay_summary = output_dir / "failure_replay_queue.json"
+        replay_report = output_dir / "failure_replay_queue.md"
         status = run_stage(
             "backtest_2025",
             [
@@ -213,6 +216,29 @@ def main() -> int:
             _write_manifest(output_dir / "manifest.json", manifest)
             return status
 
+        replay_args = [
+            "build-replay-queue",
+            "--plans-jsonl",
+            args.plans_jsonl,
+            "--backtest-results-jsonl",
+            str(backtest_results),
+            "--output",
+            str(replay_queue),
+            "--summary-json",
+            str(replay_summary),
+            "--report-md",
+            str(replay_report),
+        ]
+        if args.run_ablation:
+            replay_args.extend([
+                "--ablation-results-jsonl",
+                str(ablation_results),
+            ])
+        status = run_stage("failure_replay_queue", replay_args)
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
         quant_lab_args = [
             "quant-lab-register",
             "--experiment-id",
@@ -231,6 +257,10 @@ def main() -> int:
             str(tuning_summary),
             "--improvement-audit",
             str(output_dir / "improvement_audit.json"),
+            "--failure-replay-queue-jsonl",
+            str(replay_queue),
+            "--failure-replay-queue-summary",
+            str(replay_summary),
             "--output",
             str(output_dir / "quant_lab_manifest.json"),
             "--report-md",

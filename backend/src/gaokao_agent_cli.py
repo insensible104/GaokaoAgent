@@ -33,6 +33,7 @@ from evaluation.quant_lab import (
     build_quant_lab_experiment,
 )
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
+from evaluation.replay_queue import build_failure_replay_queue, build_markdown_replay_queue
 from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
@@ -73,6 +74,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_tuning_smoke.py",
     "test_quant_lab_smoke.py",
     "test_failure_mining_smoke.py",
+    "test_replay_queue_smoke.py",
     "test_improvement_audit_smoke.py",
     "test_intake_audit_smoke.py",
     "test_parallel_worlds_smoke.py",
@@ -351,6 +353,8 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
             "ablation_summary": args.ablation_summary,
             "ablation_results_jsonl": args.ablation_results_jsonl,
             "improvement_audit": args.improvement_audit,
+            "failure_replay_queue_jsonl": args.failure_replay_queue_jsonl,
+            "failure_replay_queue_summary": args.failure_replay_queue_summary,
         }
     )
     backtest_results = _read_jsonl(Path(args.backtest_results_jsonl)) if args.backtest_results_jsonl else None
@@ -380,6 +384,34 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
         print(f"saved quant lab report -> {report_path}")
     if not args.output and not args.report_md:
         print(json.dumps(manifest, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_build_replay_queue(args: argparse.Namespace) -> int:
+    if not args.backtest_results_jsonl and not args.ablation_results_jsonl:
+        raise ValueError("Provide --backtest-results-jsonl, --ablation-results-jsonl, or both.")
+    records = _read_jsonl(Path(args.plans_jsonl))
+    backtest_results = _read_jsonl(Path(args.backtest_results_jsonl)) if args.backtest_results_jsonl else None
+    ablation_results = _read_jsonl(Path(args.ablation_results_jsonl)) if args.ablation_results_jsonl else None
+    result = build_failure_replay_queue(
+        records,
+        failure_mining=mine_backtest_failures(backtest_results, top_k=args.top_k) if backtest_results else None,
+        ablation_failure_deltas=mine_ablation_failure_deltas(ablation_results, top_k=args.top_k)
+        if ablation_results
+        else None,
+        top_k=args.top_k,
+        include_ablation_regressions=not args.no_ablation_regressions,
+    )
+    _write_jsonl(Path(args.output), result["items"])
+    print(f"saved failure replay queue -> {args.output}")
+    if args.summary_json:
+        _write_json(Path(args.summary_json), result)
+        print(f"saved failure replay queue summary -> {args.summary_json}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_replay_queue(result), encoding="utf-8")
+        print(f"saved failure replay queue report -> {report_path}")
     return 0
 
 
@@ -689,10 +721,26 @@ def build_parser() -> argparse.ArgumentParser:
     quant_lab.add_argument("--ablation-summary", help="JSON produced by ablate-2025 --output.")
     quant_lab.add_argument("--ablation-results-jsonl", help="JSONL produced by ablate-2025 --results-jsonl.")
     quant_lab.add_argument("--improvement-audit", help="JSON produced by improvement-audit --output.")
+    quant_lab.add_argument("--failure-replay-queue-jsonl", help="JSONL produced by build-replay-queue --output.")
+    quant_lab.add_argument("--failure-replay-queue-summary", help="JSON produced by build-replay-queue --summary-json.")
     quant_lab.add_argument("--notes", default="")
     quant_lab.add_argument("--output", help="QuantLab manifest JSON output path.")
     quant_lab.add_argument("--report-md", help="QuantLab Markdown report output path.")
     quant_lab.set_defaults(func=cmd_quant_lab_register)
+
+    replay = subparsers.add_parser(
+        "build-replay-queue",
+        help="Build a frozen-plan replay queue from backtest failures and ablation regressions.",
+    )
+    replay.add_argument("--plans-jsonl", required=True, help="Frozen plan JSONL used by the source experiment.")
+    replay.add_argument("--backtest-results-jsonl", help="JSONL produced by backtest-2025 --results-jsonl.")
+    replay.add_argument("--ablation-results-jsonl", help="JSONL produced by ablate-2025 --results-jsonl.")
+    replay.add_argument("--output", required=True, help="Replay queue JSONL output path.")
+    replay.add_argument("--summary-json", help="Replay queue summary JSON output path.")
+    replay.add_argument("--report-md", help="Replay queue Markdown report output path.")
+    replay.add_argument("--top-k", type=int, default=20)
+    replay.add_argument("--no-ablation-regressions", action="store_true")
+    replay.set_defaults(func=cmd_build_replay_queue)
 
     audit = subparsers.add_parser(
         "improvement-audit",

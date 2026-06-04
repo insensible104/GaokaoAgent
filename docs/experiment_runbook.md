@@ -239,6 +239,62 @@ Failure buckets:
 Use the worst-case list as the next replay queue before adopting any aggregate
 metric improvement.
 
+### Open-Source Quant Benchmark
+
+The target operating model is closer to mature open-source quant systems than
+to a one-shot chatbot:
+
+- Qlib: full pipeline from data processing, model training, backtesting, alpha
+  research, risk modeling, portfolio optimization, and execution.
+- VectorBT: large-scale vectorized parameter sweeps and fast robustness checks
+  before a strategy is trusted.
+- Freqtrade: CLI-first workflow for data download, backtesting, analysis,
+  hyperparameter optimization, and dry-run/live separation.
+- LEAN: modular event-driven engine with local research, backtest, optimize,
+  and live commands.
+
+GaokaoAgent should translate these patterns into the admission domain:
+
+- data bundle: frozen plan inputs, post-hoc actual outcomes, source-aware
+  research evidence, and schema/version hashes
+- strategy variants: full system, quant-only, no-advisor, no-critic,
+  no-arbitrage, tuned-shadow, and future intake/report variants
+- backtest engine: judge first hit, sliding, blacklist, tail assignment,
+  preferred-major hit, score waste, and utility
+- parameter search: tune scoring weights offline and validate on holdout
+  before runtime adoption
+- experiment registry: one manifest with artifact hashes, metric digest,
+  promotion gate, failure mining, and replay queue
+- replay loop: every worst case becomes a standard frozen-case queue for the
+  next run
+- delivery gate: client-facing reports must pass expectation, constraint, risk,
+  evidence, and disclaimer checks before paid delivery
+
+### Failure Replay Queue
+
+Failure mining is now materialized into a JSONL replay artifact. Build it after
+backtest and optional ablation:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py build-replay-queue --plans-jsonl logs\frozen_plans_2025.jsonl --backtest-results-jsonl logs\backtest_2025_results.jsonl --ablation-results-jsonl logs\ablation_2025_results.jsonl --output logs\failure_replay_queue.jsonl --summary-json logs\failure_replay_queue.json --report-md logs\failure_replay_queue.md
+```
+
+Each queued JSONL row preserves the original frozen plan record and adds
+`replay_metadata`:
+
+- priority: `P0`, `P1`, or `P2`
+- failure reasons: sliding, blacklist hit, tail assignment, preferred-major
+  miss, wasted score, or missing actual outcome
+- source rows: backtest failure and/or ablation regression
+- recommended focus: the subsystem that should be inspected in the next
+  iteration
+
+The standard experiment suite writes `failure_replay_queue.jsonl`,
+`failure_replay_queue.json`, and `failure_replay_queue.md`. Use
+`failure_replay_queue.jsonl` as the next `--plans-jsonl` when you need to
+pressure-test a candidate fix on known hard cases before accepting aggregate
+metric gains.
+
 ## Self-Improvement Audit
 
 The improvement audit converts experiment metrics into prioritized engineering
@@ -444,7 +500,9 @@ backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --outpu
 When actual outcomes and frozen plans are provided, the suite also writes
 `quant_calibration_summary.json`, `quant_calibration_report.md`,
 `quant_tuning_summary.json`, `quant_tuning_report.md`,
-`improvement_audit.json`, and `improvement_audit.md`.
+`improvement_audit.json`, `improvement_audit.md`,
+`failure_replay_queue.jsonl`, `failure_replay_queue.json`, and
+`failure_replay_queue.md`.
 
 ## Claim-Evidence Mapping
 
@@ -469,3 +527,4 @@ Use these outputs for project claims:
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |
 | Tradeoff/re-ranking choices improve 2025 outcomes | `ablation_2025_summary.json`, `ablation_2025_report.md` |
 | The next iteration is metric-driven | `improvement_audit.json`, `improvement_audit.md` |
+| Known failures are replayable | `failure_replay_queue.jsonl`, `failure_replay_queue.md` |
