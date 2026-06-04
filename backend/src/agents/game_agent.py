@@ -49,6 +49,47 @@ def _extract_research_evidence_cards(state: dict) -> list[dict[str, Any]]:
     return [dict(card) for card in cards if isinstance(card, dict)]
 
 
+def _dedupe_strings(values: Sequence[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text in seen:
+            continue
+        seen.add(text)
+        deduped.append(text)
+    return deduped
+
+
+def _dedupe_evidence_cards(cards: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for card in cards:
+        key = (
+            str(card.get("signal_type") or ""),
+            str(card.get("source") or ""),
+            str(card.get("claim") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(card))
+    return deduped
+
+
+def _city_preference_from_tradeoff(row: MajorGroupRow) -> float:
+    """Approximate the original city-preference score from saved tradeoff features."""
+    city_value = (row.tradeoff_breakdown or {}).get("city_value")
+    if city_value is None:
+        return 1.0
+    city_value = _clamp01(float(city_value))
+    if city_value <= 0.10:
+        return 0.50
+    if city_value >= 1.0:
+        return 1.30
+    return max(0.50, min(1.30, city_value + 0.50))
+
+
 def _score_row_arbitrage(
     *,
     row: MajorGroupRow,
@@ -65,6 +106,57 @@ def _score_row_arbitrage(
         city_preference_score=city_preference_score,
         research_evidence_cards=research_evidence_cards,
     )
+
+
+def refresh_game_matrix_research_evidence(state: dict) -> dict:
+    """Refresh an existing game matrix after slow-loop research produces evidence.
+
+    This is intentionally not a candidate-regeneration step. It preserves the
+    current row order and only updates market-evidence, arbitrage, and volunteer
+    plan evidence fields so late research can affect reportable risk signals.
+    """
+    matrix = state.get("game_matrix")
+    profile = state.get("user_profile")
+    cards = _extract_research_evidence_cards(state)
+    rows = list(getattr(matrix, "major_group_rows", []) or []) if matrix else []
+    if not matrix or not profile or not cards or not rows:
+        return {
+            "current_agent": "research_evidence_refresh",
+            "debug_logs": ["[ResearchEvidenceRefresh] skipped: missing matrix, profile, evidence, or rows."],
+        }
+
+    refreshed = 0
+    for row in rows:
+        before_score = float(getattr(row, "plan_change_score", 0.0) or 0.0)
+        _score_row_arbitrage(
+            row=row,
+            profile=profile,
+            school_major_score=float((row.tradeoff_breakdown or {}).get("school_value", row.comprehensive_score)),
+            city_preference_score=_city_preference_from_tradeoff(row),
+            research_evidence_cards=cards,
+        )
+        row.plan_change_types = _dedupe_strings(row.plan_change_types)
+        row.plan_change_evidence = _dedupe_strings(row.plan_change_evidence)
+        row.audit_flags = _dedupe_strings(row.audit_flags)
+        row.market_behavior_notes = _dedupe_strings(row.market_behavior_notes)
+        row.market_evidence_cards = _dedupe_evidence_cards(row.market_evidence_cards)
+        if float(getattr(row, "plan_change_score", 0.0) or 0.0) > before_score:
+            refreshed += 1
+
+    existing_plan = getattr(matrix, "volunteer_plan", None)
+    max_choices = len(existing_plan.choices) if existing_plan else len(rows)
+    matrix.volunteer_plan = build_volunteer_plan(rows, profile, max_choices=max_choices, optimize_prefix=False)
+    matrix.calculate_statistics()
+    return {
+        "game_matrix": matrix,
+        "current_agent": "research_evidence_refresh",
+        "debug_logs": [
+            (
+                f"[ResearchEvidenceRefresh] refreshed {len(rows)} rows with "
+                f"{len(cards)} research cards; plan_change_score improved on {refreshed} rows."
+            )
+        ],
+    }
 
 
 def _major_keyword_score(majors, preferred_majors) -> float:

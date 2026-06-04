@@ -17,6 +17,7 @@ from agents import (
     evidence_guardian_agent_node,
     deliberation_coordinator_node,
 )
+from agents.game_agent import refresh_game_matrix_research_evidence
 from rl.supervisor_policy import (
     HeuristicSupervisorPolicy,
     append_trace_record,
@@ -134,6 +135,7 @@ def create_dual_loop_supervisor() -> StateGraph:
 
     # 慢思考循环（Slow Loop - Research）
     builder.add_node("deep_research", deep_research_agent_node)
+    builder.add_node("research_evidence_refresh", refresh_game_matrix_research_evidence)
 
     # 多模态循环（Multimodal Loop）
     builder.add_node("multimodal_parser", multimodal_agent_node)
@@ -210,8 +212,12 @@ def create_dual_loop_supervisor() -> StateGraph:
         }
     )
 
-    # Deep Research -> Report（研究完成后生成报告）
-    builder.add_edge("deep_research", "report_agent")
+    # Deep Research -> Evidence Refresh -> Report
+    # If research happened after game scoring, refresh existing row-level market
+    # evidence before report generation; when no game matrix exists, the node
+    # safely skips and still lets research-only reports proceed.
+    builder.add_edge("deep_research", "research_evidence_refresh")
+    builder.add_edge("research_evidence_refresh", "report_agent")
 
     # Multimodal -> Critic（多模态解析后直接审计）
     builder.add_edge("multimodal_parser", "critic_agent")

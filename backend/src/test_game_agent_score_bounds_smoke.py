@@ -7,9 +7,11 @@ from agents.game_agent import (
     _limit_precision_candidates,
     _normalize_percent_score,
     _score_row_arbitrage,
+    refresh_game_matrix_research_evidence,
 )
-from models.game_matrix import MajorGroupRow, MajorOption, StrategyTag, VolatilityLevel
+from models.game_matrix import GameMatrix, MajorGroupRow, MajorOption, StrategyTag, VolatilityLevel
 from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
+from recommendation.major_choice_planner import build_volunteer_plan
 
 
 def test_normalize_percent_score_clamps_to_schema_range() -> None:
@@ -121,8 +123,87 @@ def test_game_agent_arbitrage_helper_consumes_research_evidence_cards() -> None:
     assert any(card["signal_type"] == "plan_change_signal" for card in row.market_evidence_cards)
 
 
+def test_late_research_refresh_updates_game_matrix_and_volunteer_plan() -> None:
+    profile = UserProfile(
+        score=620,
+        rank=12000,
+        subject_group="physics",
+        preferred_majors=["computer"],
+        risk_tolerance=RiskTolerance.BALANCED,
+        school_major_preference=SchoolMajorPreference.BALANCED,
+    )
+    option = MajorOption(
+        school_code="90001",
+        school_name="Evidence University",
+        major_group_code="801",
+        major_name="computer science",
+        plan_quota=12,
+        user_utility=0.85,
+    )
+    row = MajorGroupRow(
+        school_name="Evidence University",
+        school_code="90001",
+        major_group_code="801",
+        major_list=["computer science"],
+        major_count=1,
+        major_options=[option],
+        suggested_major_choices=[option],
+        admission_prob=0.62,
+        min_rank_pred=12500,
+        rank_diff=500,
+        rank_ci_lower=11000,
+        rank_ci_upper=14000,
+        volatility=VolatilityLevel.MEDIUM,
+        adjustment_risk=0.10,
+        tail_assignment_risk=0.10,
+        major_utility_mean=0.85,
+        major_utility_min=0.85,
+        strategy_tag=StrategyTag.TARGET,
+        comprehensive_score=0.72,
+        tradeoff_breakdown={"school_value": 0.75, "city_value": 0.50},
+    )
+    matrix = GameMatrix(
+        major_group_rows=[row],
+        volunteer_plan=build_volunteer_plan([row], profile, optimize_prefix=False),
+    )
+    state = {
+        "user_profile": profile,
+        "game_matrix": matrix,
+        "research_evidence_cards": [
+            {
+                "signal_type": "external_research",
+                "source_type": "official_or_school",
+                "value": 0.80,
+                "confidence": 0.90,
+                "claim": "Evidence University 801 招生计划 扩招，院校专业组调整，招生人数增加。",
+                "source": "https://admission.evidence.example/plan",
+                "usable_for_prediction": True,
+            }
+        ],
+    }
+
+    update = refresh_game_matrix_research_evidence(state)
+    refreshed_matrix = update["game_matrix"]
+    refreshed_row = refreshed_matrix.major_group_rows[0]
+    refreshed_choice = refreshed_matrix.volunteer_plan.choices[0]
+
+    assert update["current_agent"] == "research_evidence_refresh"
+    assert refreshed_row.plan_change_score > 0
+    assert any(card["signal_type"] == "plan_change_signal" for card in refreshed_row.market_evidence_cards)
+    assert any(card["signal_type"] == "plan_change_signal" for card in refreshed_choice.market_evidence_cards)
+
+    second_update = refresh_game_matrix_research_evidence({**state, "game_matrix": refreshed_matrix})
+    second_row = second_update["game_matrix"].major_group_rows[0]
+    keys = [
+        (card["signal_type"], card.get("source"), card.get("claim"))
+        for card in second_row.market_evidence_cards
+    ]
+    assert len(keys) == len(set(keys))
+
+
 if __name__ == "__main__":
     test_normalize_percent_score_clamps_to_schema_range()
     test_precision_candidate_limit_keeps_rank_bands()
     test_game_agent_arbitrage_helper_consumes_research_evidence_cards()
+    test_late_research_refresh_updates_game_matrix_and_volunteer_plan()
     print("game agent score bounds smoke tests passed")
