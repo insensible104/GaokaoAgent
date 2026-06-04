@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, Sequence
+
 from models.game_matrix import MajorGroupRow
 from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
 
@@ -16,6 +18,7 @@ from .arbitrage_model import (
 )
 from .market_evidence import assess_market_evidence, build_decision_evidence_cards
 from .market_simulation import score_segment_demand
+from .research_evidence_features import derive_research_evidence_signals
 
 
 def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
@@ -209,9 +212,42 @@ def score_major_group_arbitrage(
     profile: UserProfile,
     school_major_score: float,
     city_preference_score: float,
+    research_evidence_cards: Sequence[dict[str, Any]] | None = None,
 ) -> object:
     """Score and attach personalized arbitrage signals to an existing row."""
-    assessment = assess_market_evidence(row)
+    research_signals = None
+    if research_evidence_cards:
+        research_signals = derive_research_evidence_signals(
+            research_evidence_cards,
+            scope_terms=[
+                row.school_name,
+                row.school_code,
+                row.major_group_code,
+                *row.major_list,
+            ],
+        )
+        row.plan_change_score = max(
+            row.plan_change_score,
+            research_signals.plan_change_signal,
+            research_signals.quota_change_signal,
+            research_signals.major_group_restructure_signal,
+        )
+        if research_signals.plan_change_signal > 0:
+            row.plan_change_types.append("research_plan_change")
+        if research_signals.quota_change_signal > 0:
+            row.plan_change_types.append("research_quota_change")
+        if research_signals.major_group_restructure_signal > 0:
+            row.plan_change_types.append("research_major_group_restructure")
+        if research_signals.publicity_heat_signal > 0:
+            row.market_behavior_notes.append("Research evidence indicates public attention or creator heat.")
+        row.plan_change_evidence.extend(research_signals.warnings)
+        if research_signals.reference_only_card_count and not research_signals.prediction_ready:
+            row.audit_flags.append("research_evidence_reference_only")
+
+    assessment = assess_market_evidence(
+        row,
+        external_cards=research_signals.feature_cards if research_signals else None,
+    )
     preferred_keywords = profile.preferred_majors or row.major_list[:1]
     admission = AdmissionContext.from_major_options(
         row.major_options,

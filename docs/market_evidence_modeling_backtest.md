@@ -111,7 +111,19 @@ External signal families are supported but not yet populated in the 73-case run:
 - `publicity_heat`
 - `sentiment_shock_discount`
 
-This is where LLM/search collectors should later plug in public live-stream, short-video, official-news, forum, and counselor-content evidence.
+Deep research evidence now plugs into this layer through
+`recommendation.research_evidence_features.derive_research_evidence_signals`.
+Official or semi-official evidence cards can populate:
+
+- `official_policy_signal`
+- `plan_change_signal`
+- `quota_change_signal`
+- `major_group_restructure_signal`
+
+Social, WeChat, livestream, and creator evidence is deliberately reference-only
+for prediction. It may populate `publicity_heat` or `sentiment_shock_discount`,
+which changes rebound-risk and low-attention reasoning, but it must not directly
+raise admission probability.
 
 ## 2025 Evidence-Aware Frozen Run
 

@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     )
     from .plan_change_signals import attach_plan_change_signals
     from .prefix_optimizer import optimize_prefix_order, prefix_value_score
+    from .research_evidence_features import derive_research_evidence_signals
     from .school_signal import score_school_major_signal
 
 _LAZY_EXPORTS = {
@@ -67,6 +68,10 @@ _LAZY_EXPORTS = {
     "score_segment_demand": ("recommendation.market_simulation", "score_segment_demand"),
     "optimize_prefix_order": ("recommendation.prefix_optimizer", "optimize_prefix_order"),
     "prefix_value_score": ("recommendation.prefix_optimizer", "prefix_value_score"),
+    "derive_research_evidence_signals": (
+        "recommendation.research_evidence_features",
+        "derive_research_evidence_signals",
+    ),
 }
 
 
@@ -106,4 +111,5 @@ __all__ = [
     "score_school_major_signal",
     "optimize_prefix_order",
     "prefix_value_score",
+    "derive_research_evidence_signals",
 ]

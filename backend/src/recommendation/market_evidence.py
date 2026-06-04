@@ -264,13 +264,38 @@ def assess_market_evidence(
     tuition = tuition_filter_score(row)
     campus = campus_discount_score(row)
     cold_major = cold_major_discount_score(row)
-    group_restructure = _clamp(row.major_utility_dispersion)
+    external_cards = list(external_cards or [])
+    research_group_restructure = max(
+        (
+            card.value * card.confidence
+            for card in external_cards
+            if card.usable_for_prediction and card.signal_type == "major_group_restructure_signal"
+        ),
+        default=0.0,
+    )
+    research_plan_change = max(
+        (
+            card.value * card.confidence
+            for card in external_cards
+            if card.usable_for_prediction and card.signal_type == "plan_change_signal"
+        ),
+        default=0.0,
+    )
+    research_quota_change = max(
+        (
+            card.value * card.confidence
+            for card in external_cards
+            if card.usable_for_prediction and card.signal_type == "quota_change_signal"
+        ),
+        default=0.0,
+    )
+    group_restructure = max(_clamp(row.major_utility_dispersion), _clamp(research_group_restructure))
     historical_anchor = _clamp(
         0.35 * row.variance_opportunity_score
         + 0.35 * row.major_utility_dispersion
         + 0.30 * (1 - row.admission_prob)
     )
-    quota_pressure = 0.55 if row.quota_bucket == QuotaBucket.SMALL else 0.0
+    quota_pressure = max(0.55 if row.quota_bucket == QuotaBucket.SMALL else 0.0, _clamp(research_quota_change))
 
     if tuition >= 0.30:
         cards.append(_card("tuition_filter", "enrollment_plan", tuition, 0.90, "High tuition can filter demand."))
@@ -285,7 +310,18 @@ def assess_market_evidence(
     if quota_pressure >= 0.45:
         cards.append(_card("quota_pressure", "enrollment_plan", quota_pressure, 0.70, "Small quota increases volatility and opportunity dispersion."))
 
-    for external in external_cards or []:
+    if research_plan_change >= 0.25:
+        cards.append(
+            _card(
+                "plan_change_signal",
+                "research_evidence",
+                research_plan_change,
+                0.70,
+                "Official/semi-official research evidence indicates enrollment-plan change.",
+            )
+        )
+
+    for external in external_cards:
         cards.append(external)
 
     publicity_heat = max((card.value * card.confidence for card in cards if card.signal_type == "publicity_heat"), default=0.0)
@@ -299,6 +335,7 @@ def assess_market_evidence(
             (group_restructure, 0.12),
             (historical_anchor, 0.18),
             (quota_pressure, 0.10),
+            (research_plan_change, 0.08),
             (low_attention, 0.10),
             (sentiment_shock, 0.04),
         )
@@ -313,6 +350,7 @@ def assess_market_evidence(
         + 0.45 * publicity_heat
         + 0.18 * (1 - row.quota_stability_score)
         + 0.12 * quota_pressure
+        + 0.10 * research_plan_change
         - 0.14 * low_attention
     )
 

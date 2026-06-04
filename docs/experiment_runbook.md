@@ -83,6 +83,16 @@ Audit rule:
 - No official/semi-official source: pass with a warning and require manual
   official-source review before final fill-in.
 
+Research evidence can now be converted into controlled quant features through
+`derive_research_evidence_signals(...)`. The boundary is strict:
+
+- official or semi-official cards may support policy, plan-change, quota, and
+  major-group restructuring features.
+- WeChat, livestream, creator, and social cards may support only market heat,
+  sentiment shock, and rebound-risk features.
+- manual-verification or fallback cards are reference-only and must not raise
+  admission probability.
+
 ## 2025 Backtest
 
 The 2025 actual results are post-hoc labels. They must not be used during plan
