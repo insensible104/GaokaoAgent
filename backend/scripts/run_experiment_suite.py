@@ -139,6 +139,8 @@ def main() -> int:
         replay_report = output_dir / "failure_replay_queue.md"
         quant_lab_manifest = output_dir / "quant_lab_manifest.json"
         quant_lab_report = output_dir / "quant_lab_report.md"
+        claim_readiness = output_dir / "claim_readiness.json"
+        claim_readiness_report = output_dir / "claim_readiness.md"
         quant_lab_leaderboard = output_dir / "quant_lab_leaderboard.json"
         quant_lab_leaderboard_report = output_dir / "quant_lab_leaderboard.md"
         status = run_stage(
@@ -307,6 +309,22 @@ def main() -> int:
                 str(ablation_results),
             ])
         status = run_stage("quant_lab_register", quant_lab_args)
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
+        status = run_stage(
+            "claim_readiness",
+            [
+                "claim-readiness",
+                "--quant-lab-manifest",
+                str(quant_lab_manifest),
+                "--output",
+                str(claim_readiness),
+                "--report-md",
+                str(claim_readiness_report),
+            ],
+        )
         if status != 0:
             _write_manifest(output_dir / "manifest.json", manifest)
             return status

@@ -27,6 +27,7 @@ from evaluation.benchmark_coverage import (
     compare_benchmark_coverage,
 )
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
+from evaluation.claim_readiness import build_claim_readiness, build_markdown_claim_readiness
 from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdown_delivery_portfolio_audit
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
@@ -85,6 +86,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_calibration_smoke.py",
     "test_quant_tuning_smoke.py",
     "test_benchmark_coverage_smoke.py",
+    "test_claim_readiness_smoke.py",
     "test_quant_lab_smoke.py",
     "test_experiment_leaderboard_smoke.py",
     "test_failure_mining_smoke.py",
@@ -512,6 +514,22 @@ def cmd_quant_lab_leaderboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_claim_readiness(args: argparse.Namespace) -> int:
+    manifest = _read_json(Path(args.quant_lab_manifest))
+    result = build_claim_readiness(manifest)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved claim readiness audit -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_claim_readiness(result), encoding="utf-8")
+        print(f"saved claim readiness report -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_improvement_audit(args: argparse.Namespace) -> int:
     backtest_summary = _read_json(Path(args.backtest_summary)) if args.backtest_summary else None
     backtest_results = _read_jsonl(Path(args.backtest_results_jsonl)) if args.backtest_results_jsonl else None
@@ -878,6 +896,15 @@ def build_parser() -> argparse.ArgumentParser:
     leaderboard.add_argument("--output", help="Leaderboard JSON output path.")
     leaderboard.add_argument("--report-md", help="Leaderboard Markdown output path.")
     leaderboard.set_defaults(func=cmd_quant_lab_leaderboard)
+
+    claim = subparsers.add_parser(
+        "claim-readiness",
+        help="Audit which public claims a QuantLab experiment can support.",
+    )
+    claim.add_argument("--quant-lab-manifest", required=True, help="QuantLab manifest JSON path.")
+    claim.add_argument("--output", help="Claim readiness JSON output path.")
+    claim.add_argument("--report-md", help="Claim readiness Markdown output path.")
+    claim.set_defaults(func=cmd_claim_readiness)
 
     audit = subparsers.add_parser(
         "improvement-audit",

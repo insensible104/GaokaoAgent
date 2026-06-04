@@ -280,6 +280,21 @@ open P0 blockers. The score is not a production proof. It is a review surface:
 top candidates still need replay-queue validation, critical-slice guardrails,
 and delivery-quality checks before runtime adoption.
 
+### Claim Readiness
+
+Claim readiness translates one QuantLab manifest into allowed and forbidden
+public claims:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py claim-readiness --quant-lab-manifest logs\quant_lab_manifest.json --output logs\claim_readiness.json --report-md logs\claim_readiness.md
+```
+
+Use this before any public demo, sales page, interview claim, or family-facing
+quality statement. It blocks agency-grade claims when benchmark coverage,
+backtest size, success/sliding/blacklist/tail metrics, calibration, failure
+replay, improvement blockers, or critical-slice guardrails are not strong
+enough. A leaderboard rank is not sufficient by itself.
+
 Failure buckets:
 
 - `sliding`
@@ -560,7 +575,8 @@ When actual outcomes and frozen plans are provided, the suite also writes
 `improvement_audit.json`, `improvement_audit.md`,
 `failure_replay_queue.jsonl`, `failure_replay_queue.json`, and
 `failure_replay_queue.md`, plus `quant_lab_leaderboard.json` and
-`quant_lab_leaderboard.md`.
+`quant_lab_leaderboard.md`, `claim_readiness.json`, and
+`claim_readiness.md`.
 
 ## Claim-Evidence Mapping
 
@@ -588,3 +604,4 @@ Use these outputs for project claims:
 | The next iteration is metric-driven | `improvement_audit.json`, `improvement_audit.md` |
 | Known failures are replayable | `failure_replay_queue.jsonl`, `failure_replay_queue.md` |
 | Multiple experiments can be compared | `quant_lab_leaderboard.json`, `quant_lab_leaderboard.md` |
+| Public quality claims are bounded by evidence | `claim_readiness.json`, `claim_readiness.md` |
