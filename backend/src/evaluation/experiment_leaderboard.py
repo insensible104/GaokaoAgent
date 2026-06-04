@@ -47,6 +47,9 @@ def _composite_score(row: dict[str, Any]) -> float | None:
     score -= float(row.get("calibration_brier_score") or 0.0) * 20.0
     score -= float(row.get("blocker_count") or 0.0) * 5.0
     score += float(row.get("holdout_objective_delta_vs_current") or 0.0) * 10.0
+    score += float(row.get("benchmark_coverage_score") or 0.0) * 5.0
+    score -= float(row.get("benchmark_missing_required_tag_count") or 0.0) * 1.0
+    score -= float(row.get("benchmark_missing_critical_pair_count") or 0.0) * 1.5
     return round(score, 6)
 
 
@@ -86,6 +89,20 @@ def _manifest_row(manifest: dict[str, Any]) -> dict[str, Any]:
         "replay_queue_count": _float(digest, "replay_queue", "queue_count", default=0.0),
         "replay_p0_count": _float(digest, "replay_queue", "p0_count", default=0.0),
         "blocker_count": _float(digest, "improvement_audit", "blocker_count", default=0.0),
+        "benchmark_coverage_status": _nested(digest, "benchmark_coverage", "status"),
+        "benchmark_coverage_score": _float(digest, "benchmark_coverage", "coverage_score", default=0.0),
+        "benchmark_missing_required_tag_count": _float(
+            digest,
+            "benchmark_coverage",
+            "missing_required_tag_count",
+            default=0.0,
+        ),
+        "benchmark_missing_critical_pair_count": _float(
+            digest,
+            "benchmark_coverage",
+            "missing_critical_pair_count",
+            default=0.0,
+        ),
     }
     row["composite_score"] = _composite_score(row)
     row["recommendation"] = _recommendation(row)
@@ -162,8 +179,8 @@ def build_markdown_quant_lab_leaderboard(result: dict[str, Any]) -> str:
         f"Baseline: `{result.get('baseline_experiment_id') or ''}`",
         f"Best: `{result.get('best_experiment_id') or ''}`",
         "",
-        "| Rank | Experiment | Score | Success | Sliding | Preferred | Failure | Replay | Gate | Recommendation |",
-        "| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
+        "| Rank | Experiment | Score | Success | Sliding | Preferred | Failure | Coverage | Replay | Gate | Recommendation |",
+        "| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
     ]
     for row in result.get("rows", []) or []:
         score = row.get("composite_score")
@@ -175,12 +192,13 @@ def build_markdown_quant_lab_leaderboard(result: dict[str, Any]) -> str:
             f"{float(row.get('sliding_rate') or 0.0):.1%} | "
             f"{float(row.get('preferred_major_hit_rate') or 0.0):.1%} | "
             f"{float(row.get('failure_case_rate') or 0.0):.1%} | "
+            f"{float(row.get('benchmark_coverage_score') or 0.0):.1%} | "
             f"{int(row.get('replay_queue_count') or 0)} | "
             f"`{row.get('promotion_status') or ''}` | "
             f"`{row.get('recommendation') or ''}` |"
         )
     if not result.get("rows"):
-        lines.append("|  | `none` |  |  |  |  |  |  |  |  |")
+        lines.append("|  | `none` |  |  |  |  |  |  |  |  |  |")
 
     lines.extend(["", "## Notes", ""])
     for note in result.get("notes") or []:

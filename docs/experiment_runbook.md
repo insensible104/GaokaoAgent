@@ -93,6 +93,22 @@ Research evidence can now be converted into controlled quant features through
 - manual-verification or fallback cards are reference-only and must not raise
   admission probability.
 
+## Benchmark Coverage Audit
+
+Before trusting aggregate backtest metrics, audit whether the frozen case set
+covers the user slices that matter for agency-grade claims:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py benchmark-coverage --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\benchmark_coverage.json --report-md logs\benchmark_coverage.md
+```
+
+Coverage checks include subject group, rank bands, city locks, narrow-region
+families, blacklist and strict-major constraints, risk/tradeoff modes, high
+major-cognition risk, regret sensitivity, and critical intersections such as
+history boundary-rank families or boundary-rank families with hard blacklist
+constraints. If coverage is `insufficient`, generate more frozen profiles
+before making broad quality claims from the leaderboard.
+
 ## 2025 Backtest
 
 The 2025 actual results are post-hoc labels. They must not be used during plan
@@ -200,7 +216,7 @@ shadow promotion gate.
 Run after backtest, calibration, tuning, ablation, and improvement audit:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-lab-register --experiment-id exp_2026_0604_quant_shadow --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --backtest-summary logs\backtest_2025_summary.json --backtest-results-jsonl logs\backtest_2025_results.jsonl --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --ablation-results-jsonl logs\ablation_2025_results.jsonl --improvement-audit logs\improvement_audit.json --output logs\quant_lab_manifest.json --report-md logs\quant_lab_report.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-lab-register --experiment-id exp_2026_0604_quant_shadow --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --benchmark-coverage logs\benchmark_coverage.json --backtest-summary logs\backtest_2025_summary.json --backtest-results-jsonl logs\backtest_2025_results.jsonl --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --ablation-results-jsonl logs\ablation_2025_results.jsonl --improvement-audit logs\improvement_audit.json --output logs\quant_lab_manifest.json --report-md logs\quant_lab_report.md
 ```
 
 Promotion gate rule:
@@ -514,6 +530,7 @@ backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --outpu
 ```
 
 When actual outcomes and frozen plans are provided, the suite also writes
+`benchmark_coverage.json`, `benchmark_coverage.md`,
 `quant_calibration_summary.json`, `quant_calibration_report.md`,
 `quant_tuning_summary.json`, `quant_tuning_report.md`,
 `improvement_audit.json`, `improvement_audit.md`,
@@ -527,6 +544,7 @@ Use these outputs for project claims:
 
 | Claim | Evidence artifact |
 | --- | --- |
+| Frozen benchmark covers critical user slices | `benchmark_coverage.json`, `benchmark_coverage.md` |
 | Recommendation core is backtestable | `backtest_2025_summary.json`, `backtest_2025_results.jsonl` |
 | Admission probabilities and quant risk bands are calibrated | `quant_calibration_summary.json`, `quant_calibration_report.md` |
 | Candidate quant weights are being searched offline | `quant_tuning_summary.json`, `quant_tuning_report.md` |

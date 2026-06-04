@@ -81,6 +81,7 @@ def _summary_digest(
     failure_mining: dict[str, Any] | None = None,
     ablation_failure_deltas: dict[str, Any] | None = None,
     replay_queue_summary: dict[str, Any] | None = None,
+    benchmark_coverage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     digest: dict[str, Any] = {}
     if backtest_summary:
@@ -172,6 +173,17 @@ def _summary_digest(
             "missing_case_count": _metric(replay_queue_summary, "missing_case_count"),
             "p0_count": float(p0_count),
             "p1_count": float(p1_count),
+        }
+    if benchmark_coverage:
+        gap_summary = benchmark_coverage.get("gap_summary") or {}
+        digest["benchmark_coverage"] = {
+            "status": benchmark_coverage.get("status"),
+            "case_count": _metric(benchmark_coverage, "case_count"),
+            "coverage_score": _metric(benchmark_coverage, "coverage_score"),
+            "missing_required_tag_count": _metric(gap_summary, "missing_required_tag_count"),
+            "missing_critical_pair_count": _metric(gap_summary, "missing_critical_pair_count"),
+            "thin_required_tag_count": _metric(gap_summary, "thin_required_tag_count"),
+            "thin_critical_pair_count": _metric(gap_summary, "thin_critical_pair_count"),
         }
     return digest
 
@@ -328,6 +340,7 @@ def build_quant_lab_experiment(
     failure_mining: dict[str, Any] | None = None,
     ablation_failure_deltas: dict[str, Any] | None = None,
     replay_queue_summary: dict[str, Any] | None = None,
+    benchmark_coverage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a single experiment manifest from quant outputs."""
     return {
@@ -346,11 +359,13 @@ def build_quant_lab_experiment(
             failure_mining=failure_mining,
             ablation_failure_deltas=ablation_failure_deltas,
             replay_queue_summary=replay_queue_summary,
+            benchmark_coverage=benchmark_coverage,
         ),
         "promotion_gate": _promotion_gate(ablation_summary),
         "failure_mining": failure_mining or {},
         "ablation_failure_deltas": ablation_failure_deltas or {},
         "replay_queue_summary": replay_queue_summary or {},
+        "benchmark_coverage": benchmark_coverage or {},
         "required_next_checks": [
             "Keep actual-outcome labels post-hoc only.",
             "Validate any tuned/shadow variant on a later frozen-plan split before runtime adoption.",

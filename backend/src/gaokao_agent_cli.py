@@ -18,6 +18,7 @@ from evaluation.ablation_2025 import (
     run_ablation_backtest_records,
 )
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
+from evaluation.benchmark_coverage import audit_benchmark_coverage, build_markdown_benchmark_coverage
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
 from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdown_delivery_portfolio_audit
@@ -76,6 +77,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_backtest_2025_smoke.py",
     "test_quant_calibration_smoke.py",
     "test_quant_tuning_smoke.py",
+    "test_benchmark_coverage_smoke.py",
     "test_quant_lab_smoke.py",
     "test_experiment_leaderboard_smoke.py",
     "test_failure_mining_smoke.py",
@@ -360,6 +362,7 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
             "improvement_audit": args.improvement_audit,
             "failure_replay_queue_jsonl": args.failure_replay_queue_jsonl,
             "failure_replay_queue_summary": args.failure_replay_queue_summary,
+            "benchmark_coverage": args.benchmark_coverage,
         }
     )
     backtest_results = _read_jsonl(Path(args.backtest_results_jsonl)) if args.backtest_results_jsonl else None
@@ -379,6 +382,7 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
         failure_mining=mine_backtest_failures(backtest_results) if backtest_results else None,
         ablation_failure_deltas=mine_ablation_failure_deltas(ablation_results) if ablation_results else None,
         replay_queue_summary=_read_optional_json(args.failure_replay_queue_summary),
+        benchmark_coverage=_read_optional_json(args.benchmark_coverage),
     )
     if args.output:
         _write_json(Path(args.output), manifest)
@@ -390,6 +394,26 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
         print(f"saved quant lab report -> {report_path}")
     if not args.output and not args.report_md:
         print(json.dumps(manifest, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_benchmark_coverage(args: argparse.Namespace) -> int:
+    records = _read_jsonl(Path(args.plans_jsonl))
+    result = audit_benchmark_coverage(
+        records,
+        min_cases_per_tag=args.min_cases_per_tag,
+        min_cases_per_pair=args.min_cases_per_pair,
+    )
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved benchmark coverage audit -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_benchmark_coverage(result), encoding="utf-8")
+        print(f"saved benchmark coverage report -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -763,10 +787,22 @@ def build_parser() -> argparse.ArgumentParser:
     quant_lab.add_argument("--improvement-audit", help="JSON produced by improvement-audit --output.")
     quant_lab.add_argument("--failure-replay-queue-jsonl", help="JSONL produced by build-replay-queue --output.")
     quant_lab.add_argument("--failure-replay-queue-summary", help="JSON produced by build-replay-queue --summary-json.")
+    quant_lab.add_argument("--benchmark-coverage", help="JSON produced by benchmark-coverage --output.")
     quant_lab.add_argument("--notes", default="")
     quant_lab.add_argument("--output", help="QuantLab manifest JSON output path.")
     quant_lab.add_argument("--report-md", help="QuantLab Markdown report output path.")
     quant_lab.set_defaults(func=cmd_quant_lab_register)
+
+    coverage = subparsers.add_parser(
+        "benchmark-coverage",
+        help="Audit whether frozen benchmark cases cover critical user slices.",
+    )
+    coverage.add_argument("--plans-jsonl", required=True, help="Frozen plan JSONL to audit.")
+    coverage.add_argument("--min-cases-per-tag", type=int, default=2)
+    coverage.add_argument("--min-cases-per-pair", type=int, default=1)
+    coverage.add_argument("--output", help="Benchmark coverage JSON output path.")
+    coverage.add_argument("--report-md", help="Benchmark coverage Markdown output path.")
+    coverage.set_defaults(func=cmd_benchmark_coverage)
 
     replay = subparsers.add_parser(
         "build-replay-queue",

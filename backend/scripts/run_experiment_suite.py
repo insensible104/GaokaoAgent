@@ -52,6 +52,8 @@ def main() -> int:
         "experiment_id": experiment_id,
         "stages": [],
     }
+    benchmark_coverage = output_dir / "benchmark_coverage.json"
+    benchmark_coverage_report = output_dir / "benchmark_coverage.md"
 
     def run_stage(name: str, cli_args: list[str]) -> int:
         status = _run(cli_args, dry_run=args.dry_run)
@@ -100,6 +102,23 @@ def main() -> int:
             if status != 0:
                 _write_manifest(output_dir / "manifest.json", manifest)
                 return status
+
+    if args.plans_jsonl:
+        status = run_stage(
+            "benchmark_coverage",
+            [
+                "benchmark-coverage",
+                "--plans-jsonl",
+                args.plans_jsonl,
+                "--output",
+                str(benchmark_coverage),
+                "--report-md",
+                str(benchmark_coverage_report),
+            ],
+        )
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
 
     if args.actual_outcomes and args.plans_jsonl:
         backtest_summary = output_dir / "backtest_2025_summary.json"
@@ -265,6 +284,8 @@ def main() -> int:
             str(replay_queue),
             "--failure-replay-queue-summary",
             str(replay_summary),
+            "--benchmark-coverage",
+            str(benchmark_coverage),
             "--output",
             str(quant_lab_manifest),
             "--report-md",
