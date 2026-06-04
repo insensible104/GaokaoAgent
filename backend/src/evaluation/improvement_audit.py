@@ -768,6 +768,7 @@ def build_improvement_audit(
             for severity in ("P0", "P1", "P2", "P3")
         },
         "findings": findings,
+        "prioritized_actions": findings,
         "next_actions": [
             item["recommendation"]
             for item in findings[:5]

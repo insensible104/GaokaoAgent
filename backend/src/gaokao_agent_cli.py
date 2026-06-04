@@ -42,6 +42,7 @@ from evaluation.experiment_leaderboard import (
 )
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
+from evaluation.next_iteration_plan import build_markdown_next_iteration_plan, build_next_iteration_plan
 from evaluation.parallel_worlds import build_markdown_parallel_world_analysis, run_parallel_world_analysis
 from evaluation.plan_quality_audit import audit_plan_quality, build_markdown_plan_quality_audit
 from evaluation.quant_lab import (
@@ -102,6 +103,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_failure_mining_smoke.py",
     "test_replay_queue_smoke.py",
     "test_improvement_audit_smoke.py",
+    "test_next_iteration_plan_smoke.py",
     "test_intake_audit_smoke.py",
     "test_parallel_worlds_smoke.py",
     "test_plan_quality_audit_smoke.py",
@@ -827,6 +829,58 @@ def cmd_delivery_portfolio_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_next_iteration_plan(args: argparse.Namespace) -> int:
+    improvement_audit = _read_json(Path(args.improvement_audit)) if args.improvement_audit else None
+    coverage_repair_plan = _read_json(Path(args.coverage_repair_plan)) if args.coverage_repair_plan else None
+    replay_queue_summary = _read_json(Path(args.replay_queue_summary)) if args.replay_queue_summary else None
+    claim_readiness_portfolio = (
+        _read_json(Path(args.claim_readiness_portfolio))
+        if args.claim_readiness_portfolio
+        else None
+    )
+    research_evidence_audit = _read_json(Path(args.research_evidence_audit)) if args.research_evidence_audit else None
+    if not any(
+        (
+            improvement_audit,
+            coverage_repair_plan,
+            replay_queue_summary,
+            claim_readiness_portfolio,
+            research_evidence_audit,
+        )
+    ):
+        raise ValueError(
+            "Provide at least one audit artifact, such as --improvement-audit "
+            "or --coverage-repair-plan."
+        )
+    source_paths = {
+        key: value
+        for key, value in {
+            "coverage_repair_plan": args.coverage_repair_plan,
+            "replay_queue_jsonl": args.replay_queue_jsonl,
+        }.items()
+        if value
+    }
+    result = build_next_iteration_plan(
+        improvement_audit=improvement_audit,
+        coverage_repair_plan=coverage_repair_plan,
+        replay_queue_summary=replay_queue_summary,
+        claim_readiness_portfolio=claim_readiness_portfolio,
+        research_evidence_audit=research_evidence_audit,
+        source_paths=source_paths,
+    )
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved next iteration plan json -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_next_iteration_plan(result), encoding="utf-8")
+        print(f"saved next iteration plan markdown -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1054,6 +1108,23 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--output", help="Improvement audit JSON output path.")
     audit.add_argument("--report-md", help="Markdown improvement audit output path.")
     audit.set_defaults(func=cmd_improvement_audit)
+
+    iteration_plan = subparsers.add_parser(
+        "next-iteration-plan",
+        help="Build a unified next-run plan from audit and replay artifacts.",
+    )
+    iteration_plan.add_argument("--improvement-audit", help="JSON produced by improvement-audit --output.")
+    iteration_plan.add_argument("--coverage-repair-plan", help="JSON produced by benchmark-coverage repair planning.")
+    iteration_plan.add_argument("--replay-queue-summary", help="JSON produced by build-replay-queue --summary-json.")
+    iteration_plan.add_argument("--replay-queue-jsonl", help="JSONL produced by build-replay-queue --output.")
+    iteration_plan.add_argument(
+        "--claim-readiness-portfolio",
+        help="JSON produced by claim-readiness-portfolio --output.",
+    )
+    iteration_plan.add_argument("--research-evidence-audit", help="JSON produced by research-evidence-audit --output.")
+    iteration_plan.add_argument("--output", help="Next-iteration plan JSON output path.")
+    iteration_plan.add_argument("--report-md", help="Next-iteration plan Markdown output path.")
+    iteration_plan.set_defaults(func=cmd_next_iteration_plan)
 
     report_audit = subparsers.add_parser(
         "report-quality-audit",

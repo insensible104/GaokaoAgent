@@ -26,6 +26,7 @@ quant-tune
 quant-lab-register
 ablate-2025
 improvement-audit
+next-iteration-plan
 plan-quality-audit
 parallel-worlds
 report-quality-audit
@@ -410,6 +411,19 @@ The audit flags:
 - baseline variants that beat the full system
 - failure-mining buckets such as sliding, blacklist hit, tail assignment, preferred-major miss, wasted score, and missing actual labels
 - ablation variants that introduce new case-level failures versus `full`
+
+## Next Iteration Plan
+
+Use this after the standard audits when you want one operator-facing plan for
+the next experiment cycle:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py next-iteration-plan --improvement-audit logs\improvement_audit.json --coverage-repair-plan logs\benchmark_coverage_repair_plan.json --replay-queue-summary logs\failure_replay_queue.json --replay-queue-jsonl logs\failure_replay_queue.jsonl --claim-readiness-portfolio logs\claim_readiness_portfolio.json --research-evidence-audit logs\research_evidence_audit.json --output logs\next_iteration_plan.json --report-md logs\next_iteration_plan.md
+```
+
+The plan merges P0/P1 findings, benchmark coverage repair specs, replay queue
+focus areas, claim-readiness blockers, and research-evidence blockers. Treat
+its commands as the starting point for the next frozen-plan or replay run.
 - next actions for the next model iteration
 
 ## Plan Quality Audit
@@ -605,7 +619,8 @@ When actual outcomes and frozen plans are provided, the suite also writes
 `failure_replay_queue.md`, plus `quant_lab_leaderboard.json` and
 `quant_lab_leaderboard.md`, `claim_readiness.json`, and
 `claim_readiness.md`, plus `claim_readiness_portfolio.json` and
-`claim_readiness_portfolio.md`.
+`claim_readiness_portfolio.md`, plus `next_iteration_plan.json` and
+`next_iteration_plan.md`.
 
 When `--research-evidence-json` or `--research-evidence-glob` is provided, the
 suite also writes `research_evidence_audit.json` and
@@ -637,6 +652,7 @@ Use these outputs for project claims:
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |
 | Tradeoff/re-ranking choices improve 2025 outcomes | `ablation_2025_summary.json`, `ablation_2025_report.md` |
 | The next iteration is metric-driven | `improvement_audit.json`, `improvement_audit.md` |
+| The next experiment run is operationalized from audits | `next_iteration_plan.json`, `next_iteration_plan.md` |
 | Known failures are replayable | `failure_replay_queue.jsonl`, `failure_replay_queue.md` |
 | Multiple experiments can be compared | `quant_lab_leaderboard.json`, `quant_lab_leaderboard.md` |
 | Public quality claims are bounded by evidence | `claim_readiness.json`, `claim_readiness.md` |

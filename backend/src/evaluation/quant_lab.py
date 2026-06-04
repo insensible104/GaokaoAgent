@@ -131,14 +131,16 @@ def _summary_digest(
             "slice_count": (ablation_summary.get("slice_scoreboard") or {}).get("slice_count", 0),
         }
     if improvement_audit:
+        prioritized_actions = improvement_audit.get("prioritized_actions") or improvement_audit.get("findings") or []
         digest["improvement_audit"] = {
             "status": improvement_audit.get("status"),
-            "priority_count": len(improvement_audit.get("prioritized_actions") or []),
+            "priority_count": len(prioritized_actions),
             "blocker_count": len(
                 [
                     item
-                    for item in improvement_audit.get("prioritized_actions") or []
+                    for item in prioritized_actions
                     if str(item.get("priority") or "").upper() == "P0"
+                    or str(item.get("severity") or "").upper() == "P0"
                 ]
             ),
         }

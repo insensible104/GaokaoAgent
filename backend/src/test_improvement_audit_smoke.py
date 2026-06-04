@@ -155,6 +155,7 @@ def test_improvement_audit_prioritizes_blockers() -> None:
 
     assert result["status"] == "blocked_for_agency_grade_claims"
     assert result["severity_counts"]["P0"] >= 1
+    assert result["prioritized_actions"] == result["findings"]
     assert any("风险档不单调" in item["finding"] for item in result["findings"])
     assert any("safe_first" in item["finding"] for item in result["findings"])
     assert any(item["area"] == "quant_tuning" for item in result["findings"])

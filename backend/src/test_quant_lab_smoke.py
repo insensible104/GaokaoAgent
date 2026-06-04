@@ -185,8 +185,31 @@ def test_quant_lab_promotion_gate_blocks_critical_slice_regression():
     assert "Slice Guardrails" in report
 
 
+def test_quant_lab_counts_improvement_findings_as_blockers():
+    manifest = build_quant_lab_experiment(
+        experiment_id="improvement_findings_smoke",
+        improvement_audit={
+            "status": "blocked_for_agency_grade_claims",
+            "findings": [
+                {
+                    "severity": "P0",
+                    "area": "research_evidence",
+                    "finding": "搜索证据被阻断进入量化特征",
+                    "recommendation": "修复证据边界。",
+                }
+            ],
+        },
+    )
+
+    digest = manifest["metric_digest"]["improvement_audit"]
+
+    assert digest["priority_count"] == 1
+    assert digest["blocker_count"] == 1
+
+
 if __name__ == "__main__":
     test_slice_scoreboard_attaches_profile_segments_and_regressions()
     test_quant_lab_manifest_keeps_shadow_promotion_gate_conservative()
     test_quant_lab_promotion_gate_blocks_critical_slice_regression()
+    test_quant_lab_counts_improvement_findings_as_blockers()
     print("quant lab smoke tests passed")

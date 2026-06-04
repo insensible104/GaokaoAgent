@@ -184,6 +184,8 @@ def main() -> int:
         claim_readiness_portfolio_report = output_dir / "claim_readiness_portfolio.md"
         quant_lab_leaderboard = output_dir / "quant_lab_leaderboard.json"
         quant_lab_leaderboard_report = output_dir / "quant_lab_leaderboard.md"
+        next_iteration_plan = output_dir / "next_iteration_plan.json"
+        next_iteration_plan_report = output_dir / "next_iteration_plan.md"
         status = run_stage(
             "backtest_2025",
             [
@@ -403,6 +405,33 @@ def main() -> int:
                 str(quant_lab_leaderboard_report),
             ],
         )
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
+        iteration_args = [
+            "next-iteration-plan",
+            "--improvement-audit",
+            str(output_dir / "improvement_audit.json"),
+            "--coverage-repair-plan",
+            str(benchmark_coverage_repair),
+            "--replay-queue-summary",
+            str(replay_summary),
+            "--replay-queue-jsonl",
+            str(replay_queue),
+            "--claim-readiness-portfolio",
+            str(claim_readiness_portfolio),
+            "--output",
+            str(next_iteration_plan),
+            "--report-md",
+            str(next_iteration_plan_report),
+        ]
+        if args.research_evidence_json or args.research_evidence_glob:
+            iteration_args.extend([
+                "--research-evidence-audit",
+                str(research_evidence_audit),
+            ])
+        status = run_stage("next_iteration_plan", iteration_args)
         if status != 0:
             _write_manifest(output_dir / "manifest.json", manifest)
             return status
