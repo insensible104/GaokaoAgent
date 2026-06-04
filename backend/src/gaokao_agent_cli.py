@@ -23,6 +23,10 @@ from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdown_delivery_portfolio_audit
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
 from evaluation.failure_mining import mine_ablation_failure_deltas, mine_backtest_failures
+from evaluation.experiment_leaderboard import (
+    build_markdown_quant_lab_leaderboard,
+    build_quant_lab_leaderboard,
+)
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
 from evaluation.parallel_worlds import build_markdown_parallel_world_analysis, run_parallel_world_analysis
@@ -73,6 +77,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_calibration_smoke.py",
     "test_quant_tuning_smoke.py",
     "test_quant_lab_smoke.py",
+    "test_experiment_leaderboard_smoke.py",
     "test_failure_mining_smoke.py",
     "test_replay_queue_smoke.py",
     "test_improvement_audit_smoke.py",
@@ -373,6 +378,7 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
         improvement_audit=_read_optional_json(args.improvement_audit),
         failure_mining=mine_backtest_failures(backtest_results) if backtest_results else None,
         ablation_failure_deltas=mine_ablation_failure_deltas(ablation_results) if ablation_results else None,
+        replay_queue_summary=_read_optional_json(args.failure_replay_queue_summary),
     )
     if args.output:
         _write_json(Path(args.output), manifest)
@@ -412,6 +418,40 @@ def cmd_build_replay_queue(args: argparse.Namespace) -> int:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(build_markdown_replay_queue(result), encoding="utf-8")
         print(f"saved failure replay queue report -> {report_path}")
+    return 0
+
+
+def _read_quant_lab_manifest_paths(paths: list[str] | None, patterns: list[str] | None) -> list[Path]:
+    selected: list[Path] = []
+    for path in paths or []:
+        selected.append(Path(path))
+    for pattern in patterns or []:
+        selected.extend(Path(match) for match in sorted(glob.glob(pattern)))
+    unique: dict[str, Path] = {}
+    for path in selected:
+        unique[str(path)] = path
+    return list(unique.values())
+
+
+def cmd_quant_lab_leaderboard(args: argparse.Namespace) -> int:
+    paths = _read_quant_lab_manifest_paths(args.manifest, args.manifest_glob)
+    if not paths:
+        raise ValueError("Provide at least one --manifest or --manifest-glob.")
+    manifests = [_read_json(path) for path in paths]
+    result = build_quant_lab_leaderboard(
+        manifests,
+        baseline_experiment_id=args.baseline_experiment_id,
+    )
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved quant lab leaderboard -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_quant_lab_leaderboard(result), encoding="utf-8")
+        print(f"saved quant lab leaderboard report -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -741,6 +781,21 @@ def build_parser() -> argparse.ArgumentParser:
     replay.add_argument("--top-k", type=int, default=20)
     replay.add_argument("--no-ablation-regressions", action="store_true")
     replay.set_defaults(func=cmd_build_replay_queue)
+
+    leaderboard = subparsers.add_parser(
+        "quant-lab-leaderboard",
+        help="Compare multiple QuantLab manifests as a research leaderboard.",
+    )
+    leaderboard.add_argument("--manifest", nargs="*", help="One or more quant_lab_manifest.json paths.")
+    leaderboard.add_argument(
+        "--manifest-glob",
+        nargs="*",
+        help="Glob pattern(s), such as logs/experiments/*/quant_lab_manifest.json.",
+    )
+    leaderboard.add_argument("--baseline-experiment-id", help="Optional experiment id for delta columns.")
+    leaderboard.add_argument("--output", help="Leaderboard JSON output path.")
+    leaderboard.add_argument("--report-md", help="Leaderboard Markdown output path.")
+    leaderboard.set_defaults(func=cmd_quant_lab_leaderboard)
 
     audit = subparsers.add_parser(
         "improvement-audit",

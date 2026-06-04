@@ -227,6 +227,22 @@ The standard experiment suite writes `quant_lab_manifest.json` and
 It also mines `backtest_2025_results.jsonl` and `ablation_2025_results.jsonl`
 for failure buckets, worst cases, and variant-level case regressions.
 
+### QuantLab Leaderboard
+
+Use the leaderboard when comparing many experiment folders instead of judging a
+single run in isolation:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-lab-leaderboard --manifest-glob "logs\experiments\*\quant_lab_manifest.json" --baseline-experiment-id exp_2026_0604_baseline --output logs\quant_lab_leaderboard.json --report-md logs\quant_lab_leaderboard.md
+```
+
+The leaderboard ranks runs by a conservative triage score that rewards success,
+preferred-major hit, and assigned-major utility, while penalizing sliding,
+blacklist hits, tail assignment, failure-case rate, calibration error, and
+open P0 blockers. The score is not a production proof. It is a review surface:
+top candidates still need replay-queue validation, critical-slice guardrails,
+and delivery-quality checks before runtime adoption.
+
 Failure buckets:
 
 - `sliding`
@@ -502,7 +518,8 @@ When actual outcomes and frozen plans are provided, the suite also writes
 `quant_tuning_summary.json`, `quant_tuning_report.md`,
 `improvement_audit.json`, `improvement_audit.md`,
 `failure_replay_queue.jsonl`, `failure_replay_queue.json`, and
-`failure_replay_queue.md`.
+`failure_replay_queue.md`, plus `quant_lab_leaderboard.json` and
+`quant_lab_leaderboard.md`.
 
 ## Claim-Evidence Mapping
 
@@ -528,3 +545,4 @@ Use these outputs for project claims:
 | Tradeoff/re-ranking choices improve 2025 outcomes | `ablation_2025_summary.json`, `ablation_2025_report.md` |
 | The next iteration is metric-driven | `improvement_audit.json`, `improvement_audit.md` |
 | Known failures are replayable | `failure_replay_queue.jsonl`, `failure_replay_queue.md` |
+| Multiple experiments can be compared | `quant_lab_leaderboard.json`, `quant_lab_leaderboard.md` |

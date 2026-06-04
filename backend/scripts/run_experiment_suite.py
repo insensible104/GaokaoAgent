@@ -112,6 +112,10 @@ def main() -> int:
         replay_queue = output_dir / "failure_replay_queue.jsonl"
         replay_summary = output_dir / "failure_replay_queue.json"
         replay_report = output_dir / "failure_replay_queue.md"
+        quant_lab_manifest = output_dir / "quant_lab_manifest.json"
+        quant_lab_report = output_dir / "quant_lab_report.md"
+        quant_lab_leaderboard = output_dir / "quant_lab_leaderboard.json"
+        quant_lab_leaderboard_report = output_dir / "quant_lab_leaderboard.md"
         status = run_stage(
             "backtest_2025",
             [
@@ -262,9 +266,9 @@ def main() -> int:
             "--failure-replay-queue-summary",
             str(replay_summary),
             "--output",
-            str(output_dir / "quant_lab_manifest.json"),
+            str(quant_lab_manifest),
             "--report-md",
-            str(output_dir / "quant_lab_report.md"),
+            str(quant_lab_report),
             "--notes",
             "standard experiment suite",
         ]
@@ -276,6 +280,22 @@ def main() -> int:
                 str(ablation_results),
             ])
         status = run_stage("quant_lab_register", quant_lab_args)
+        if status != 0:
+            _write_manifest(output_dir / "manifest.json", manifest)
+            return status
+
+        status = run_stage(
+            "quant_lab_leaderboard",
+            [
+                "quant-lab-leaderboard",
+                "--manifest",
+                str(quant_lab_manifest),
+                "--output",
+                str(quant_lab_leaderboard),
+                "--report-md",
+                str(quant_lab_leaderboard_report),
+            ],
+        )
         if status != 0:
             _write_manifest(output_dir / "manifest.json", manifest)
             return status

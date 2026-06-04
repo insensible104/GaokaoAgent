@@ -80,6 +80,7 @@ def _summary_digest(
     improvement_audit: dict[str, Any] | None = None,
     failure_mining: dict[str, Any] | None = None,
     ablation_failure_deltas: dict[str, Any] | None = None,
+    replay_queue_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     digest: dict[str, Any] = {}
     if backtest_summary:
@@ -155,6 +156,22 @@ def _summary_digest(
         digest["ablation_failure_deltas"] = {
             "variant_count": len(ablation_failure_deltas.get("variant_failure_deltas") or {}),
             "case_regression_count": len(ablation_failure_deltas.get("case_regressions") or []),
+        }
+    if replay_queue_summary:
+        p0_count = 0
+        p1_count = 0
+        for item in replay_queue_summary.get("items") or []:
+            metadata = item.get("replay_metadata") or {}
+            if metadata.get("priority") == "P0":
+                p0_count += 1
+            if metadata.get("priority") == "P1":
+                p1_count += 1
+        digest["replay_queue"] = {
+            "queue_count": _metric(replay_queue_summary, "queue_count"),
+            "source_case_count": _metric(replay_queue_summary, "source_case_count"),
+            "missing_case_count": _metric(replay_queue_summary, "missing_case_count"),
+            "p0_count": float(p0_count),
+            "p1_count": float(p1_count),
         }
     return digest
 
@@ -310,6 +327,7 @@ def build_quant_lab_experiment(
     improvement_audit: dict[str, Any] | None = None,
     failure_mining: dict[str, Any] | None = None,
     ablation_failure_deltas: dict[str, Any] | None = None,
+    replay_queue_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a single experiment manifest from quant outputs."""
     return {
@@ -327,10 +345,12 @@ def build_quant_lab_experiment(
             improvement_audit=improvement_audit,
             failure_mining=failure_mining,
             ablation_failure_deltas=ablation_failure_deltas,
+            replay_queue_summary=replay_queue_summary,
         ),
         "promotion_gate": _promotion_gate(ablation_summary),
         "failure_mining": failure_mining or {},
         "ablation_failure_deltas": ablation_failure_deltas or {},
+        "replay_queue_summary": replay_queue_summary or {},
         "required_next_checks": [
             "Keep actual-outcome labels post-hoc only.",
             "Validate any tuned/shadow variant on a later frozen-plan split before runtime adoption.",
