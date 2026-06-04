@@ -125,7 +125,68 @@ def test_quant_lab_manifest_keeps_shadow_promotion_gate_conservative():
     assert "Promotion Gate" in report
 
 
+def test_quant_lab_promotion_gate_blocks_critical_slice_regression():
+    ablation_summary = {
+        "variants": ["full", "aggregate_winner_slice_loser"],
+        "summaries": {
+            "full": {
+                "success_rate": 0.70,
+                "blacklist_hit_rate": 0.0,
+                "tail_assignment_rate": 0.20,
+                "preferred_major_hit_rate": 0.30,
+                "average_assigned_major_utility": 0.50,
+            },
+            "aggregate_winner_slice_loser": {
+                "success_rate": 0.72,
+                "blacklist_hit_rate": 0.0,
+                "tail_assignment_rate": 0.21,
+                "preferred_major_hit_rate": 0.34,
+                "average_assigned_major_utility": 0.53,
+            },
+        },
+        "slice_scoreboard": {
+            "slice_count": 2,
+            "rows": [
+                {
+                    "variant": "full",
+                    "slice": "rank_boundary_or_lower",
+                    "case_count": 12,
+                    "success_rate": 0.75,
+                    "preferred_major_hit_rate": 0.30,
+                    "blacklist_hit_rate": 0.0,
+                    "tail_assignment_hit_rate": 0.20,
+                },
+                {
+                    "variant": "aggregate_winner_slice_loser",
+                    "slice": "rank_boundary_or_lower",
+                    "case_count": 12,
+                    "success_rate": 0.66,
+                    "preferred_major_hit_rate": 0.35,
+                    "blacklist_hit_rate": 0.0,
+                    "tail_assignment_hit_rate": 0.21,
+                },
+            ],
+        },
+    }
+
+    manifest = build_quant_lab_experiment(
+        experiment_id="slice_guardrail_smoke",
+        ablation_summary=ablation_summary,
+    )
+    gate = manifest["promotion_gate"]
+    report = build_markdown_quant_lab_report(manifest)
+
+    assert gate["status"] == "hold_current"
+    assert gate["candidates"][0]["aggregate_passes"] is True
+    assert gate["candidates"][0]["passes_shadow_gate"] is False
+    assert gate["candidates"][0]["slice_blocker_count"] >= 1
+    assert gate["slice_guardrails"]["status"] == "blocked"
+    assert gate["winners"] == []
+    assert "Slice Guardrails" in report
+
+
 if __name__ == "__main__":
     test_slice_scoreboard_attaches_profile_segments_and_regressions()
     test_quant_lab_manifest_keeps_shadow_promotion_gate_conservative()
+    test_quant_lab_promotion_gate_blocks_critical_slice_regression()
     print("quant lab smoke tests passed")

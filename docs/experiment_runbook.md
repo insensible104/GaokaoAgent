@@ -211,7 +211,16 @@ new variant may be promoted only if:
 - blacklist_hit_rate does not worsen
 - tail_assignment_rate rises by no more than 3 percentage points
 - preferred_major_hit_rate or average_assigned_major_utility improves
+- critical slices do not regress
 ```
+
+QuantLab treats these as critical slices: boundary/lower rank, 60k-120k rank,
+Guangdong or narrow-region locked families, major blacklist or strict-major
+families, high major-cognition risk, regret-sensitive families, and
+conservative-risk families. A candidate is blocked when these slices lose
+success rate, increase blacklist rate, increase tail-assignment rate by more
+than 5 percentage points, or lose preferred-major hit rate by more than 5
+percentage points.
 
 The standard experiment suite writes `quant_lab_manifest.json` and
 `quant_lab_report.md` when 2025 outcome labels and frozen plans are provided.

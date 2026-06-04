@@ -15,6 +15,17 @@ from typing import Any, Mapping
 
 PROTOCOL_VERSION = "gaokao-quant-lab-v1"
 MISSION = "高考志愿平权化：用可评估、可回测、可优化的量化闭环逼近头部填报机构质量。"
+CRITICAL_SLICE_PREFIXES = (
+    "rank_boundary_or_lower",
+    "rank_60k_120k",
+    "region_guangdong_or_city_locked",
+    "region_narrow_preference",
+    "major_has_blacklist",
+    "major_strict_preference",
+    "major_cognition_high",
+    "regret_sensitive",
+    "risk_conservative",
+)
 
 
 def _sha256(path: Path) -> str | None:
@@ -137,6 +148,7 @@ def _promotion_gate(ablation_summary: dict[str, Any] | None) -> dict[str, Any]:
             "reason": "No ablation summary was provided.",
         }
     full = (ablation_summary.get("summaries") or {}).get("full") or {}
+    slice_guardrails = _slice_guardrails(ablation_summary)
     candidates: list[dict[str, Any]] = []
     for variant, summary in (ablation_summary.get("summaries") or {}).items():
         if variant == "full":
@@ -152,21 +164,26 @@ def _promotion_gate(ablation_summary: dict[str, Any] | None) -> dict[str, Any]:
             full,
             "average_assigned_major_utility",
         )
-        passes = (
+        aggregate_passes = (
             success_delta >= 0
             and blacklist_delta <= 0
             and tail_delta <= 0.03
             and (preferred_delta > 0 or utility_delta > 0)
         )
+        slice_blockers = slice_guardrails.get("blockers_by_variant", {}).get(variant, [])
+        passes = aggregate_passes and not slice_blockers
         candidates.append(
             {
                 "variant": variant,
+                "aggregate_passes": aggregate_passes,
                 "passes_shadow_gate": passes,
                 "success_delta": round(success_delta, 6),
                 "blacklist_delta": round(blacklist_delta, 6),
                 "tail_assignment_delta": round(tail_delta, 6),
                 "preferred_major_delta": round(preferred_delta, 6),
                 "utility_delta": round(utility_delta, 6),
+                "slice_blocker_count": len(slice_blockers),
+                "slice_blockers": slice_blockers,
             }
         )
     winners = [item for item in candidates if item["passes_shadow_gate"]]
@@ -174,10 +191,92 @@ def _promotion_gate(ablation_summary: dict[str, Any] | None) -> dict[str, Any]:
         "status": "candidate_found" if winners else "hold_current",
         "rule": (
             "Promote only if success is not worse, blacklist does not worsen, "
-            "tail risk rises by no more than 3pp, and preferred-major or utility improves."
+            "tail risk rises by no more than 3pp, preferred-major or utility improves, "
+            "and critical user slices do not regress."
         ),
+        "slice_guardrails": slice_guardrails,
         "candidates": candidates,
         "winners": winners,
+    }
+
+
+def _is_critical_slice(slice_name: str) -> bool:
+    return slice_name.startswith(CRITICAL_SLICE_PREFIXES)
+
+
+def _slice_guardrails(ablation_summary: dict[str, Any]) -> dict[str, Any]:
+    """Build promotion blockers from slice-level variant regressions."""
+    scoreboard = ablation_summary.get("slice_scoreboard") or {}
+    rows = scoreboard.get("rows") or []
+    if not rows:
+        return {
+            "status": "not_evaluable",
+            "reason": "No slice_scoreboard rows were provided.",
+            "critical_slice_prefixes": list(CRITICAL_SLICE_PREFIXES),
+            "blockers_by_variant": {},
+        }
+
+    by_slice_variant = {
+        (str(row.get("slice") or ""), str(row.get("variant") or "")): row
+        for row in rows
+    }
+    blockers_by_variant: dict[str, list[dict[str, Any]]] = {}
+    for (slice_name, variant), row in by_slice_variant.items():
+        if variant == "full" or not _is_critical_slice(slice_name):
+            continue
+        baseline = by_slice_variant.get((slice_name, "full"))
+        if not baseline:
+            continue
+        checks = [
+            (
+                "success_rate",
+                _metric_value(row, "success_rate") - _metric_value(baseline, "success_rate"),
+                -0.000001,
+                "critical slice success cannot decline",
+                "min",
+            ),
+            (
+                "preferred_major_hit_rate",
+                _metric_value(row, "preferred_major_hit_rate")
+                - _metric_value(baseline, "preferred_major_hit_rate"),
+                -0.050001,
+                "critical slice preferred-major hit cannot decline by more than 5pp",
+                "min",
+            ),
+            (
+                "blacklist_hit_rate",
+                _metric_value(row, "blacklist_hit_rate") - _metric_value(baseline, "blacklist_hit_rate"),
+                0.000001,
+                "critical slice blacklist rate cannot increase",
+                "max",
+            ),
+            (
+                "tail_assignment_hit_rate",
+                _metric_value(row, "tail_assignment_hit_rate")
+                - _metric_value(baseline, "tail_assignment_hit_rate"),
+                0.050001,
+                "critical slice tail-assignment rate cannot rise by more than 5pp",
+                "max",
+            ),
+        ]
+        for metric, delta, threshold, reason, direction in checks:
+            blocked = delta < threshold if direction == "min" else delta > threshold
+            if not blocked:
+                continue
+            blockers_by_variant.setdefault(variant, []).append(
+                {
+                    "slice": slice_name,
+                    "metric": metric,
+                    "delta_vs_full": round(delta, 6),
+                    "case_count": row.get("case_count", 0),
+                    "reason": reason,
+                }
+            )
+
+    return {
+        "status": "pass" if not blockers_by_variant else "blocked",
+        "critical_slice_prefixes": list(CRITICAL_SLICE_PREFIXES),
+        "blockers_by_variant": blockers_by_variant,
     }
 
 
@@ -254,10 +353,26 @@ def build_markdown_quant_lab_report(manifest: dict[str, Any]) -> str:
             f"success {item.get('success_delta'):+.3f}, "
             f"preferred {item.get('preferred_major_delta'):+.3f}, "
             f"tail {item.get('tail_assignment_delta'):+.3f}, "
-            f"blacklist {item.get('blacklist_delta'):+.3f}"
+            f"blacklist {item.get('blacklist_delta'):+.3f}, "
+            f"slice blockers {item.get('slice_blocker_count', 0)}"
         )
     if not gate.get("candidates"):
         lines.append("- No shadow candidate evaluated.")
+
+    slice_guardrails = gate.get("slice_guardrails") or {}
+    blockers_by_variant = slice_guardrails.get("blockers_by_variant") or {}
+    lines.extend(["", "## Slice Guardrails", "", f"Status: `{slice_guardrails.get('status', 'unknown')}`", ""])
+    if blockers_by_variant:
+        for variant, blockers in blockers_by_variant.items():
+            for blocker in blockers[:8]:
+                lines.append(
+                    f"- `{variant}` blocked on `{blocker.get('slice')}` "
+                    f"`{blocker.get('metric')}` delta {blocker.get('delta_vs_full'):+.3f}: "
+                    f"{blocker.get('reason')}"
+                )
+    else:
+        reason = slice_guardrails.get("reason")
+        lines.append(f"- {reason}" if reason else "- No critical slice blocker found.")
 
     lines.extend(["", "## Required Next Checks", ""])
     for item in manifest.get("required_next_checks") or []:
