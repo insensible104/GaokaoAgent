@@ -119,6 +119,17 @@ Repair profiles are prioritized before the regular rank grid/random samples, so
 missing critical slices are represented in the next benchmark before aggregate
 metrics are compared.
 
+After generating repaired frozen plans, rerun coverage and compare the delta:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py benchmark-coverage --plans-jsonl logs\frozen_plans_2025_repaired.jsonl --output logs\benchmark_coverage_repaired.json --report-md logs\benchmark_coverage_repaired.md
+
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py benchmark-coverage-compare --before logs\benchmark_coverage.json --after logs\benchmark_coverage_repaired.json --output logs\benchmark_coverage_compare.json --report-md logs\benchmark_coverage_compare.md
+```
+
+Only treat the repair as successful if coverage score improves without
+regressing existing required tags or critical pairs.
+
 ## 2025 Backtest
 
 The 2025 actual results are post-hoc labels. They must not be used during plan
@@ -543,6 +554,7 @@ When actual outcomes and frozen plans are provided, the suite also writes
 `benchmark_coverage.json`, `benchmark_coverage.md`,
 `benchmark_coverage_repair_plan.json`,
 `benchmark_coverage_repair_plan.md`,
+`benchmark_coverage_compare.json` when a before/after repair comparison is run,
 `quant_calibration_summary.json`, `quant_calibration_report.md`,
 `quant_tuning_summary.json`, `quant_tuning_report.md`,
 `improvement_audit.json`, `improvement_audit.md`,

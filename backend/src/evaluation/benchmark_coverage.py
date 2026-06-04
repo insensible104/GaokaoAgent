@@ -354,6 +354,132 @@ def build_markdown_coverage_repair_plan(result: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _coverage_row_map(rows: Sequence[dict[str, Any]], *, key: str) -> dict[str, dict[str, Any]]:
+    mapped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if key == "pair":
+            row_key = " + ".join(str(item) for item in row.get("pair", []) or [])
+        else:
+            row_key = str(row.get(key) or "")
+        if row_key:
+            mapped[row_key] = dict(row)
+    return mapped
+
+
+def _status_improved(before_status: str, after_status: str) -> bool:
+    order = {"missing": 0, "thin": 1, "covered": 2}
+    return order.get(after_status, -1) > order.get(before_status, -1)
+
+
+def _compare_rows(before_rows: Sequence[dict[str, Any]], after_rows: Sequence[dict[str, Any]], *, key: str) -> list[dict[str, Any]]:
+    before = _coverage_row_map(before_rows, key=key)
+    after = _coverage_row_map(after_rows, key=key)
+    rows: list[dict[str, Any]] = []
+    for row_key in sorted(set(before) | set(after)):
+        before_row = before.get(row_key, {})
+        after_row = after.get(row_key, {})
+        before_status = str(before_row.get("status") or "missing")
+        after_status = str(after_row.get("status") or "missing")
+        rows.append(
+            {
+                "key": row_key,
+                "before_status": before_status,
+                "after_status": after_status,
+                "before_case_count": int(before_row.get("case_count", 0) or 0),
+                "after_case_count": int(after_row.get("case_count", 0) or 0),
+                "case_count_delta": int(after_row.get("case_count", 0) or 0)
+                - int(before_row.get("case_count", 0) or 0),
+                "improved": _status_improved(before_status, after_status),
+                "fixed": before_status != "covered" and after_status == "covered",
+                "regressed": _status_improved(after_status, before_status),
+            }
+        )
+    return rows
+
+
+def compare_benchmark_coverage(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    """Compare two benchmark coverage audits after a repair iteration."""
+    tag_rows = _compare_rows(
+        before.get("required_tag_coverage") or [],
+        after.get("required_tag_coverage") or [],
+        key="tag",
+    )
+    pair_rows = _compare_rows(
+        before.get("critical_pair_coverage") or [],
+        after.get("critical_pair_coverage") or [],
+        key="pair",
+    )
+    fixed_tags = [row["key"] for row in tag_rows if row["fixed"]]
+    fixed_pairs = [row["key"] for row in pair_rows if row["fixed"]]
+    regressed_tags = [row["key"] for row in tag_rows if row["regressed"]]
+    regressed_pairs = [row["key"] for row in pair_rows if row["regressed"]]
+    return {
+        "protocol_version": "gaokao-benchmark-coverage-compare-v1",
+        "before_status": before.get("status"),
+        "after_status": after.get("status"),
+        "before_coverage_score": before.get("coverage_score"),
+        "after_coverage_score": after.get("coverage_score"),
+        "coverage_score_delta": round(float(after.get("coverage_score", 0.0)) - float(before.get("coverage_score", 0.0)), 6),
+        "before_gap_summary": before.get("gap_summary") or {},
+        "after_gap_summary": after.get("gap_summary") or {},
+        "fixed_required_tags": fixed_tags,
+        "fixed_critical_pairs": fixed_pairs,
+        "regressed_required_tags": regressed_tags,
+        "regressed_critical_pairs": regressed_pairs,
+        "required_tag_deltas": tag_rows,
+        "critical_pair_deltas": pair_rows,
+        "status": "regressed" if regressed_tags or regressed_pairs else "improved" if fixed_tags or fixed_pairs else "unchanged",
+        "recommendation": _comparison_recommendation(fixed_tags, fixed_pairs, regressed_tags, regressed_pairs, after),
+    }
+
+
+def _comparison_recommendation(
+    fixed_tags: Sequence[str],
+    fixed_pairs: Sequence[str],
+    regressed_tags: Sequence[str],
+    regressed_pairs: Sequence[str],
+    after: dict[str, Any],
+) -> str:
+    if regressed_tags or regressed_pairs:
+        return "Do not trust the repaired benchmark yet; inspect regressed coverage rows."
+    if after.get("status") == "ready":
+        return "Coverage repair reached ready status; proceed to backtest and slice guardrails."
+    if fixed_tags or fixed_pairs:
+        return "Coverage improved but gaps remain; generate another repair plan before broad claims."
+    return "No coverage improvement detected; inspect repair profile generation and skipped frozen cases."
+
+
+def build_markdown_benchmark_coverage_comparison(result: dict[str, Any]) -> str:
+    """Build a Markdown comparison for coverage repair impact."""
+    lines = [
+        "# Benchmark Coverage Comparison",
+        "",
+        f"Status: `{result.get('status', 'unknown')}`",
+        f"Before: `{result.get('before_status', '')}` -> After: `{result.get('after_status', '')}`",
+        f"Coverage score delta: {float(result.get('coverage_score_delta', 0.0)):+.1%}",
+        "",
+        "## Fixed Gaps",
+        "",
+    ]
+    fixed_tags = result.get("fixed_required_tags") or []
+    fixed_pairs = result.get("fixed_critical_pairs") or []
+    if fixed_tags:
+        lines.append("- Required tags: " + ", ".join(f"`{item}`" for item in fixed_tags))
+    if fixed_pairs:
+        lines.append("- Critical pairs: " + ", ".join(f"`{item}`" for item in fixed_pairs))
+    if not fixed_tags and not fixed_pairs:
+        lines.append("- No fixed gap.")
+
+    regressions = (result.get("regressed_required_tags") or []) + (result.get("regressed_critical_pairs") or [])
+    if regressions:
+        lines.extend(["", "## Regressions", ""])
+        for item in regressions:
+            lines.append(f"- `{item}`")
+
+    lines.extend(["", "## Recommendation", "", f"- {result.get('recommendation', '')}"])
+    return "\n".join(lines)
+
+
 def build_markdown_benchmark_coverage(result: dict[str, Any]) -> str:
     """Build a Markdown report for benchmark coverage."""
     lines = [

@@ -6,7 +6,9 @@ from evaluation.benchmark_coverage import (
     audit_benchmark_coverage,
     build_coverage_repair_plan,
     build_markdown_benchmark_coverage,
+    build_markdown_benchmark_coverage_comparison,
     build_markdown_coverage_repair_plan,
+    compare_benchmark_coverage,
 )
 from evaluation.quant_lab import build_quant_lab_experiment
 
@@ -98,6 +100,53 @@ def test_benchmark_coverage_finds_required_tags_and_pairs():
     assert manifest["metric_digest"]["benchmark_coverage"]["status"] == "insufficient"
 
 
+def test_benchmark_coverage_comparison_tracks_repair_effect():
+    before = audit_benchmark_coverage(
+        [
+            _record(
+                "physics_target_open",
+                subject="物理",
+                rank=30000,
+            )
+        ],
+        min_cases_per_tag=1,
+        min_cases_per_pair=1,
+    )
+    after = audit_benchmark_coverage(
+        [
+            _record(
+                "physics_target_open",
+                subject="物理",
+                rank=30000,
+            ),
+            _record(
+                "history_boundary_city_locked",
+                subject="历史",
+                rank=130000,
+                risk="conservative",
+                tradeoff="prioritize_major",
+                cities=["广州"],
+                majors=["法学", "汉语言文学"],
+                blacklist=["旅游管理"],
+                cognition=0.7,
+                regret=0.8,
+            ),
+        ],
+        min_cases_per_tag=1,
+        min_cases_per_pair=1,
+    )
+
+    comparison = compare_benchmark_coverage(before, after)
+    markdown = build_markdown_benchmark_coverage_comparison(comparison)
+
+    assert comparison["coverage_score_delta"] > 0
+    assert "subject_history" in comparison["fixed_required_tags"]
+    assert "rank_boundary_or_lower + subject_history" in comparison["fixed_critical_pairs"]
+    assert comparison["status"] == "improved"
+    assert "Benchmark Coverage Comparison" in markdown
+
+
 if __name__ == "__main__":
     test_benchmark_coverage_finds_required_tags_and_pairs()
+    test_benchmark_coverage_comparison_tracks_repair_effect()
     print("benchmark coverage smoke tests passed")

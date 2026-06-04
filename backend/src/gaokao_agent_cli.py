@@ -22,7 +22,9 @@ from evaluation.benchmark_coverage import (
     audit_benchmark_coverage,
     build_coverage_repair_plan,
     build_markdown_benchmark_coverage,
+    build_markdown_benchmark_coverage_comparison,
     build_markdown_coverage_repair_plan,
+    compare_benchmark_coverage,
 )
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
 from evaluation.delivery_bundle import build_delivery_bundle
@@ -431,6 +433,23 @@ def cmd_benchmark_coverage(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_benchmark_coverage_compare(args: argparse.Namespace) -> int:
+    before = _read_json(Path(args.before))
+    after = _read_json(Path(args.after))
+    result = compare_benchmark_coverage(before, after)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved benchmark coverage comparison -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_benchmark_coverage_comparison(result), encoding="utf-8")
+        print(f"saved benchmark coverage comparison report -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_build_replay_queue(args: argparse.Namespace) -> int:
     if not args.backtest_results_jsonl and not args.ablation_results_jsonl:
         raise ValueError("Provide --backtest-results-jsonl, --ablation-results-jsonl, or both.")
@@ -820,6 +839,16 @@ def build_parser() -> argparse.ArgumentParser:
     coverage.add_argument("--repair-plan-md", help="Coverage repair Markdown output path.")
     coverage.add_argument("--repair-max-specs", type=int, default=50)
     coverage.set_defaults(func=cmd_benchmark_coverage)
+
+    coverage_compare = subparsers.add_parser(
+        "benchmark-coverage-compare",
+        help="Compare before/after benchmark coverage audits after repair.",
+    )
+    coverage_compare.add_argument("--before", required=True, help="Baseline benchmark_coverage.json.")
+    coverage_compare.add_argument("--after", required=True, help="Repaired benchmark_coverage.json.")
+    coverage_compare.add_argument("--output", help="Coverage comparison JSON output path.")
+    coverage_compare.add_argument("--report-md", help="Coverage comparison Markdown output path.")
+    coverage_compare.set_defaults(func=cmd_benchmark_coverage_compare)
 
     replay = subparsers.add_parser(
         "build-replay-queue",
