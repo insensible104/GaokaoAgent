@@ -354,6 +354,7 @@ def synthesize_report(state: DeepResearchState) -> dict:
 
     research_topic = state.get("research_topic", "")
     search_results = state.get("search_results", [])
+    evidence_cards = state.get("research_evidence_cards", [])
 
     if not search_results:
         return {

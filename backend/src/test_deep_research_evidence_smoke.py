@@ -6,7 +6,7 @@ import os
 
 from agents.critic_agent_enhanced import audit_slow_loop
 from models.audit_result import AuditStatus
-from subgraphs.deep_research import _evidence_appendix, execute_research
+from subgraphs.deep_research import _evidence_appendix, execute_research, synthesize_report
 
 
 def test_deep_research_fallback_generates_evidence_cards() -> None:
@@ -69,7 +69,33 @@ def test_slow_loop_audit_requires_evidence_appendix_and_cards() -> None:
     assert any("不可直接用于预测" in issue for issue in with_cards.issues)
 
 
+def test_synthesize_report_preserves_evidence_appendix() -> None:
+    result = synthesize_report(
+        {
+            "research_topic": "测试专业组招生计划",
+            "search_results": ["- 学校官网发布招生计划调整。"],
+            "research_evidence_cards": [
+                {
+                    "signal_type": "external_research",
+                    "source_type": "official_or_school",
+                    "value": 0.8,
+                    "confidence": 0.9,
+                    "claim": "学校官网发布招生计划调整。",
+                    "source": "https://admission.example.edu.cn/plan",
+                    "cutoff_date": "2026-06-04",
+                    "usable_for_prediction": True,
+                }
+            ],
+            "knowledge_gaps": [],
+        }
+    )
+
+    assert "引用与证据附录" in result["research_report"]
+    assert "official_or_school" in result["research_report"]
+
+
 if __name__ == "__main__":
     test_deep_research_fallback_generates_evidence_cards()
     test_slow_loop_audit_requires_evidence_appendix_and_cards()
+    test_synthesize_report_preserves_evidence_appendix()
     print("deep research evidence smoke tests passed")

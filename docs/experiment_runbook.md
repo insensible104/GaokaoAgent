@@ -21,6 +21,7 @@ build-pairwise
 eval-orchestration
 backtest-2025
 quant-calibrate-2025
+research-evidence-audit
 quant-tune
 quant-lab-register
 ablate-2025
@@ -92,6 +93,18 @@ Research evidence can now be converted into controlled quant features through
   sentiment shock, and rebound-risk features.
 - manual-verification or fallback cards are reference-only and must not raise
   admission probability.
+
+Before feeding search/deep-research output into quant features, audit the
+evidence cards:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py research-evidence-audit --evidence-json logs\research_state.json --scope-term "Brand Institute" "801" --output logs\research_evidence_audit.json --report-md logs\research_evidence_audit.md
+```
+
+The audit blocks quant ingestion if social, WeChat, livestream, creator, or
+manual-fallback evidence is marked `usable_for_prediction`. Official and
+semi-official cards can become controlled signals only when they keep source
+attribution, cutoff date, and scope terms clear.
 
 ## Benchmark Coverage Audit
 
@@ -605,6 +618,7 @@ Use these outputs for project claims:
 | Client-facing delivery is packaged consistently | `delivery_bundle.json`, `delivery_bundle.md` |
 | Batch delivery quality is improving over cases | `delivery_portfolio_audit.json`, `delivery_portfolio_audit.md` |
 | External research is auditable and source-aware | `research_evidence_cards`, `引用与证据附录` in `research_report` |
+| Search/deep-research evidence is safe for quant ingestion | `research_evidence_audit.json`, `research_evidence_audit.md` |
 | Agentic orchestration is not decorative | `orchestration_rollouts.jsonl`, `orchestration_eval.json` |
 | RL/reward direction has trainable traces | `orchestration_pairwise.jsonl` |
 | LLM components can be ablated | compare runs with `ENABLE_LLM_ADVISORS` / `ENABLE_LLM_CRITIC` on and off |

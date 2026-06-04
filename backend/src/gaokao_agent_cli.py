@@ -52,6 +52,10 @@ from evaluation.quant_lab import (
 from evaluation.quant_tuning import build_markdown_quant_tuning_report, tune_quant_probability_blends
 from evaluation.replay_queue import build_failure_replay_queue, build_markdown_replay_queue
 from evaluation.report_quality import audit_report_quality, build_markdown_report_quality_audit
+from evaluation.research_evidence_audit import (
+    audit_research_evidence_cards,
+    build_markdown_research_evidence_audit,
+)
 from evaluation.schemas import PlanBacktestResult
 from models.game_matrix import VolunteerPlan
 from models.user_profile import UserProfile
@@ -83,6 +87,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_multi_agent_deliberation_smoke.py",
     "test_agent_protocol_smoke.py",
     "test_deep_research_evidence_smoke.py",
+    "test_research_evidence_audit_smoke.py",
     "test_supervisor_policy_smoke.py",
     "test_orchestration_data_pipeline_smoke.py",
     "test_orchestration_trl_utils_smoke.py",
@@ -130,6 +135,21 @@ def _write_json(path: Path, payload: Any) -> None:
 
 def _read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _extract_research_evidence_cards(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [dict(item) for item in payload if isinstance(item, dict)]
+    if not isinstance(payload, dict):
+        return []
+    cards = payload.get("research_evidence_cards")
+    if cards is None:
+        cards = payload.get("evidence_cards")
+    if cards is None and isinstance(payload.get("controlled_signals"), dict):
+        cards = payload.get("controlled_signals", {}).get("feature_cards")
+    if isinstance(cards, list):
+        return [dict(item) for item in cards if isinstance(item, dict)]
+    return []
 
 
 def _write_jsonl(path: Path, records: Iterable[dict[str, Any]]) -> None:
@@ -333,6 +353,39 @@ def cmd_quant_calibrate_2025(args: argparse.Namespace) -> int:
         print(f"saved quant calibration summary -> {args.output}")
     else:
         print(json.dumps(export_result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _read_research_evidence_paths(paths: list[str] | None, patterns: list[str] | None) -> list[Path]:
+    selected: list[Path] = []
+    for path in paths or []:
+        selected.append(Path(path))
+    for pattern in patterns or []:
+        selected.extend(Path(match) for match in sorted(glob.glob(pattern)))
+    unique: dict[str, Path] = {}
+    for path in selected:
+        unique[str(path)] = path
+    return list(unique.values())
+
+
+def cmd_research_evidence_audit(args: argparse.Namespace) -> int:
+    paths = _read_research_evidence_paths(args.evidence_json, args.evidence_glob)
+    if not paths:
+        raise ValueError("Provide at least one --evidence-json or --evidence-glob.")
+    cards: list[dict[str, Any]] = []
+    for path in paths:
+        cards.extend(_extract_research_evidence_cards(_read_json(path)))
+    result = audit_research_evidence_cards(cards, scope_terms=args.scope_term)
+    if args.output:
+        _write_json(Path(args.output), result)
+        print(f"saved research evidence audit -> {args.output}")
+    if args.report_md:
+        report_path = Path(args.report_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_research_evidence_audit(result), encoding="utf-8")
+        print(f"saved research evidence audit report -> {report_path}")
+    if not args.output and not args.report_md:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -844,6 +897,29 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--choice-rows-jsonl", help="Choice-level calibration rows JSONL output path.")
     calibrate.add_argument("--report-md", help="Markdown calibration report output path.")
     calibrate.set_defaults(func=cmd_quant_calibrate_2025)
+
+    research_audit = subparsers.add_parser(
+        "research-evidence-audit",
+        help="Audit deep-research evidence cards before quant-feature ingestion.",
+    )
+    research_audit.add_argument(
+        "--evidence-json",
+        nargs="*",
+        help="JSON file(s) containing research_evidence_cards or a raw card list.",
+    )
+    research_audit.add_argument(
+        "--evidence-glob",
+        nargs="*",
+        help="Glob pattern(s), such as logs/research/*/research_state.json.",
+    )
+    research_audit.add_argument(
+        "--scope-term",
+        nargs="*",
+        help="Optional school, major, or group terms used for scoped signal extraction.",
+    )
+    research_audit.add_argument("--output", help="Research evidence audit JSON output path.")
+    research_audit.add_argument("--report-md", help="Research evidence audit Markdown output path.")
+    research_audit.set_defaults(func=cmd_research_evidence_audit)
 
     tune = subparsers.add_parser(
         "quant-tune",
