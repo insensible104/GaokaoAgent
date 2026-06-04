@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from evaluation.benchmark_coverage import audit_benchmark_coverage, build_markdown_benchmark_coverage
+from evaluation.benchmark_coverage import (
+    audit_benchmark_coverage,
+    build_coverage_repair_plan,
+    build_markdown_benchmark_coverage,
+    build_markdown_coverage_repair_plan,
+)
 from evaluation.quant_lab import build_quant_lab_experiment
 
 
@@ -72,6 +77,8 @@ def test_benchmark_coverage_finds_required_tags_and_pairs():
 
     result = audit_benchmark_coverage(records, min_cases_per_tag=1, min_cases_per_pair=1)
     markdown = build_markdown_benchmark_coverage(result)
+    repair_plan = build_coverage_repair_plan(result)
+    repair_markdown = build_markdown_coverage_repair_plan(repair_plan)
     manifest = build_quant_lab_experiment(
         experiment_id="coverage_smoke",
         benchmark_coverage=result,
@@ -85,6 +92,9 @@ def test_benchmark_coverage_finds_required_tags_and_pairs():
     assert pairs[("rank_boundary_or_lower", "subject_history")]["status"] == "covered"
     assert result["status"] == "insufficient"
     assert "Benchmark Coverage Audit" in markdown
+    assert repair_plan["repair_spec_count"] > 0
+    assert repair_plan["profile_specs"][0]["profile"]["rank"] is not None
+    assert "Benchmark Coverage Repair Plan" in repair_markdown
     assert manifest["metric_digest"]["benchmark_coverage"]["status"] == "insufficient"
 
 

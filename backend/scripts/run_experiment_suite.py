@@ -54,6 +54,8 @@ def main() -> int:
     }
     benchmark_coverage = output_dir / "benchmark_coverage.json"
     benchmark_coverage_report = output_dir / "benchmark_coverage.md"
+    benchmark_coverage_repair = output_dir / "benchmark_coverage_repair_plan.json"
+    benchmark_coverage_repair_report = output_dir / "benchmark_coverage_repair_plan.md"
 
     def run_stage(name: str, cli_args: list[str]) -> int:
         status = _run(cli_args, dry_run=args.dry_run)
@@ -114,6 +116,10 @@ def main() -> int:
                 str(benchmark_coverage),
                 "--report-md",
                 str(benchmark_coverage_report),
+                "--repair-plan-output",
+                str(benchmark_coverage_repair),
+                "--repair-plan-md",
+                str(benchmark_coverage_repair_report),
             ],
         )
         if status != 0:

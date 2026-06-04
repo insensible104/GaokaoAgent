@@ -99,7 +99,7 @@ Before trusting aggregate backtest metrics, audit whether the frozen case set
 covers the user slices that matter for agency-grade claims:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py benchmark-coverage --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\benchmark_coverage.json --report-md logs\benchmark_coverage.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py benchmark-coverage --plans-jsonl logs\frozen_plans_2025.jsonl --output logs\benchmark_coverage.json --report-md logs\benchmark_coverage.md --repair-plan-output logs\benchmark_coverage_repair_plan.json --repair-plan-md logs\benchmark_coverage_repair_plan.md
 ```
 
 Coverage checks include subject group, rank bands, city locks, narrow-region
@@ -108,6 +108,16 @@ major-cognition risk, regret sensitivity, and critical intersections such as
 history boundary-rank families or boundary-rank families with hard blacklist
 constraints. If coverage is `insufficient`, generate more frozen profiles
 before making broad quality claims from the leaderboard.
+
+The repair plan can be fed back into frozen-plan generation:
+
+```powershell
+backend\.venv\Scripts\python.exe backend\scripts\generate_frozen_plans_2025.py --output logs\frozen_plans_2025_repaired.jsonl --num-cases 40 --coverage-repair-plan logs\benchmark_coverage_repair_plan.json
+```
+
+Repair profiles are prioritized before the regular rank grid/random samples, so
+missing critical slices are represented in the next benchmark before aggregate
+metrics are compared.
 
 ## 2025 Backtest
 
@@ -531,6 +541,8 @@ backend\.venv\Scripts\python.exe backend\scripts\run_experiment_suite.py --outpu
 
 When actual outcomes and frozen plans are provided, the suite also writes
 `benchmark_coverage.json`, `benchmark_coverage.md`,
+`benchmark_coverage_repair_plan.json`,
+`benchmark_coverage_repair_plan.md`,
 `quant_calibration_summary.json`, `quant_calibration_report.md`,
 `quant_tuning_summary.json`, `quant_tuning_report.md`,
 `improvement_audit.json`, `improvement_audit.md`,

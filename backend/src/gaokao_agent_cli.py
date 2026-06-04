@@ -18,7 +18,12 @@ from evaluation.ablation_2025 import (
     run_ablation_backtest_records,
 )
 from evaluation.backtest_2025 import load_actual_outcomes_csv, run_plan_backtest, summarize_backtests
-from evaluation.benchmark_coverage import audit_benchmark_coverage, build_markdown_benchmark_coverage
+from evaluation.benchmark_coverage import (
+    audit_benchmark_coverage,
+    build_coverage_repair_plan,
+    build_markdown_benchmark_coverage,
+    build_markdown_coverage_repair_plan,
+)
 from evaluation.calibration import build_markdown_calibration_report, run_quant_calibration_records
 from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdown_delivery_portfolio_audit
@@ -404,6 +409,7 @@ def cmd_benchmark_coverage(args: argparse.Namespace) -> int:
         min_cases_per_tag=args.min_cases_per_tag,
         min_cases_per_pair=args.min_cases_per_pair,
     )
+    repair_plan = build_coverage_repair_plan(result, max_specs=args.repair_max_specs)
     if args.output:
         _write_json(Path(args.output), result)
         print(f"saved benchmark coverage audit -> {args.output}")
@@ -412,7 +418,15 @@ def cmd_benchmark_coverage(args: argparse.Namespace) -> int:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(build_markdown_benchmark_coverage(result), encoding="utf-8")
         print(f"saved benchmark coverage report -> {report_path}")
-    if not args.output and not args.report_md:
+    if args.repair_plan_output:
+        _write_json(Path(args.repair_plan_output), repair_plan)
+        print(f"saved benchmark coverage repair plan -> {args.repair_plan_output}")
+    if args.repair_plan_md:
+        report_path = Path(args.repair_plan_md)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(build_markdown_coverage_repair_plan(repair_plan), encoding="utf-8")
+        print(f"saved benchmark coverage repair plan report -> {report_path}")
+    if not any((args.output, args.report_md, args.repair_plan_output, args.repair_plan_md)):
         print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
@@ -802,6 +816,9 @@ def build_parser() -> argparse.ArgumentParser:
     coverage.add_argument("--min-cases-per-pair", type=int, default=1)
     coverage.add_argument("--output", help="Benchmark coverage JSON output path.")
     coverage.add_argument("--report-md", help="Benchmark coverage Markdown output path.")
+    coverage.add_argument("--repair-plan-output", help="Coverage repair profile-spec JSON output path.")
+    coverage.add_argument("--repair-plan-md", help="Coverage repair Markdown output path.")
+    coverage.add_argument("--repair-max-specs", type=int, default=50)
     coverage.set_defaults(func=cmd_benchmark_coverage)
 
     replay = subparsers.add_parser(

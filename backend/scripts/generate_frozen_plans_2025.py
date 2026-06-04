@@ -189,6 +189,46 @@ def generate_profiles(*, data_dir: Path, num_cases: int, seed: int) -> list[tupl
     rng.shuffle(cases)
     return cases[:num_cases]
 
+
+def load_coverage_repair_profiles(path: str | Path | None, *, data_dir: Path) -> list[tuple[str, UserProfile]]:
+    """Load profile specs produced by benchmark-coverage repair planning."""
+    if not path:
+        return []
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    specs = payload.get("profile_specs") if isinstance(payload, dict) else []
+    if not isinstance(specs, list):
+        raise ValueError("Coverage repair plan must contain a `profile_specs` list.")
+
+    profiles: list[tuple[str, UserProfile]] = []
+    for index, spec in enumerate(specs, start=1):
+        if not isinstance(spec, dict):
+            continue
+        profile_payload = dict(spec.get("profile") or {})
+        subject_group = str(profile_payload.get("subject_group") or "物理")
+        rank = int(profile_payload.get("rank") or 38000)
+        profile_payload["rank"] = rank
+        profile_payload["subject_group"] = subject_group
+        profile_payload["score"] = int(profile_payload.get("score") or _score_for_rank(data_dir, subject_group, rank))
+        case_id = str(spec.get("case_id") or f"coverage_repair_{index:03d}")
+        profiles.append((case_id, UserProfile(**profile_payload)))
+    return profiles
+
+
+def merge_profile_cases(*groups: Iterable[tuple[str, UserProfile]], limit: int) -> list[tuple[str, UserProfile]]:
+    """Merge profile groups while preserving priority order and unique case ids."""
+    merged: list[tuple[str, UserProfile]] = []
+    seen: set[str] = set()
+    for group in groups:
+        for case_id, profile in group:
+            if case_id in seen:
+                continue
+            seen.add(case_id)
+            merged.append((case_id, profile))
+            if len(merged) >= limit:
+                return merged
+    return merged
+
+
 def _strategy_tag(raw: str) -> StrategyTag:
     try:
         return StrategyTag(raw)
@@ -451,6 +491,10 @@ def main() -> None:
         "--plan-change-diff-json",
         help="Optional enrollment diff JSON generated from prediction-time plan/history data.",
     )
+    parser.add_argument(
+        "--coverage-repair-plan",
+        help="Optional repair plan JSON produced by benchmark-coverage --repair-plan-output.",
+    )
     args = parser.parse_args()
 
     data_dir = Path(_resolve_runtime_data_dir())
@@ -463,7 +507,14 @@ def main() -> None:
     plan_change_events = load_plan_change_events_from_json(args.plan_change_diff_json)
     if plan_change_events:
         print(f"[frozen] loaded plan-change events: {len(plan_change_events)}")
-    profiles = generate_profiles(data_dir=data_dir, num_cases=args.num_cases, seed=args.seed)
+    repair_profiles = load_coverage_repair_profiles(args.coverage_repair_plan, data_dir=data_dir)
+    if repair_profiles:
+        print(f"[frozen] loaded coverage repair profiles: {len(repair_profiles)}")
+    profiles = merge_profile_cases(
+        repair_profiles,
+        generate_profiles(data_dir=data_dir, num_cases=args.num_cases, seed=args.seed),
+        limit=args.num_cases,
+    )
 
     records: list[dict] = []
     skipped: list[dict] = []
@@ -503,6 +554,7 @@ def main() -> None:
         "min_probability": args.min_probability,
         "uses_actual_2025": False,
         "plan_change_events": len(plan_change_events),
+        "coverage_repair_profiles": len(repair_profiles),
     }
     summary_path = output_path.with_suffix(".summary.json")
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
