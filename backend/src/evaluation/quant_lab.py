@@ -78,6 +78,8 @@ def _summary_digest(
     tuning_summary: dict[str, Any] | None = None,
     ablation_summary: dict[str, Any] | None = None,
     improvement_audit: dict[str, Any] | None = None,
+    failure_mining: dict[str, Any] | None = None,
+    ablation_failure_deltas: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     digest: dict[str, Any] = {}
     if backtest_summary:
@@ -137,6 +139,22 @@ def _summary_digest(
                     if str(item.get("priority") or "").upper() == "P0"
                 ]
             ),
+        }
+    if failure_mining:
+        digest["failure_mining"] = {
+            "failure_case_count": _metric(failure_mining, "failure_case_count"),
+            "failure_case_rate": _metric(failure_mining, "failure_case_rate"),
+            "missing_actual_choice_count": _metric(failure_mining, "missing_actual_choice_count"),
+            "top_failure_bucket": (
+                (failure_mining.get("failure_buckets") or [{}])[0].get("bucket")
+                if failure_mining.get("failure_buckets")
+                else None
+            ),
+        }
+    if ablation_failure_deltas:
+        digest["ablation_failure_deltas"] = {
+            "variant_count": len(ablation_failure_deltas.get("variant_failure_deltas") or {}),
+            "case_regression_count": len(ablation_failure_deltas.get("case_regressions") or []),
         }
     return digest
 
@@ -290,6 +308,8 @@ def build_quant_lab_experiment(
     tuning_summary: dict[str, Any] | None = None,
     ablation_summary: dict[str, Any] | None = None,
     improvement_audit: dict[str, Any] | None = None,
+    failure_mining: dict[str, Any] | None = None,
+    ablation_failure_deltas: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a single experiment manifest from quant outputs."""
     return {
@@ -305,12 +325,17 @@ def build_quant_lab_experiment(
             tuning_summary=tuning_summary,
             ablation_summary=ablation_summary,
             improvement_audit=improvement_audit,
+            failure_mining=failure_mining,
+            ablation_failure_deltas=ablation_failure_deltas,
         ),
         "promotion_gate": _promotion_gate(ablation_summary),
+        "failure_mining": failure_mining or {},
+        "ablation_failure_deltas": ablation_failure_deltas or {},
         "required_next_checks": [
             "Keep actual-outcome labels post-hoc only.",
             "Validate any tuned/shadow variant on a later frozen-plan split before runtime adoption.",
             "Inspect slice_scoreboard for boundary-rank and hard-constraint regressions.",
+            "Replay worst failure cases before accepting aggregate metric gains.",
             "Use official-source evidence before turning search signals into prediction features.",
         ],
     }
@@ -373,6 +398,40 @@ def build_markdown_quant_lab_report(manifest: dict[str, Any]) -> str:
     else:
         reason = slice_guardrails.get("reason")
         lines.append(f"- {reason}" if reason else "- No critical slice blocker found.")
+
+    failure_mining = manifest.get("failure_mining") or {}
+    if failure_mining:
+        lines.extend(
+            [
+                "",
+                "## Failure Mining",
+                "",
+                f"Failure cases: {failure_mining.get('failure_case_count', 0)} "
+                f"({float(failure_mining.get('failure_case_rate', 0.0)):.1%})",
+                "",
+            ]
+        )
+        for row in (failure_mining.get("failure_buckets") or [])[:6]:
+            lines.append(
+                f"- `{row.get('bucket')}`: {row.get('case_count', 0)} cases "
+                f"({float(row.get('case_rate', 0.0)):.1%})"
+            )
+        worst = failure_mining.get("worst_cases") or []
+        if worst:
+            lines.extend(["", "Worst cases:"])
+            for row in worst[:5]:
+                reasons = ", ".join(str(item) for item in row.get("failure_reasons", []) or [])
+                lines.append(
+                    f"- `{row.get('case_id')}` severity {float(row.get('severity_score', 0.0)):.3f}: {reasons}"
+                )
+
+    ablation_failure_deltas = manifest.get("ablation_failure_deltas") or {}
+    regressions = ablation_failure_deltas.get("case_regressions") or []
+    if regressions:
+        lines.extend(["", "## Ablation Case Regressions", ""])
+        for row in regressions[:5]:
+            failures = ", ".join(str(item) for item in row.get("new_failures", []) or [])
+            lines.append(f"- `{row.get('variant')}` / `{row.get('case_id')}` new failures: {failures}")
 
     lines.extend(["", "## Required Next Checks", ""])
     for item in manifest.get("required_next_checks") or []:

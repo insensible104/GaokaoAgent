@@ -22,6 +22,7 @@ from evaluation.calibration import build_markdown_calibration_report, run_quant_
 from evaluation.delivery_bundle import build_delivery_bundle
 from evaluation.delivery_portfolio import audit_delivery_portfolio, build_markdown_delivery_portfolio_audit
 from evaluation.expectation_packet import build_expectation_packet, build_markdown_expectation_packet
+from evaluation.failure_mining import mine_ablation_failure_deltas, mine_backtest_failures
 from evaluation.improvement_audit import build_improvement_audit, build_markdown_improvement_audit
 from evaluation.intake_audit import build_intake_audit, build_markdown_intake_audit
 from evaluation.parallel_worlds import build_markdown_parallel_world_analysis, run_parallel_world_analysis
@@ -71,6 +72,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_quant_calibration_smoke.py",
     "test_quant_tuning_smoke.py",
     "test_quant_lab_smoke.py",
+    "test_failure_mining_smoke.py",
     "test_improvement_audit_smoke.py",
     "test_intake_audit_smoke.py",
     "test_parallel_worlds_smoke.py",
@@ -343,12 +345,16 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
             "plans_jsonl": args.plans_jsonl,
             "actual_outcomes": args.actual_outcomes,
             "backtest_summary": args.backtest_summary,
+            "backtest_results_jsonl": args.backtest_results_jsonl,
             "calibration_summary": args.calibration_summary,
             "tuning_summary": args.tuning_summary,
             "ablation_summary": args.ablation_summary,
+            "ablation_results_jsonl": args.ablation_results_jsonl,
             "improvement_audit": args.improvement_audit,
         }
     )
+    backtest_results = _read_jsonl(Path(args.backtest_results_jsonl)) if args.backtest_results_jsonl else None
+    ablation_results = _read_jsonl(Path(args.ablation_results_jsonl)) if args.ablation_results_jsonl else None
     manifest = build_quant_lab_experiment(
         experiment_id=args.experiment_id,
         config={
@@ -361,6 +367,8 @@ def cmd_quant_lab_register(args: argparse.Namespace) -> int:
         tuning_summary=_read_optional_json(args.tuning_summary),
         ablation_summary=_read_optional_json(args.ablation_summary),
         improvement_audit=_read_optional_json(args.improvement_audit),
+        failure_mining=mine_backtest_failures(backtest_results) if backtest_results else None,
+        ablation_failure_deltas=mine_ablation_failure_deltas(ablation_results) if ablation_results else None,
     )
     if args.output:
         _write_json(Path(args.output), manifest)
@@ -668,9 +676,11 @@ def build_parser() -> argparse.ArgumentParser:
     quant_lab.add_argument("--plans-jsonl", help="Frozen plan JSONL used by the experiment.")
     quant_lab.add_argument("--actual-outcomes", help="Actual outcome CSV used post-hoc.")
     quant_lab.add_argument("--backtest-summary", help="JSON produced by backtest-2025 --output.")
+    quant_lab.add_argument("--backtest-results-jsonl", help="JSONL produced by backtest-2025 --results-jsonl.")
     quant_lab.add_argument("--calibration-summary", help="JSON produced by quant-calibrate-2025 --output.")
     quant_lab.add_argument("--tuning-summary", help="JSON produced by quant-tune --output.")
     quant_lab.add_argument("--ablation-summary", help="JSON produced by ablate-2025 --output.")
+    quant_lab.add_argument("--ablation-results-jsonl", help="JSONL produced by ablate-2025 --results-jsonl.")
     quant_lab.add_argument("--improvement-audit", help="JSON produced by improvement-audit --output.")
     quant_lab.add_argument("--notes", default="")
     quant_lab.add_argument("--output", help="QuantLab manifest JSON output path.")

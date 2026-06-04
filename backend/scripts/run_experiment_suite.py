@@ -103,10 +103,12 @@ def main() -> int:
 
     if args.actual_outcomes and args.plans_jsonl:
         backtest_summary = output_dir / "backtest_2025_summary.json"
+        backtest_results = output_dir / "backtest_2025_results.jsonl"
         calibration_summary = output_dir / "quant_calibration_summary.json"
         calibration_choices = output_dir / "quant_calibration_choices.jsonl"
         tuning_summary = output_dir / "quant_tuning_summary.json"
         ablation_summary = output_dir / "ablation_2025_summary.json"
+        ablation_results = output_dir / "ablation_2025_results.jsonl"
         status = run_stage(
             "backtest_2025",
             [
@@ -118,7 +120,7 @@ def main() -> int:
                 "--output",
                 str(backtest_summary),
                 "--results-jsonl",
-                str(output_dir / "backtest_2025_results.jsonl"),
+                str(backtest_results),
             ],
         )
         if status != 0:
@@ -173,7 +175,7 @@ def main() -> int:
                     "--output",
                     str(ablation_summary),
                     "--results-jsonl",
-                    str(output_dir / "ablation_2025_results.jsonl"),
+                    str(ablation_results),
                     "--report-md",
                     str(output_dir / "ablation_2025_report.md"),
                     "--tuning-summary",
@@ -214,6 +216,8 @@ def main() -> int:
             args.plans_jsonl,
             "--backtest-summary",
             str(backtest_summary),
+            "--backtest-results-jsonl",
+            str(backtest_results),
             "--calibration-summary",
             str(calibration_summary),
             "--tuning-summary",
@@ -228,7 +232,12 @@ def main() -> int:
             "standard experiment suite",
         ]
         if args.run_ablation:
-            quant_lab_args.extend(["--ablation-summary", str(ablation_summary)])
+            quant_lab_args.extend([
+                "--ablation-summary",
+                str(ablation_summary),
+                "--ablation-results-jsonl",
+                str(ablation_results),
+            ])
         status = run_stage("quant_lab_register", quant_lab_args)
         if status != 0:
             _write_manifest(output_dir / "manifest.json", manifest)

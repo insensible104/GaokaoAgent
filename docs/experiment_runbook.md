@@ -200,7 +200,7 @@ shadow promotion gate.
 Run after backtest, calibration, tuning, ablation, and improvement audit:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-lab-register --experiment-id exp_2026_0604_quant_shadow --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --backtest-summary logs\backtest_2025_summary.json --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --improvement-audit logs\improvement_audit.json --output logs\quant_lab_manifest.json --report-md logs\quant_lab_report.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py quant-lab-register --experiment-id exp_2026_0604_quant_shadow --actual-outcomes data\actual_2025.csv --plans-jsonl logs\frozen_plans_2025.jsonl --backtest-summary logs\backtest_2025_summary.json --backtest-results-jsonl logs\backtest_2025_results.jsonl --calibration-summary logs\quant_calibration_summary.json --tuning-summary logs\quant_tuning_summary.json --ablation-summary logs\ablation_2025_summary.json --ablation-results-jsonl logs\ablation_2025_results.jsonl --improvement-audit logs\improvement_audit.json --output logs\quant_lab_manifest.json --report-md logs\quant_lab_report.md
 ```
 
 Promotion gate rule:
@@ -224,6 +224,20 @@ percentage points.
 
 The standard experiment suite writes `quant_lab_manifest.json` and
 `quant_lab_report.md` when 2025 outcome labels and frozen plans are provided.
+It also mines `backtest_2025_results.jsonl` and `ablation_2025_results.jsonl`
+for failure buckets, worst cases, and variant-level case regressions.
+
+Failure buckets:
+
+- `sliding`
+- `blacklist_hit`
+- `tail_assignment`
+- `preferred_major_miss`
+- `wasted_score`
+- `missing_actual_outcome`
+
+Use the worst-case list as the next replay queue before adopting any aggregate
+metric improvement.
 
 ## Self-Improvement Audit
 
