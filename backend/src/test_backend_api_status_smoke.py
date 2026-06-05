@@ -61,6 +61,90 @@ def test_runtime_status_exposes_backend_and_agent_capabilities():
 def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
     from main import DeliveryPreviewRequest, preview_delivery_bundle
 
+    plan = {
+        "province": "广东",
+        "year": 2025,
+        "subject_group": "物理",
+        "user_score": 620,
+        "user_rank": 12000,
+        "choices": [
+            {
+                "choice_index": 1,
+                "school_code": "A001",
+                "school_name": "A大学",
+                "major_group_code": "201",
+                "major_choices": [
+                    {
+                        "school_code": "A001",
+                        "school_name": "A大学",
+                        "major_group_code": "201",
+                        "major_name": "计算机类",
+                        "is_preferred": True,
+                        "user_utility": 0.86,
+                        "major_rank_risk": 0.12,
+                    }
+                ],
+                "obey_adjustment": True,
+                "adjustment_advice": "recommend",
+                "group_admission_prob": 0.38,
+                "expected_major_utility": 0.86,
+                "tail_assignment_risk": 0.10,
+                "strategy_tag": "rush",
+                "explanation": "位次缓冲、概率和专业组结构均已解释。",
+                "quant_evidence": ["rank_buffer=rush", "data_confidence=0.80"],
+            },
+            {
+                "choice_index": 2,
+                "school_code": "B001",
+                "school_name": "B大学",
+                "major_group_code": "202",
+                "major_choices": [
+                    {
+                        "school_code": "B001",
+                        "school_name": "B大学",
+                        "major_group_code": "202",
+                        "major_name": "软件工程",
+                        "is_preferred": True,
+                        "user_utility": 0.82,
+                        "major_rank_risk": 0.10,
+                    }
+                ],
+                "obey_adjustment": True,
+                "adjustment_advice": "recommend",
+                "group_admission_prob": 0.72,
+                "expected_major_utility": 0.82,
+                "tail_assignment_risk": 0.08,
+                "strategy_tag": "target",
+                "explanation": "稳妥区关键志愿，位次缓冲和专业可接受度均已解释。",
+                "quant_evidence": ["rank_buffer=stable", "data_confidence=0.82"],
+            },
+            {
+                "choice_index": 3,
+                "school_code": "C001",
+                "school_name": "C大学",
+                "major_group_code": "203",
+                "major_choices": [
+                    {
+                        "school_code": "C001",
+                        "school_name": "C大学",
+                        "major_group_code": "203",
+                        "major_name": "信息管理",
+                        "is_acceptable": True,
+                        "user_utility": 0.72,
+                        "major_rank_risk": 0.08,
+                    }
+                ],
+                "obey_adjustment": True,
+                "adjustment_advice": "recommend",
+                "group_admission_prob": 0.98,
+                "expected_major_utility": 0.72,
+                "tail_assignment_risk": 0.06,
+                "strategy_tag": "safe",
+                "explanation": "保底安全垫，专业组尾部风险可承受。",
+                "quant_evidence": ["rank_buffer=safe", "data_confidence=0.86"],
+            },
+        ],
+    }
     request = DeliveryPreviewRequest(
         profile={
             "score": 620,
@@ -79,6 +163,7 @@ def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
 第1志愿：A 大学 201 专业组，专业1-6：计算机类、软件工程，调剂建议谨慎。量化校验：位次缓冲和历史数据置信。
 最终以官方招生章程、考试院数据和政策更新为准，仅供参考，请家长复核。
 """,
+        plan=plan,
         case_id="api-smoke-delivery",
     )
 
@@ -90,6 +175,8 @@ def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
         "ready_for_recommendation",
         "needs_clarification",
     }
+    assert response.manifest["plan_quality_status"] != "not_provided"
+    assert "VolunteerPlan JSON" not in response.artifacts["plan_quality_audit"]
     assert "expectation_packet" in response.artifacts
     assert "report_quality_audit" in response.artifacts
 

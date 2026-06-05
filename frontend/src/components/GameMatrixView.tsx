@@ -8,19 +8,30 @@ import React, { useState, useMemo, useCallback } from 'react';
 
 export interface MajorGroupRow {
   school_name: string;
+  school_code?: string;
   major_group_code: string;
   major_list: string[];  // 该专业组包含的所有专业
+  major_options?: Array<Record<string, unknown>>;
+  suggested_major_choices?: Array<Record<string, unknown>>;
   major_count: number;
   admission_prob: number;
+  choice_index?: number | null;
   min_rank_pred: number;
   rank_ci_lower: number;
   rank_ci_upper: number;
   fear_index: number;
   volatility: 'low' | 'medium' | 'high';
   adjustment_risk: number;
+  tail_assignment_risk?: number;
+  major_utility_mean?: number;
   worst_case_major: string | null;
   is_blacklist_risk: boolean;
+  obey_adjustment?: boolean;
+  adjustment_advice?: 'recommend' | 'cautious' | 'avoid';
   strategy_tag: 'rush' | 'target' | 'safe';
+  tradeoff_summary?: string;
+  quant_evidence?: string[];
+  risk_reasons?: string[];
   sentiment_score: number;
   news_summary: string | null;
   is_selected: boolean;
@@ -59,6 +70,7 @@ export interface GameMatrix {
       avg_admission_prob?: number;
     };
   } | null;
+  volunteer_plan?: Record<string, unknown> | null;
 }
 
 interface GameMatrixViewProps {

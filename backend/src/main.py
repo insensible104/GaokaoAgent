@@ -199,6 +199,7 @@ class DeliveryPreviewRequest(BaseModel):
 
     profile: DeliveryProfileInput
     report: str = Field(..., min_length=1, max_length=120_000)
+    plan: Optional[dict[str, Any]] = None
     case_id: Optional[str] = Field(None, max_length=80)
 
 
@@ -279,6 +280,17 @@ def _build_delivery_profile(input_profile: DeliveryProfileInput):
         medical_restrictions=input_profile.medical_restrictions,
         subject_scores=input_profile.subject_scores,
     )
+
+
+def _build_delivery_plan(plan_payload: dict[str, Any] | None):
+    """Convert an optional API VolunteerPlan payload into the canonical model."""
+    if not plan_payload:
+        return None
+    from models.game_matrix import VolunteerPlan
+
+    plan = VolunteerPlan.model_validate(plan_payload)
+    plan.calculate_statistics()
+    return plan
 
 
 def build_user_message(request: QueryRequest) -> str:
@@ -535,6 +547,7 @@ async def preview_delivery_bundle(request: DeliveryPreviewRequest):
             profile=_build_delivery_profile(request.profile),
             report_payload=request.report,
             output_dir=output_dir,
+            plan=_build_delivery_plan(request.plan),
             case_id=case_id,
         )
         artifact_contents: dict[str, str] = {}

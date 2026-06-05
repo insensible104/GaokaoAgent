@@ -474,6 +474,7 @@ function AppContent() {
                 <InternalDeliveryReview
                   profile={deliveryProfile}
                   report={result.report}
+                  gameMatrix={result.game_matrix}
                 />
 
                 {/* Report View */}
