@@ -1,0 +1,262 @@
+# GaokaoAgent Iteration Log
+
+This log records product-facing and engineering-facing improvements that are easy to miss from terse commit titles. Use it with `git log` when reviewing whether each iteration moved GaokaoAgent closer to the goal:
+
+> Make high-quality Gaokao volunteer planning more equal, auditable, and affordable, while approaching the rigor of top counseling agencies and creators.
+
+## Logging Standard
+
+Each future iteration should record:
+
+| Field | Meaning |
+| --- | --- |
+| Goal | The user/business problem this iteration addresses. |
+| Commits | Git commits included in the iteration. |
+| What Changed | Concrete implementation changes. |
+| Why It Matters | Product, delivery, risk, or quant value. |
+| Validation | Commands/tests/builds actually run. |
+| Remaining Risk | What is still not proven or still manual. |
+
+## 2026-06-05: Structured Delivery Review Workbench
+
+### Goal
+
+Move the project from "can generate a recommendation report" toward "can support real internal case delivery." The immediate business problem is reducing disputes caused by unclear constraints, unclear risk boundaries, and weak pre-delivery quality control.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| `c599b74` | Add internal delivery review workbench |
+| `25dbe25` | Feed volunteer plans into delivery preview |
+
+### What Changed
+
+- Added a FastAPI internal delivery endpoint: `POST /api/delivery/preview`.
+- Added a frontend internal workbench: `frontend/src/components/InternalDeliveryReview.tsx`.
+- Preserved structured intake fields from the frontend form:
+  - score, rank, subject group
+  - preferred cities
+  - preferred majors
+  - blacklisted majors
+  - risk tolerance
+  - subject scores
+- Connected delivery preview to existing deterministic delivery artifacts:
+  - intake readiness audit
+  - expectation packet
+  - volunteer-plan quality audit
+  - report quality audit
+  - delivery gates
+  - next actions
+- Extended `/api/delivery/preview` to accept an optional structured `VolunteerPlan`.
+- Made the frontend pass `game_matrix.volunteer_plan` when available.
+- Added a frontend fallback that synthesizes a `VolunteerPlan` from `major_group_rows` when the backend does not return a plan.
+- Preserved key plan-quality fields in the synthesized plan:
+  - choice order
+  - school and major-group code
+  - rush/target/safe tag
+  - admission probability
+  - adjustment advice
+  - tail-assignment risk
+  - major choices
+  - blacklist risk
+  - quant evidence
+- Added API smoke coverage so delivery preview with a structured plan no longer silently regresses to `plan_quality_status=not_provided`.
+
+### Why It Matters
+
+Before this iteration, the project had strong offline delivery-audit modules, but the user-facing workflow still stopped at "generate report." That created a product gap: a counselor could not easily inspect whether a generated case was ready to show a family.
+
+This iteration makes the UI support an internal service workflow:
+
+1. Collect a case.
+2. Generate analysis.
+3. Inspect game matrix and report.
+4. Run delivery preview.
+5. See blocked gates and next actions.
+6. Review expectation and disclaimer artifacts before handing anything to a client.
+
+This directly addresses the 2025 service pain point: families may impose hard constraints such as "only in province" and later judge recommendations poorly unless the constraints, tradeoffs, and non-guarantee boundaries were confirmed before delivery.
+
+### Validation
+
+Latest verified commands during this iteration:
+
+| Command | Result |
+| --- | --- |
+| `uv run python -m pytest src/test_backend_api_status_smoke.py src/test_delivery_bundle_smoke.py` | 7 passed |
+| `uv run python scripts/gaokao_agent.py smoke --fail-fast` | 43 smoke tests passed |
+| `npm run build` in `frontend/` | passed |
+| `npm run lint` in `frontend/` | 0 errors, 2 existing Fast Refresh warnings |
+| `curl http://127.0.0.1:8000/api/status` | backend status returned successfully |
+| `curl -I http://127.0.0.1:5173/app/` | frontend returned 200 |
+
+Known lint warnings:
+
+- `frontend/src/components/ui/badge.tsx`: Fast Refresh warning because the file exports both component and variant helper.
+- `frontend/src/components/ui/button.tsx`: Fast Refresh warning for the same pattern.
+
+These warnings predate the delivery-workbench iteration and do not block production build.
+
+### Remaining Risk
+
+- The fallback frontend `VolunteerPlan` synthesis is an audit bridge, not a replacement for a backend-generated final plan. The preferred path remains returning canonical `game_matrix.volunteer_plan` from the backend.
+- The internal workbench still needs real case walkthroughs to find operational friction.
+- The current frontend can preview Markdown artifacts, but it does not yet provide one-click export of a complete signed delivery bundle.
+- The current delivery gates are deterministic checks. They do not replace human review for official招生章程, fee, campus, medical restriction, and final考试院 data confirmation.
+
+## 2026-06-04: Self-Improving Quant and Evidence Loop
+
+### Goal
+
+Move from isolated recommendation logic toward a repeatable improvement loop: evidence collection, quant evaluation, failure mining, claim control, and next-action planning.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| `8b76c44` | Add next iteration plan |
+| `78cbf14` | Wire research evidence into experiment suite |
+| `c658c8b` | Fold research evidence into improvement audit |
+| `0fa121b` | Add research evidence audit |
+| `e7c39bf` | Add claim readiness portfolio |
+| `bb9c10f` | Add claim readiness gate |
+| `19e5f2e` | Track benchmark coverage repair impact |
+| `fc27c5a` | Add benchmark coverage repair plan |
+| `dc01729` | Add benchmark coverage audit |
+| `7b237ab` | Add QuantLab experiment leaderboard |
+
+### What Changed
+
+- Added or extended the research evidence audit path.
+- Wired research evidence into the experiment suite.
+- Folded evidence quality into the improvement audit.
+- Added claim-readiness gates and claim-readiness portfolio checks.
+- Added benchmark coverage audit and repair planning.
+- Added QuantLab leaderboard visibility.
+- Added a next-iteration planner that consumes audit outputs and produces prioritized work.
+
+### Why It Matters
+
+This iteration makes the project less dependent on ad hoc judgment. Instead of "the model feels better," the project now has a loop:
+
+1. Run experiments.
+2. Audit evidence.
+3. Audit claims.
+4. Check benchmark coverage.
+5. Mine failures.
+6. Produce prioritized next actions.
+
+That is the right direction for a product whose core promise is fairness and rigor rather than personality-driven counseling.
+
+### Validation
+
+The standard smoke suite was run repeatedly during this phase, with the latest full smoke state reported as:
+
+- `uv run python scripts/gaokao_agent.py smoke --fail-fast`
+- Result: 43 smoke tests passed.
+
+### Remaining Risk
+
+- A good improvement loop does not automatically mean the recommendations are already agency-grade.
+- Benchmark coverage still needs more real edge cases from actual user consultations.
+- Research evidence improves explanation and demand-side interpretation, but social/creator content must remain blocked from direct prediction ingestion.
+
+## 2026-06-03: Research Evidence, Market Signals, and Delivery Governance
+
+### Goal
+
+Strengthen the parts that distinguish a professional planning workflow from a generic AI report: source-aware research, market/demand interpretation, delivery gates, and expectation control.
+
+### Representative Commits
+
+| Commit | Title |
+| --- | --- |
+| `a6e2a52` | Add source-aware deep research evidence |
+| `4558545` | Convert research evidence into quant signals |
+| `3a67020` | Feed research evidence into game scoring |
+| `5b8c636` | Refresh game evidence after deep research |
+| `d855e6d` | Block quant promotion on critical slice regressions |
+| `6f8ae2f` | Add QuantLab failure mining |
+| `baddc42` | Turn failure mining into improvement actions |
+| `aeb7693` | Add failure replay queue |
+| `1c7c139` | Add volunteer plan quality audit |
+| `4c917fc` | Gate delivery bundles on plan quality |
+| `8a0d643` | Include delivery gates in improvement audit |
+| `74918e5` | Add delivery portfolio audit |
+| `554b71c` | Include delivery portfolio in improvement audit |
+
+### What Changed
+
+- Added source-aware evidence cards for deep research.
+- Converted approved research evidence into controlled quant signals.
+- Fed research evidence into game scoring.
+- Added failure mining and replay queue.
+- Added volunteer-plan quality audit.
+- Added delivery bundle gates.
+- Included delivery and portfolio audits in the improvement audit.
+- Blocked quant promotion when critical slice regressions appear.
+
+### Why It Matters
+
+Top counseling workflows are not just rankings. They combine:
+
+- hard data
+- preference discovery
+- market behavior interpretation
+- risk explanation
+- plan structure checks
+- customer expectation management
+- final human review
+
+This phase added the backbone for those checks, especially the distinction between "useful research signal" and "unsafe prediction input."
+
+### Validation
+
+The individual smoke tests for these modules were added and included in the full smoke suite:
+
+- research evidence audit
+- plan quality audit
+- delivery bundle audit
+- delivery portfolio audit
+- failure mining
+- replay queue
+- improvement audit
+
+### Remaining Risk
+
+- Search evidence quality still depends on source collection and manual verification.
+- WeChat and creator-platform discovery remain difficult to automate reliably. The safer near-term path is manual link capture plus evidence-card normalization.
+- Delivery quality still depends on whether real counselors use the pre-delivery gates before talking to families.
+
+## Push Documentation Gap Found
+
+The commit history was readable enough to show technical direction, but not enough to support enterprise-style review:
+
+- Commit titles usually described the engineering action, not the business reason.
+- Validation results were recorded in conversation but not in Git.
+- Multi-commit iterations lacked a single written summary.
+
+This document is the correction. Future significant pushes should update this log in the same commit or in a follow-up documentation commit.
+
+## Suggested Future Commit Body Template
+
+```text
+<short imperative title>
+
+Why:
+- Business or product problem.
+- Risk being reduced or metric being improved.
+
+What:
+- Main implementation changes.
+- Important files or interfaces.
+
+Validation:
+- Exact commands run and results.
+
+Remaining risk:
+- What is not proven.
+- What still requires manual review.
+```
+

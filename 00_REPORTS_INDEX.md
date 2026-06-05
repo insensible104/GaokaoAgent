@@ -4,6 +4,17 @@
 
 ---
 
+## 2026年6月5日 (260605) 自我迭代与交付闭环
+
+### 主要成果：补齐 GitHub 提交之外的可复盘迭代记录
+
+13. **[iteration_log.md](docs/iteration_log.md)** **当前迭代复盘入口**
+   - **内容**: 按 Goal / Commits / What Changed / Why It Matters / Validation / Remaining Risk 记录 6 月自我迭代。
+   - **覆盖**: 内部交付预检工作台、结构化志愿表进入交付质检、研究证据链、QuantLab/benchmark/claim readiness、失败挖掘和下一轮计划。
+   - **用途**: 查看每次 push 背后的业务动机、工程改动、验证结果和残余风险，弥补短 commit title 不够企业级复盘的问题。
+
+---
+
 ## 2026年4月26日 (260426) 面试最终复习入口
 
 ### 主要成果：合并所有面试材料，形成唯一主复习文件
@@ -391,4 +402,3 @@
 - `data/` - 所有数据文件
   - `2011-2025广东高考一分一段表.xlsx`
   - `广东省2025年夏季高考专家版.xlsx`
-
