@@ -17,6 +17,51 @@ Each future iteration should record:
 | Validation | Commands/tests/builds actually run. |
 | Remaining Risk | What is still not proven or still manual. |
 
+## 2026-06-07: One-Click Delivery Bundle Export
+
+### Goal
+
+Close the immediate operational gap in the internal delivery workbench: after a case passes or partially passes pre-delivery review, the counselor should be able to export a complete review packet for manual checking, archiving, or client-delivery preparation.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| this commit | Return and download complete delivery preview bundle |
+
+### What Changed
+
+- Returned `delivery_bundle.md` from `/api/delivery/preview` as the `delivery_bundle` artifact.
+- Added API smoke assertions that the delivery bundle index is returned and contains `服务交付包`.
+- Added a frontend "下载完整预检包" action to the internal delivery review workbench.
+- Combined all returned Markdown artifacts into one downloadable Markdown file named `<case_id>-delivery-preview.md`.
+
+### Why It Matters
+
+The previous workbench made delivery issues visible but still required manual copying across multiple previews. This iteration makes the workflow closer to how an internal counseling desk actually works:
+
+1. Generate recommendation.
+2. Run internal delivery preflight.
+3. Inspect gates and next actions.
+4. Download a single review packet.
+5. Use that packet for human review, family confirmation, or case archive.
+
+This reduces operational friction and makes it easier to prove what was explained before handoff.
+
+### Validation
+
+| Command | Result |
+| --- | --- |
+| `uv run python -m pytest src/test_backend_api_status_smoke.py src/test_delivery_bundle_smoke.py` | 7 passed |
+| `npm run build` in `frontend/` | passed |
+| `npm run lint` in `frontend/` | 0 errors, 2 existing Fast Refresh warnings |
+
+### Remaining Risk
+
+- The export is Markdown, not a signed PDF or DOCX package.
+- It still depends on the counselor using the download before final communication.
+- The frontend does not yet support separate "client-facing" versus "internal-only" artifact filtering.
+
 ## 2026-06-05: Structured Delivery Review Workbench
 
 ### Goal
@@ -259,4 +304,3 @@ Remaining risk:
 - What is not proven.
 - What still requires manual review.
 ```
-

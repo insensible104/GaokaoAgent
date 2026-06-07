@@ -551,6 +551,11 @@ async def preview_delivery_bundle(request: DeliveryPreviewRequest):
             case_id=case_id,
         )
         artifact_contents: dict[str, str] = {}
+        bundle_index_path = output_dir / "delivery_bundle.md"
+        if bundle_index_path.is_file():
+            artifact_contents["delivery_bundle"] = bundle_index_path.read_text(
+                encoding="utf-8"
+            )
         for artifact in manifest.get("artifacts", []) or []:
             path = output_dir / str(artifact.get("path", ""))
             if path.is_file() and path.suffix == ".md":

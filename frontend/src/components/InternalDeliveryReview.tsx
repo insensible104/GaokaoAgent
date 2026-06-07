@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileText, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileDown, FileText, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -135,6 +135,16 @@ function artifactTitle(id: string) {
     final_report: "最终报告",
   };
   return labels[id] || id;
+}
+
+function downloadMarkdown(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 function boundedNumber(value: unknown, fallback: number, min = 0, max = 1) {
@@ -277,6 +287,26 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
     );
   }, [preview]);
 
+  function downloadCombinedBundle() {
+    if (!preview || orderedArtifacts.length === 0) return;
+    const content = [
+      `# GaokaoAgent 交付预检包`,
+      "",
+      `Case: ${preview.case_id}`,
+      `Status: ${preview.manifest.status}`,
+      "",
+      ...orderedArtifacts.flatMap(([id, artifact]) => [
+        "---",
+        "",
+        `# ${artifactTitle(id)}`,
+        "",
+        artifact.trim(),
+        "",
+      ]),
+    ].join("\n");
+    downloadMarkdown(`${preview.case_id}-delivery-preview.md`, content);
+  }
+
   async function runReview() {
     if (!profile || !report) return;
     setIsLoading(true);
@@ -404,9 +434,19 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
 
           {orderedArtifacts.length > 0 && (
             <Tabs defaultValue={orderedArtifacts[0][0]} className="rounded-lg border border-slate-200 p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                <FileText className="size-4 text-slate-600" aria-hidden="true" />
-                交付材料预览
+              <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  <FileText className="size-4 text-slate-600" aria-hidden="true" />
+                  交付材料预览
+                </div>
+                <Button
+                  type="button"
+                  onClick={downloadCombinedBundle}
+                  className="w-full bg-slate-800 text-white hover:bg-slate-900 md:w-auto"
+                >
+                  <FileDown className="size-4" aria-hidden="true" />
+                  下载完整预检包
+                </Button>
               </div>
               <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-slate-100">
                 {orderedArtifacts.map(([id]) => (

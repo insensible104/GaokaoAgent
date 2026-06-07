@@ -177,6 +177,8 @@ def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
     }
     assert response.manifest["plan_quality_status"] != "not_provided"
     assert "VolunteerPlan JSON" not in response.artifacts["plan_quality_audit"]
+    assert "delivery_bundle" in response.artifacts
+    assert "服务交付包" in response.artifacts["delivery_bundle"]
     assert "expectation_packet" in response.artifacts
     assert "report_quality_audit" in response.artifacts
 
