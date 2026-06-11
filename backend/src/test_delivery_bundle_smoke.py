@@ -95,6 +95,12 @@ def test_delivery_bundle_writes_client_artifacts() -> None:
         assert manifest["status"] == "pending_signoff"
         assert manifest["intake_status"] == "ready_for_recommendation"
         assert manifest["plan_quality_status"] == "pass"
+        audiences = {item["id"]: item["audience"] for item in manifest["artifacts"]}
+        assert audiences["expectation_packet"] == "client_confirmation"
+        assert audiences["final_report"] == "client_confirmation"
+        assert audiences["intake_audit"] == "internal_review"
+        assert audiences["plan_quality_audit"] == "internal_review"
+        assert audiences["report_quality_audit"] == "internal_review"
         assert (output_dir / "intake_audit.md").exists()
         assert (output_dir / "plan_quality_audit.md").exists()
         assert (output_dir / "expectation_packet.md").exists()

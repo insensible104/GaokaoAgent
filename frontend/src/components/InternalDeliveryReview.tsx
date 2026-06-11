@@ -36,6 +36,13 @@ interface DeliveryManifest {
   expectation_status?: string;
   report_quality_status?: string;
   report_quality_score?: number;
+  artifacts?: Array<{
+    id: string;
+    label: string;
+    path: string;
+    required: boolean;
+    audience?: "internal_review" | "client_confirmation" | "client_final" | string;
+  }>;
   delivery_gates?: Array<{
     gate: string;
     status: string;
@@ -110,6 +117,7 @@ const statusLabel: Record<string, string> = {
 };
 
 const CLIENT_FACING_ARTIFACT_IDS = new Set(["expectation_packet", "final_report"]);
+const CLIENT_FACING_AUDIENCES = new Set(["client_confirmation", "client_final"]);
 
 function statusTone(status: string | undefined) {
   if (!status) return "border-slate-300 bg-slate-50 text-slate-700";
@@ -289,8 +297,17 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
     );
   }, [preview]);
   const clientFacingArtifacts = useMemo(
-    () => orderedArtifacts.filter(([id]) => CLIENT_FACING_ARTIFACT_IDS.has(id)),
-    [orderedArtifacts]
+    () => {
+      const artifactAudienceById = new Map(
+        (preview?.manifest.artifacts || []).map((artifact) => [artifact.id, artifact.audience])
+      );
+      return orderedArtifacts.filter(([id]) => {
+        const audience = artifactAudienceById.get(id);
+        if (audience) return CLIENT_FACING_AUDIENCES.has(audience);
+        return CLIENT_FACING_ARTIFACT_IDS.has(id);
+      });
+    },
+    [orderedArtifacts, preview]
   );
 
   function downloadCombinedBundle() {
