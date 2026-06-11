@@ -17,6 +17,48 @@ Each future iteration should record:
 | Validation | Commands/tests/builds actually run. |
 | Remaining Risk | What is still not proven or still manual. |
 
+## 2026-06-11: Client-Safe Delivery Export Split
+
+### Goal
+
+Reduce operational risk in paid-case handoff by separating internal audit materials from client-facing confirmation materials.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| this commit | Split client-facing and internal delivery exports |
+
+### What Changed
+
+- Added a separate frontend download action for a client-facing confirmation package.
+- Limited the client package to:
+  - `expectation_packet`
+  - `final_report`
+- Kept the full internal preflight package as a separate download that includes audits, gates, and internal review artifacts.
+- Preserved the previous complete internal export for counselor review and case archiving.
+
+### Why It Matters
+
+The internal delivery workbench now supports two distinct handoff modes:
+
+1. Internal review package: counselor-facing, includes audit findings and failed gates.
+2. Client confirmation package: family-facing, focuses on expectation confirmation and final recommendation text.
+
+This reduces the chance of sending internal diagnostic language to families while still preserving a complete review trail for the counselor.
+
+### Validation
+
+| Command | Result |
+| --- | --- |
+| `npm run build` in `frontend/` | passed |
+| `npm run lint` in `frontend/` | 0 errors, 2 existing Fast Refresh warnings |
+
+### Remaining Risk
+
+- The client package is still Markdown, not a signed PDF/DOCX with signature fields.
+- The split is enforced in the frontend export path; a future backend artifact manifest should mark each artifact as `internal`, `client_confirmation`, or `client_final`.
+
 ## 2026-06-07: One-Click Delivery Bundle Export
 
 ### Goal

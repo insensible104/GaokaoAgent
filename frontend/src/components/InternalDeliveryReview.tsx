@@ -109,6 +109,8 @@ const statusLabel: Record<string, string> = {
   pass: "通过",
 };
 
+const CLIENT_FACING_ARTIFACT_IDS = new Set(["expectation_packet", "final_report"]);
+
 function statusTone(status: string | undefined) {
   if (!status) return "border-slate-300 bg-slate-50 text-slate-700";
   if (["ready_to_deliver", "ready_for_recommendation", "pass"].includes(status)) {
@@ -286,6 +288,10 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
       ([left], [right]) => preferredOrder.indexOf(left) - preferredOrder.indexOf(right)
     );
   }, [preview]);
+  const clientFacingArtifacts = useMemo(
+    () => orderedArtifacts.filter(([id]) => CLIENT_FACING_ARTIFACT_IDS.has(id)),
+    [orderedArtifacts]
+  );
 
   function downloadCombinedBundle() {
     if (!preview || orderedArtifacts.length === 0) return;
@@ -305,6 +311,25 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
       ]),
     ].join("\n");
     downloadMarkdown(`${preview.case_id}-delivery-preview.md`, content);
+  }
+
+  function downloadClientBundle() {
+    if (!preview || clientFacingArtifacts.length === 0) return;
+    const content = [
+      `# GaokaoAgent 客户确认包`,
+      "",
+      `Case: ${preview.case_id}`,
+      "",
+      ...clientFacingArtifacts.flatMap(([id, artifact]) => [
+        "---",
+        "",
+        `# ${artifactTitle(id)}`,
+        "",
+        artifact.trim(),
+        "",
+      ]),
+    ].join("\n");
+    downloadMarkdown(`${preview.case_id}-client-confirmation.md`, content);
   }
 
   async function runReview() {
@@ -439,14 +464,25 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
                   <FileText className="size-4 text-slate-600" aria-hidden="true" />
                   交付材料预览
                 </div>
-                <Button
-                  type="button"
-                  onClick={downloadCombinedBundle}
-                  className="w-full bg-slate-800 text-white hover:bg-slate-900 md:w-auto"
-                >
-                  <FileDown className="size-4" aria-hidden="true" />
-                  下载完整预检包
-                </Button>
+                <div className="flex flex-col gap-2 md:flex-row">
+                  <Button
+                    type="button"
+                    onClick={downloadClientBundle}
+                    disabled={clientFacingArtifacts.length === 0}
+                    className="w-full bg-cyan-700 text-white hover:bg-cyan-800 md:w-auto"
+                  >
+                    <FileDown className="size-4" aria-hidden="true" />
+                    下载客户确认包
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={downloadCombinedBundle}
+                    className="w-full bg-slate-800 text-white hover:bg-slate-900 md:w-auto"
+                  >
+                    <FileDown className="size-4" aria-hidden="true" />
+                    下载完整预检包
+                  </Button>
+                </div>
               </div>
               <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-slate-100">
                 {orderedArtifacts.map(([id]) => (
