@@ -85,6 +85,16 @@ def test_improvement_audit_prioritizes_blockers() -> None:
             "case_count": 10,
             "ready_to_deliver_rate": 0.30,
             "blocked_rate": 0.20,
+            "client_delivery_allowed_rate": 0.40,
+            "client_delivery_blocked_rate": 0.60,
+            "client_delivery_status_counts": {"allowed": 4, "blocked": 6},
+            "top_client_delivery_blocked_reasons": [
+                {
+                    "reason": "客户确认包仅在内部质检通过后开放。",
+                    "count": 6,
+                    "rate": 0.60,
+                }
+            ],
             "top_failed_gates": [
                 {"gate": "plan_quality", "failed_count": 6, "failed_rate": 0.60},
                 {"gate": "report_quality", "failed_count": 3, "failed_rate": 0.30},
@@ -164,6 +174,10 @@ def test_improvement_audit_prioritizes_blockers() -> None:
     assert any(item["area"] == "report_quality" for item in result["findings"])
     assert any(item["area"] == "delivery_bundle" for item in result["findings"])
     assert any(item["area"] == "delivery_portfolio" for item in result["findings"])
+    assert any(
+        item["area"] == "delivery_portfolio_client_delivery"
+        for item in result["findings"]
+    )
     assert any(item["area"] == "delivery_portfolio_gate" for item in result["findings"])
     assert any(item["area"] == "research_evidence" for item in result["findings"])
     assert any(item["area"] == "research_evidence_confidence" for item in result["findings"])

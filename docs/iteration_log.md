@@ -17,6 +17,54 @@ Each future iteration should record:
 | Validation | Commands/tests/builds actually run. |
 | Remaining Risk | What is still not proven or still manual. |
 
+## 2026-06-12: Portfolio-Level Client Delivery Readiness
+
+### Goal
+
+Make batch service review reflect whether cases are actually safe to send to families, not just whether individual audit modules produced artifacts.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| this commit | Track client delivery readiness in portfolio audits |
+
+### What Changed
+
+- Extended delivery portfolio audits with client-delivery readiness metrics:
+  - `client_delivery_allowed_rate`
+  - `client_delivery_blocked_rate`
+  - `client_delivery_status_counts`
+  - top repeated client-delivery blocked reasons
+- Made portfolio aggregation prefer explicit `client_delivery` manifest gates when present.
+- Added conservative fallback behavior for older manifests that do not yet include `client_delivery`.
+- Added Markdown reporting for client delivery gate counts and repeated blocked reasons.
+- Fed client-delivery allowed rate into the overall self-improvement audit so low client-ready share becomes prioritized product work.
+- Updated smoke coverage to assert both explicit client-delivery gates and legacy-manifest fallback behavior.
+
+### Why It Matters
+
+Single-case gates prevent one bad handoff. Batch metrics show whether the service process is improving across paid cases. For real counseling operations, this matters more than a beautiful single report: if many cases remain blocked from client delivery, the product still has workflow, intake, plan-quality, or report-quality problems.
+
+This moves the project closer to an internal operations dashboard where a counselor can answer:
+
+- How many cases can be safely sent to families now?
+- How many are still internal-only?
+- Which repeated blocked reasons should become the next product or process fix?
+
+### Validation
+
+| Command | Result |
+| --- | --- |
+| `uv run python -m pytest src/test_delivery_portfolio_smoke.py src/test_delivery_bundle_smoke.py src/test_improvement_audit_smoke.py` | 4 passed |
+| `uv run ruff check src/evaluation/delivery_portfolio.py src/test_delivery_portfolio_smoke.py` | not run: `ruff` is not installed in the backend environment |
+
+### Remaining Risk
+
+- Portfolio audit still depends on exported delivery manifests being collected into a batch.
+- The dashboard/UI does not yet visualize these portfolio metrics directly.
+- The current gate is deterministic; final counselor review remains required before paid delivery.
+
 ## 2026-06-11: Client-Safe Delivery Export Split
 
 ### Goal

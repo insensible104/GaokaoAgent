@@ -55,6 +55,26 @@ def _failed_gates(bundle: dict[str, Any]) -> list[dict[str, Any]]:
     return failed
 
 
+def _client_delivery_state(bundle: dict[str, Any]) -> dict[str, Any]:
+    client_delivery = bundle.get("client_delivery")
+    if isinstance(client_delivery, dict):
+        allowed = bool(client_delivery.get("allowed"))
+        return {
+            "allowed": allowed,
+            "status": str(client_delivery.get("status") or ("allowed" if allowed else "blocked")),
+            "blocked_reason": str(client_delivery.get("blocked_reason") or ""),
+        }
+    status = str(bundle.get("status") or "unknown")
+    allowed = status in {"ready_to_deliver", "pending_signoff"}
+    return {
+        "allowed": allowed,
+        "status": "allowed" if allowed else "blocked",
+        "blocked_reason": ""
+        if allowed
+        else "客户交付状态缺少显式 client_delivery 门控，已按交付包 status 保守拦截。",
+    }
+
+
 def _status(manifests: list[dict[str, Any]], ready_rate: float, blocked_rate: float) -> str:
     if not manifests:
         return "no_cases"
@@ -75,6 +95,9 @@ def audit_delivery_portfolio(manifests: Iterable[dict[str, Any]]) -> dict[str, A
     gate_status_counts: dict[str, Counter[str]] = defaultdict(Counter)
     failed_gate_counts: Counter[str] = Counter()
     action_counts: Counter[str] = Counter()
+    client_delivery_status_counts: Counter[str] = Counter()
+    client_delivery_blocked_reason_counts: Counter[str] = Counter()
+    client_delivery_allowed_count = 0
     score_buckets = {
         "intake_readiness_score": [],
         "plan_quality_score": [],
@@ -83,6 +106,12 @@ def audit_delivery_portfolio(manifests: Iterable[dict[str, Any]]) -> dict[str, A
     worst_cases: list[dict[str, Any]] = []
 
     for bundle in records:
+        client_delivery = _client_delivery_state(bundle)
+        client_delivery_status_counts[str(client_delivery["status"])] += 1
+        if client_delivery["allowed"]:
+            client_delivery_allowed_count += 1
+        elif client_delivery["blocked_reason"]:
+            client_delivery_blocked_reason_counts[str(client_delivery["blocked_reason"])] += 1
         for key in score_buckets:
             value = _float(bundle, key)
             if value > 0:
@@ -113,6 +142,8 @@ def audit_delivery_portfolio(manifests: Iterable[dict[str, Any]]) -> dict[str, A
     blocked_count = status_counts["blocked"]
     ready_rate = ready_count / case_count if case_count else 0.0
     blocked_rate = blocked_count / case_count if case_count else 0.0
+    client_delivery_allowed_rate = client_delivery_allowed_count / case_count if case_count else 0.0
+    client_delivery_blocked_rate = 1.0 - client_delivery_allowed_rate if case_count else 0.0
     worst_cases = sorted(
         worst_cases,
         key=lambda item: (
@@ -133,12 +164,20 @@ def audit_delivery_portfolio(manifests: Iterable[dict[str, Any]]) -> dict[str, A
         {"action": action, "count": count, "rate": round(count / case_count, 6) if case_count else 0.0}
         for action, count in action_counts.most_common(10)
     ]
+    top_client_delivery_blocked_reasons = [
+        {"reason": reason, "count": count, "rate": round(count / case_count, 6) if case_count else 0.0}
+        for reason, count in client_delivery_blocked_reason_counts.most_common(10)
+    ]
     return {
         "status": _status(records, ready_rate, blocked_rate),
         "case_count": case_count,
         "ready_to_deliver_rate": round(ready_rate, 6),
         "blocked_rate": round(blocked_rate, 6),
         "status_counts": dict(status_counts),
+        "client_delivery_allowed_rate": round(client_delivery_allowed_rate, 6),
+        "client_delivery_blocked_rate": round(client_delivery_blocked_rate, 6),
+        "client_delivery_status_counts": dict(client_delivery_status_counts),
+        "top_client_delivery_blocked_reasons": top_client_delivery_blocked_reasons,
         "average_scores": {
             key: round(_mean(values), 6)
             for key, values in score_buckets.items()
@@ -152,7 +191,8 @@ def audit_delivery_portfolio(manifests: Iterable[dict[str, Any]]) -> dict[str, A
         "worst_cases": worst_cases,
         "portfolio_standard": (
             "A scalable Gaokao planning service should keep blocked delivery bundles rare, "
-            "raise ready-to-deliver share over time, and treat repeated failed gates as product work."
+            "raise ready-to-deliver share over time, track client-delivery blocks separately, "
+            "and treat repeated failed gates as product work."
         ),
     }
 
@@ -166,6 +206,8 @@ def build_markdown_delivery_portfolio_audit(result: dict[str, Any]) -> str:
         f"Cases: {result.get('case_count', 0)}",
         f"Ready-to-deliver rate: {float(result.get('ready_to_deliver_rate', 0.0)):.1%}",
         f"Blocked rate: {float(result.get('blocked_rate', 0.0)):.1%}",
+        f"Client delivery allowed rate: {float(result.get('client_delivery_allowed_rate', 0.0)):.1%}",
+        f"Client delivery blocked rate: {float(result.get('client_delivery_blocked_rate', 0.0)):.1%}",
         "",
         result.get("portfolio_standard", ""),
         "",
@@ -176,6 +218,19 @@ def build_markdown_delivery_portfolio_audit(result: dict[str, Any]) -> str:
     ]
     for status, count in (result.get("status_counts", {}) or {}).items():
         lines.append(f"| `{status}` | {count} |")
+
+    lines.extend(["", "## Client Delivery Gate", "", "| Status | Count |", "| --- | ---: |"])
+    for status, count in (result.get("client_delivery_status_counts", {}) or {}).items():
+        lines.append(f"| `{status}` | {count} |")
+    lines.extend(["", "### Top Blocked Reasons", ""])
+    if result.get("top_client_delivery_blocked_reasons"):
+        for idx, item in enumerate(result["top_client_delivery_blocked_reasons"], 1):
+            lines.append(
+                f"{idx}. ({item.get('count', 0)} cases, {float(item.get('rate', 0.0)):.1%}) "
+                f"{item.get('reason', '')}"
+            )
+    else:
+        lines.append("1. No repeated client-delivery blocks.")
 
     lines.extend(["", "## Average Scores", "", "| Metric | Average |", "| --- | ---: |"])
     for key, value in (result.get("average_scores", {}) or {}).items():
