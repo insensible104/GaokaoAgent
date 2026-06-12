@@ -93,6 +93,8 @@ def test_delivery_bundle_writes_client_artifacts() -> None:
 
         assert manifest["case_id"] == "case-smoke"
         assert manifest["status"] == "pending_signoff"
+        assert manifest["client_delivery"]["allowed"] is True
+        assert manifest["client_delivery"]["status"] == "allowed"
         assert manifest["intake_status"] == "ready_for_recommendation"
         assert manifest["plan_quality_status"] == "pass"
         audiences = {item["id"]: item["audience"] for item in manifest["artifacts"]}
@@ -131,6 +133,9 @@ def test_delivery_bundle_requires_plan_quality_artifact() -> None:
         )
 
         assert manifest["status"] == "needs_revision"
+        assert manifest["client_delivery"]["allowed"] is False
+        assert manifest["client_delivery"]["status"] == "blocked"
+        assert "客户确认包" in manifest["client_delivery"]["blocked_reason"]
         assert manifest["plan_quality_status"] == "not_provided"
         assert (output_dir / "plan_quality_audit.md").exists()
         assert "VolunteerPlan JSON" in (output_dir / "plan_quality_audit.md").read_text(encoding="utf-8")

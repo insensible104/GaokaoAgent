@@ -120,6 +120,7 @@ def build_delivery_bundle(
     intake_state = str(intake_audit.get("status") or "unknown")
     plan_quality_state = str(plan_quality.get("status") or "unknown")
     status = _bundle_status(intake_state, plan_quality_state, expectation_state, report_quality)
+    client_delivery_allowed = status in {"ready_to_deliver", "pending_signoff"}
     manifest = {
         "case_id": case_id,
         "status": status,
@@ -130,6 +131,14 @@ def build_delivery_bundle(
         "expectation_status": expectation_state,
         "report_quality_status": report_quality.get("status"),
         "report_quality_score": report_quality.get("total_score"),
+        "client_delivery": {
+            "allowed": client_delivery_allowed,
+            "status": "allowed" if client_delivery_allowed else "blocked",
+            "artifact_audiences": ["client_confirmation", "client_final"],
+            "blocked_reason": ""
+            if client_delivery_allowed
+            else "客户确认包仅在交付包可交付或待签署确认时开放；当前仍需先修订内部质检问题。",
+        },
         "artifacts": [
             {
                 "id": "intake_audit",

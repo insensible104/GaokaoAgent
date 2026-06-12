@@ -29,6 +29,7 @@ Reduce operational risk in paid-case handoff by separating internal audit materi
 | --- | --- |
 | this commit | Split client-facing and internal delivery exports |
 | this commit | Add manifest-driven artifact audience tags |
+| this commit | Gate client package download by delivery status |
 
 ### What Changed
 
@@ -42,6 +43,8 @@ Reduce operational risk in paid-case handoff by separating internal audit materi
   - `client_confirmation`
   - `internal_review`
 - Updated the frontend client package filter to prefer manifest `audience` metadata while keeping id-based fallback compatibility.
+- Added a backend `client_delivery` gate so client package download is allowed only when the case is `ready_to_deliver` or `pending_signoff`.
+- Disabled frontend client-package download and showed the backend blocked reason when the bundle still needs revision.
 
 ### Why It Matters
 
@@ -62,7 +65,7 @@ This reduces the chance of sending internal diagnostic language to families whil
 ### Remaining Risk
 
 - The client package is still Markdown, not a signed PDF/DOCX with signature fields.
-- The split is now manifest-driven, but the project still needs a signed PDF/DOCX export path before polished paid delivery.
+- The split and download permission are now manifest-driven, but the project still needs a signed PDF/DOCX export path before polished paid delivery.
 
 ## 2026-06-07: One-Click Delivery Bundle Export
 

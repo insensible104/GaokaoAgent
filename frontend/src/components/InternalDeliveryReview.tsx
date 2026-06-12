@@ -36,6 +36,12 @@ interface DeliveryManifest {
   expectation_status?: string;
   report_quality_status?: string;
   report_quality_score?: number;
+  client_delivery?: {
+    allowed: boolean;
+    status: string;
+    artifact_audiences?: string[];
+    blocked_reason?: string;
+  };
   artifacts?: Array<{
     id: string;
     label: string;
@@ -309,6 +315,10 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
     },
     [orderedArtifacts, preview]
   );
+  const clientDeliveryAllowed = preview?.manifest.client_delivery?.allowed ?? true;
+  const clientDeliveryBlockedReason =
+    preview?.manifest.client_delivery?.blocked_reason ||
+    "客户确认包暂不可下载，请先修订内部质检问题。";
 
   function downloadCombinedBundle() {
     if (!preview || orderedArtifacts.length === 0) return;
@@ -485,7 +495,7 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
                   <Button
                     type="button"
                     onClick={downloadClientBundle}
-                    disabled={clientFacingArtifacts.length === 0}
+                    disabled={clientFacingArtifacts.length === 0 || !clientDeliveryAllowed}
                     className="w-full bg-cyan-700 text-white hover:bg-cyan-800 md:w-auto"
                   >
                     <FileDown className="size-4" aria-hidden="true" />
@@ -501,6 +511,11 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
                   </Button>
                 </div>
               </div>
+              {!clientDeliveryAllowed && (
+                <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                  {clientDeliveryBlockedReason}
+                </div>
+              )}
               <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-slate-100">
                 {orderedArtifacts.map(([id]) => (
                   <TabsTrigger key={id} value={id} className="min-h-8 flex-none">
