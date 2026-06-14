@@ -116,6 +116,34 @@ export interface GameMatrix {
     plan_summary?: string;
     human_review_items?: string[];
   } | null;
+  plan_audit_summary?: {
+    protocol_version?: string;
+    status?: string;
+    total_score?: number;
+    key_prefix?: {
+      count?: number;
+      choice_indexes?: number[];
+    };
+    shadowed_choice_count?: number;
+    coverage?: {
+      coverage_sufficient?: boolean;
+      selected?: { rush?: number; target?: number; safe?: number };
+      desired?: { rush?: number; target?: number; safe?: number };
+      deficits?: Record<string, number>;
+      actions?: string[];
+    };
+    data_boundary?: {
+      target_year?: number;
+      formal_recommendation_ready?: boolean;
+      limitations?: string[];
+    };
+    student_facing_items?: Array<{
+      type?: string;
+      severity?: string;
+      title?: string;
+      detail?: string;
+    }>;
+  } | null;
   data_vintage?: {
     target_year?: number;
     latest_historical_admission_year?: number | null;
@@ -279,6 +307,7 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
   const capacityFill = optimizationSummary?.capacity_fill;
   const volunteerPlan = gameMatrix.volunteer_plan;
   const dataVintage = gameMatrix.data_vintage;
+  const planAuditSummary = gameMatrix.plan_audit_summary;
   const probabilityRange = volunteerPlan
     ? `${formatPercent(volunteerPlan.admission_probability_lower_bound)}-${formatPercent(
         volunteerPlan.admission_probability_upper_bound,
@@ -330,6 +359,73 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
     }
     return facts;
   }, [userProfile]);
+  const keyPrefixAudit = useMemo(() => {
+    const rows = dataSource.filter((row) => row.is_key_prefix);
+    return {
+      count: planAuditSummary?.key_prefix?.count ?? volunteerPlan?.key_prefix_count ?? rows.length,
+      indexes:
+        planAuditSummary?.key_prefix?.choice_indexes ??
+        volunteerPlan?.key_choice_indexes ??
+        rows.map((row) => row.choice_index).filter(Boolean),
+      rows,
+    };
+  }, [dataSource, planAuditSummary, volunteerPlan]);
+  const shadowedAudit = useMemo(() => {
+    const rows = dataSource.filter((row) => row.prefix_role === "shadowed" || row.is_key_prefix === false);
+    return {
+      count: planAuditSummary?.shadowed_choice_count ?? volunteerPlan?.shadowed_choice_count ?? rows.length,
+      rows,
+    };
+  }, [dataSource, planAuditSummary, volunteerPlan]);
+  const auditItems = useMemo(() => {
+    const items: Array<{ label: string; value: string; tone: "green" | "amber" | "red" | "slate"; detail: string }> = [];
+    const auditCoverage = planAuditSummary?.coverage ?? coverageReport;
+    const auditBoundary = planAuditSummary?.data_boundary ?? dataVintage;
+    const coverageSufficient = auditCoverage?.coverage_sufficient ?? true;
+    items.push({
+      label: "关键前缀",
+      value: `${keyPrefixAudit.count ?? 0} 行`,
+      tone: (keyPrefixAudit.count ?? 0) >= 2 ? "green" : "amber",
+      detail: `真正影响首个录取结果的志愿行：${(keyPrefixAudit.indexes ?? []).join("、") || "待计算"}`,
+    });
+    items.push({
+      label: "被遮蔽志愿",
+      value: `${shadowedAudit.count ?? 0} 行`,
+      tone: (shadowedAudit.count ?? 0) > dataSource.length * 0.7 ? "amber" : "slate",
+      detail: "这些行大概率被前序志愿消耗，只适合作为尾部结构检查。",
+    });
+    items.push({
+      label: "覆盖缺口",
+      value: coverageSufficient ? "无明显缺口" : "需要复核",
+      tone: coverageSufficient ? "green" : "red",
+      detail: coverageSufficient
+        ? "当前冲稳保供给满足目标结构。"
+        : `缺口：${Object.entries(auditCoverage?.deficits ?? {})
+            .filter(([, value]) => Number(value) > 0)
+            .map(([key, value]) => `${key} ${value}`)
+            .join("、") || "未列明"}`,
+    });
+    items.push({
+      label: "数据边界",
+      value: auditBoundary?.formal_recommendation_ready ? "正式数据就绪" : "仅供预研",
+      tone: auditBoundary?.formal_recommendation_ready ? "green" : "amber",
+      detail:
+        auditBoundary?.formal_recommendation_ready
+          ? "当前数据年份满足正式推荐口径。"
+          : "当前年份官方数据尚不完整，正式填报前必须重新生成并人工复核。",
+    });
+    return items;
+  }, [coverageReport, dataSource.length, dataVintage, keyPrefixAudit, planAuditSummary, shadowedAudit]);
+  const comparisonSignals = useMemo(() => {
+    const desired = coverageReport?.desired ?? {};
+    const selected = coverageReport?.selected ?? {};
+    return (["rush", "target", "safe"] as const).map((bucket) => ({
+      bucket,
+      desired: desired[bucket] ?? 0,
+      selected: selected[bucket] ?? 0,
+      delta: (selected[bucket] ?? 0) - (desired[bucket] ?? 0),
+    }));
+  }, [coverageReport]);
 
   const filteredAndSortedRows = useMemo(() => {
     const filtered =
@@ -512,6 +608,59 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
           )}
         </section>
       )}
+
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-md">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">志愿表审计工作台</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              这里不是再生成一张新表，而是检查当前方案的关键前缀、遮蔽行、覆盖缺口和数据边界。
+            </p>
+          </div>
+          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+            Plan Audit
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          {auditItems.map((item) => (
+            <AuditTile key={item.label} {...item} />
+          ))}
+        </div>
+
+        <div className="mt-5 border-t border-gray-200 pt-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 className="font-semibold text-gray-900">方案对比</h4>
+              <p className="text-sm text-gray-600">
+                当前方案与目标冲稳保结构对比；后续可接入千问方案、家长方案或人工方案做 A/B 审计。
+              </p>
+            </div>
+            {(capacityFill?.filled_count ?? 0) > 0 && (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+                已容量补齐 {capacityFill?.filled_count} 行
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {comparisonSignals.map((signal) => (
+              <div key={signal.bucket} className="rounded-lg bg-gray-50 px-4 py-3">
+                <div className="text-xs font-semibold uppercase text-gray-500">{signal.bucket}</div>
+                <div className="mt-1 text-sm text-gray-700">
+                  目标 {signal.desired} / 当前 {signal.selected}
+                </div>
+                <div
+                  className={`mt-1 text-sm font-bold ${
+                    signal.delta < 0 ? "text-amber-700" : signal.delta > 0 ? "text-sky-700" : "text-emerald-700"
+                  }`}
+                >
+                  {signal.delta === 0 ? "匹配目标" : signal.delta > 0 ? `多 ${signal.delta}` : `缺 ${Math.abs(signal.delta)}`}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {optimizationSummary && (
         <section className="min-w-0 overflow-hidden rounded-lg bg-slate-900 p-6 text-slate-50 shadow-md">
@@ -904,6 +1053,32 @@ function MetricCard({
     <div className={`rounded-lg p-4 ${tones[tone]}`}>
       <div className="mb-1 text-sm opacity-80">{label}</div>
       <div className="text-2xl font-bold">{value}</div>
+    </div>
+  );
+}
+
+function AuditTile({
+  label,
+  value,
+  tone,
+  detail,
+}: {
+  label: string;
+  value: string;
+  tone: "green" | "amber" | "red" | "slate";
+  detail: string;
+}) {
+  const tones = {
+    green: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    amber: "border-amber-200 bg-amber-50 text-amber-900",
+    red: "border-red-200 bg-red-50 text-red-900",
+    slate: "border-slate-200 bg-slate-50 text-slate-900",
+  };
+  return (
+    <div className={`rounded-lg border px-4 py-3 ${tones[tone]}`}>
+      <div className="text-xs font-semibold text-gray-600">{label}</div>
+      <div className="mt-1 text-lg font-bold">{value}</div>
+      <p className="mt-2 text-xs leading-5 text-gray-700">{detail}</p>
     </div>
   );
 }

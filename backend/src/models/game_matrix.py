@@ -536,6 +536,11 @@ class GameMatrix(BaseModel):
     )
     volunteer_plan: Optional[VolunteerPlan] = Field(default=None, description="广东志愿表草案")
 
+    plan_audit_summary: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Product-facing audit summary for the generated volunteer plan.",
+    )
+
     def calculate_statistics(self):
         """计算全局统计（基于专业组）- 修复：添加除零检查"""
         if not self.major_group_rows or len(self.major_group_rows) == 0:

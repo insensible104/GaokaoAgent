@@ -44,6 +44,7 @@ from recommendation.strategy_coverage import (
     fill_plan_capacity,
     retain_strategy_candidates,
 )
+from evaluation.plan_audit import build_plan_audit_summary
 from utils.agent_bus import publish_agent_message, remember
 from utils.city_mapping import get_school_city, calculate_city_preference_score
 from rl.rank_gradient_strategy import RankGradientStrategy
@@ -999,6 +1000,17 @@ def game_agent_node(state: SupervisorState) -> dict:
     volunteer_plan = build_volunteer_plan(final_groups, profile, optimize_prefix=True)
 
     # 创建博弈矩阵
+    plan_audit_summary = (
+        build_plan_audit_summary(
+            volunteer_plan,
+            profile,
+            coverage_report=optimization_summary.get("coverage_report"),
+            data_vintage=data_vintage.model_dump(),
+        )
+        if volunteer_plan
+        else None
+    )
+
     game_matrix = GameMatrix(
         major_group_rows=final_groups,
         agentic_rl_used=optimization_summary.get("checkpoint_loaded", False),
@@ -1006,6 +1018,7 @@ def game_agent_node(state: SupervisorState) -> dict:
         optimization_summary=optimization_summary,
         data_vintage=data_vintage.model_dump(),
         volunteer_plan=volunteer_plan,
+        plan_audit_summary=plan_audit_summary,
     )
     game_matrix.calculate_statistics()
 
