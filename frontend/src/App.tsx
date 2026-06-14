@@ -9,11 +9,13 @@ const ProgressTracker = lazy(() => import("@/components/ProgressTracker").then(m
 const GameMatrixView = lazy(() => import("@/components/GameMatrixView").then(module => ({ default: module.GameMatrixView })));
 const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryReview").then(module => ({ default: module.InternalDeliveryReview })));
 const InvestmentResearchReportPreview = lazy(() => import("@/components/PathFinderReportTemplate").then(module => ({ default: module.InvestmentResearchReportPreview })));
+const DeliveryReadinessConsole = lazy(() => import("@/components/DeliveryReadinessConsole").then(module => ({ default: module.DeliveryReadinessConsole })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
 import type { AgentStep } from "@/components/ProgressTracker";
 import type { PathFinderReportPayload } from "@/components/PathFinderReportTemplate";
+import { buildDeliveryReadinessSummary } from "@/lib/deliveryReadiness";
 
 interface AnalysisResult {
   success: boolean;
@@ -445,6 +447,11 @@ function AppContent() {
       gameMatrix: result.game_matrix,
       deliveryProfile,
       report: result.report,
+      deliveryReadiness: buildDeliveryReadinessSummary({
+        gameMatrix: result.game_matrix,
+        deliveryProfile,
+        report: result.report,
+      }),
       generatedAt: new Date().toISOString(),
     };
     window.sessionStorage.setItem("pathfinder-report-preview", JSON.stringify(payload));
@@ -531,21 +538,12 @@ function AppContent() {
                   (result.game_matrix.rows && result.game_matrix.rows.length > 0)
                 ) && (
                   <>
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900">PathFinder A4 决策报告</h2>
-                        <p className="text-sm text-slate-600">
-                          将当前推荐、审计摘要、证据边界和学生画像写入可打印报告模板。
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={openReportTemplatePreview}
-                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
-                      >
-                        打开 A4 报告预览
-                      </button>
-                    </div>
+                    <DeliveryReadinessConsole
+                      gameMatrix={result.game_matrix}
+                      deliveryProfile={deliveryProfile}
+                      report={result.report}
+                      onOpenReportPreview={openReportTemplatePreview}
+                    />
                     <GameMatrixView gameMatrix={result.game_matrix} userProfile={deliveryProfile} />
                   </>
                 )}

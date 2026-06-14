@@ -1,3 +1,5 @@
+import { buildDeliveryReadinessSummary, type DeliveryReadinessSummary } from "@/lib/deliveryReadiness";
+
 type Metric = {
   label: string;
   value: string;
@@ -105,6 +107,7 @@ export type PathFinderReportPayload = {
     mbti_type?: string;
   } | null;
   report?: string | null;
+  deliveryReadiness?: DeliveryReadinessSummary;
   generatedAt?: string;
 };
 
@@ -113,6 +116,7 @@ type ReportRenderData = {
   rows: MatrixRow[];
   evidence: EvidenceItem[];
   risks: RiskItem[];
+  deliveryReadiness: DeliveryReadinessSummary;
   profileLine: string;
   strategyLine: string;
   focusLine: string;
@@ -351,11 +355,19 @@ function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRen
   const subjectGroup = deliveryProfile?.subject_group === "history" ? "历史类" : "物理类";
   const riasec = deliveryProfile?.riasec_top_codes?.join("/") || "I/R";
   const mbti = deliveryProfile?.mbti_type || "未填写";
+  const deliveryReadiness =
+    payload?.deliveryReadiness ??
+    buildDeliveryReadinessSummary({
+      gameMatrix,
+      deliveryProfile,
+      report: payload?.report,
+    });
   return {
     metrics,
     rows: sourceRows.length ? sourceRows : defaultMatrixRows,
     evidence,
     risks,
+    deliveryReadiness,
     profileLine: `城市：${preferredCities}；专业：${preferredMajors}；黑名单：${blacklist}。`,
     strategyLine: `Rush ${gameMatrix?.total_rush ?? 8} / Target ${gameMatrix?.total_target ?? 20} / Safe ${gameMatrix?.total_safe ?? 17}；容量恢复不改变原始策略标签。`,
     focusLine: `解释关键前缀志愿，不把被前序遮蔽的 ${plan?.shadowed_choice_count ?? 0} 行尾部志愿当作同等重要推荐。`,
@@ -385,6 +397,36 @@ function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRen
     ],
   };
 }
+
+const DeliveryReadiness = ({ summary }: { summary: DeliveryReadinessSummary }) => (
+  <section className="report-readiness">
+    <div className="section-heading">
+      <p>01</p>
+      <div>
+        <h2>DeliveryReadiness</h2>
+        <span>交付准备度与复核 gate</span>
+      </div>
+    </div>
+    <div className="readiness-summary">
+      <div>
+        <span>交付准备度</span>
+        <strong>{summary.score}</strong>
+      </div>
+      <p>{summary.claimBoundary}</p>
+    </div>
+    <div className="readiness-grid">
+      {summary.gates.map((gate) => (
+        <article key={gate.id} className={`readiness-gate readiness-gate--${gate.status}`}>
+          <span>{gate.status}</span>
+          <h3>{gate.label}</h3>
+          <p>{gate.signal}</p>
+          <b>{gate.action}</b>
+        </article>
+      ))}
+    </div>
+    <p className="readiness-next">正式交付前必须复核：{summary.nextAction}</p>
+  </section>
+);
 
 const DataBoundary = ({ text }: { text: string }) => (
   <section className="report-callout">
@@ -934,6 +976,88 @@ const ReportStyles = () => (
       padding: 16px;
     }
 
+    .report-readiness {
+      margin-top: 18px;
+    }
+
+    .readiness-summary {
+      align-items: center;
+      background: #eef3f6;
+      border-left: 5px solid var(--pf-navy);
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 150px 1fr;
+      margin-bottom: 14px;
+      padding: 14px 16px;
+    }
+
+    .readiness-summary span {
+      color: var(--pf-muted);
+      display: block;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .readiness-summary strong {
+      display: block;
+      font-size: 42px;
+      line-height: 1;
+      margin-top: 5px;
+    }
+
+    .readiness-summary p,
+    .readiness-next {
+      color: var(--pf-muted);
+      font-size: 12px;
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .readiness-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .readiness-gate {
+      border: 1px solid var(--pf-line);
+      border-radius: 6px;
+      padding: 11px;
+    }
+
+    .readiness-gate--ready { border-top: 4px solid var(--pf-green); }
+    .readiness-gate--needs_review { border-top: 4px solid var(--pf-amber); }
+    .readiness-gate--blocked { border-top: 4px solid var(--pf-red); }
+
+    .readiness-gate span {
+      color: var(--pf-muted);
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .readiness-gate h3 {
+      font-size: 13px;
+      margin: 6px 0;
+    }
+
+    .readiness-gate p,
+    .readiness-gate b {
+      display: block;
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    .readiness-gate p {
+      color: var(--pf-muted);
+      margin: 0 0 6px;
+    }
+
+    .readiness-next {
+      margin-top: 12px;
+    }
+
     .career-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       margin-top: 18px;
@@ -1039,6 +1163,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <article><span>06</span><h3>最终复核</h3><p>正式填报前按招生计划、章程、体检和单科要求完成人工复核。</p></article>
           </div>
           <DataBoundary text={reportData.dataBoundaryText} />
+          <DeliveryReadiness summary={reportData.deliveryReadiness} />
           <PageFooter page="02" />
         </div>
       </section>
@@ -1067,15 +1192,21 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <div><b>Decision focus</b><span>{reportData.focusLine}</span></div>
           </div>
           <VolunteerMatrix rows={reportData.rows} />
-          <DecisionEvidenceCard />
           <PageFooter page="03" />
         </div>
       </section>
 
       <section className="report-page">
         <div className="report-page__inner">
+          <div className="section-heading">
+            <p>03</p>
+            <div>
+              <h2>Decision Evidence</h2>
+              <span>Key prefix explanation</span>
+            </div>
+          </div>
+          <DecisionEvidenceCard />
           <EvidenceLedger items={reportData.evidence} />
-          <RiskLedger items={reportData.risks} />
           <PageFooter page="04" />
         </div>
       </section>
@@ -1084,6 +1215,20 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
         <div className="report-page__inner">
           <div className="section-heading">
             <p>05</p>
+            <div>
+              <h2>Risk Control Appendix</h2>
+              <span>Risk ledger and verification actions</span>
+            </div>
+          </div>
+          <RiskLedger items={reportData.risks} />
+          <PageFooter page="05" />
+        </div>
+      </section>
+
+      <section className="report-page">
+        <div className="report-page__inner">
+          <div className="section-heading">
+            <p>06</p>
             <div>
               <h2>Career Fit Appendix</h2>
               <span>专业兴趣与解释边界</span>
@@ -1099,7 +1244,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             ))}
           </div>
           <DataBoundary text={reportData.dataBoundaryText} />
-          <PageFooter page="05" />
+          <PageFooter page="06" />
         </div>
       </section>
     </div>
