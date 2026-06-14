@@ -8,10 +8,12 @@ const LoadingView = lazy(() => import("@/components/LoadingView").then(module =>
 const ProgressTracker = lazy(() => import("@/components/ProgressTracker").then(module => ({ default: module.ProgressTracker })));
 const GameMatrixView = lazy(() => import("@/components/GameMatrixView").then(module => ({ default: module.GameMatrixView })));
 const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryReview").then(module => ({ default: module.InternalDeliveryReview })));
+const InvestmentResearchReportPreview = lazy(() => import("@/components/PathFinderReportTemplate").then(module => ({ default: module.InvestmentResearchReportPreview })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
 import type { AgentStep } from "@/components/ProgressTracker";
+import type { PathFinderReportPayload } from "@/components/PathFinderReportTemplate";
 
 interface AnalysisResult {
   success: boolean;
@@ -437,6 +439,26 @@ function AppContent() {
     setDeliveryProfile(null);
   };
 
+  const openReportTemplatePreview = useCallback(() => {
+    if (!result?.game_matrix) return;
+    const payload: PathFinderReportPayload = {
+      gameMatrix: result.game_matrix,
+      deliveryProfile,
+      report: result.report,
+      generatedAt: new Date().toISOString(),
+    };
+    window.sessionStorage.setItem("pathfinder-report-preview", JSON.stringify(payload));
+    window.open("/app/report-template-preview", "_blank", "noopener,noreferrer");
+  }, [deliveryProfile, result]);
+
+  if (window.location.pathname.includes("report-template-preview")) {
+    return (
+      <Suspense fallback={<div className="p-8 text-center text-slate-600">Loading report template...</div>}>
+        <InvestmentResearchReportPreview />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -508,7 +530,24 @@ function AppContent() {
                   (result.game_matrix.major_group_rows && result.game_matrix.major_group_rows.length > 0) ||
                   (result.game_matrix.rows && result.game_matrix.rows.length > 0)
                 ) && (
-                  <GameMatrixView gameMatrix={result.game_matrix} userProfile={deliveryProfile} />
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">PathFinder A4 决策报告</h2>
+                        <p className="text-sm text-slate-600">
+                          将当前推荐、审计摘要、证据边界和学生画像写入可打印报告模板。
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={openReportTemplatePreview}
+                        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
+                      >
+                        打开 A4 报告预览
+                      </button>
+                    </div>
+                    <GameMatrixView gameMatrix={result.game_matrix} userProfile={deliveryProfile} />
+                  </>
                 )}
 
                 <InternalDeliveryReview
