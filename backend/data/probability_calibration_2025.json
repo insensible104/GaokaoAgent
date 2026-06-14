@@ -1,0 +1,44 @@
+{
+  "version": "gaokao-probability-calibration-2025-v2",
+  "calibration_year": 2025,
+  "source": "228 prospective frozen profiles / 2037 matched choices against actual 2025 Guangdong outcomes; grouped five-fold validation by case_id",
+  "method": "beta_subject",
+  "global_beta": {
+    "intercept": 0.214913,
+    "log_probability_coefficient": 0.881814574,
+    "log_one_minus_probability_coefficient": 0.053257075,
+    "blend_weight": 1.0
+  },
+  "subject_beta": {
+    "history": {
+      "intercept": 0.119307392,
+      "log_probability_coefficient": 2.958355096,
+      "log_one_minus_probability_coefficient": 0.158744325,
+      "blend_weight": 0.788494078
+    },
+    "physics": {
+      "intercept": 0.784701839,
+      "log_probability_coefficient": 0.966413828,
+      "log_one_minus_probability_coefficient": -0.049406062,
+      "blend_weight": 0.815498155
+    }
+  },
+  "subsequent_choice_hazard_scale": 0.2,
+  "cross_validation": {
+    "folds": 5,
+    "split_unit": "case_id",
+    "choice_count": 2037,
+    "case_count": 228,
+    "shrinkage_prior_rows": 250,
+    "all_folds_improve_brier": true,
+    "global_isotonic_group_brier": 0.221404,
+    "subject_beta_group_brier": 0.176223,
+    "global_isotonic_log_loss": 0.637568,
+    "subject_beta_log_loss": 0.529051,
+    "history_isotonic_brier": 0.188713,
+    "history_subject_beta_brier": 0.136815,
+    "physics_isotonic_brier": 0.248977,
+    "physics_subject_beta_brier": 0.209461,
+    "observed_plan_success_rate": 0.644737
+  }
+}

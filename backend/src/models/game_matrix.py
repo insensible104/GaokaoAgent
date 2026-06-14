@@ -64,6 +64,7 @@ class MajorOption(BaseModel):
     is_acceptable: bool = True
     is_blacklisted: bool = False
     major_rank_risk: float = Field(default=0.5, ge=0, le=1)
+    career_fit_score: Optional[float] = Field(default=None, ge=0, le=1)
     risk_reasons: List[str] = Field(default_factory=list)
 
 
@@ -78,6 +79,12 @@ class VolunteerChoice(BaseModel):
     adjustment_advice: AdjustmentAdvice = AdjustmentAdvice.CAUTIOUS
 
     group_admission_prob: float = Field(default=0.0, ge=0, le=1)
+    raw_group_admission_prob: Optional[float] = Field(default=None, ge=0, le=1)
+    probability_is_calibrated: bool = False
+    probability_method: str = "historical_rank_monte_carlo_uncalibrated"
+    probability_calibration_year: Optional[int] = None
+    probability_hazard_scale: float = Field(default=1.0, ge=0, le=1)
+    probability_calibration_source: str = ""
     survival_before_prob: float = Field(
         default=1.0,
         ge=0,
@@ -173,6 +180,18 @@ class VolunteerPlan(BaseModel):
         le=1,
         description="Probability that at least one ordered volunteer choice admits the user.",
     )
+    admission_probability_lower_bound: float = Field(default=0.0, ge=0, le=1)
+    admission_probability_upper_bound: float = Field(default=0.0, ge=0, le=1)
+    probability_method: str = Field(default="correlated_outcomes_heuristic")
+    probability_is_calibrated: bool = Field(default=False)
+    probability_calibration_year: Optional[int] = None
+    subsequent_choice_hazard_scale: float = Field(default=1.0, ge=0, le=1)
+    probability_warning: str = Field(
+        default=(
+            "各志愿结果共享考生位次和年度竞争环境，彼此相关；"
+            "组合命中率仅作排序诊断，未经过当年真实录取结果校准。"
+        )
+    )
     expected_first_hit_utility: float = Field(
         default=0.0,
         ge=0,
@@ -230,12 +249,17 @@ class VolunteerPlan(BaseModel):
         expected_tail_risk = 0.0
         key_indexes: List[int] = []
         shadowed_count = 0
+        admission_probabilities: List[float] = []
 
-        for choice in self.choices:
+        for choice_position, choice in enumerate(self.choices):
             admission_prob = max(0.0, min(1.0, choice.group_admission_prob))
+            admission_probabilities.append(admission_prob)
+            effective_hazard = admission_prob
+            if self.probability_is_calibrated and choice_position > 0:
+                effective_hazard *= self.subsequent_choice_hazard_scale
             choice.survival_before_prob = survival
-            choice.first_hit_prob = survival * admission_prob
-            survival *= 1 - admission_prob
+            choice.first_hit_prob = survival * effective_hazard
+            survival *= 1 - effective_hazard
             choice.cumulative_hit_prob = 1 - survival
             choice.consequence_score = choice.first_hit_prob * max(
                 0.0,
@@ -263,7 +287,14 @@ class VolunteerPlan(BaseModel):
             expected_utility += choice.first_hit_prob * choice.expected_major_utility
             expected_tail_risk += choice.first_hit_prob * choice.tail_assignment_risk
 
-        self.expected_admission_prob = 1 - survival
+        self.expected_admission_prob = round(1 - survival, 6)
+        self.admission_probability_lower_bound = round(max(admission_probabilities, default=0.0), 6)
+        self.admission_probability_upper_bound = round(
+            self.expected_admission_prob
+            if self.probability_is_calibrated
+            else min(1.0, sum(admission_probabilities)),
+            6,
+        )
         self.expected_first_hit_utility = min(1.0, expected_utility)
         self.expected_tail_risk = min(1.0, expected_tail_risk)
         self.expected_plan_value = (
@@ -295,6 +326,12 @@ class MajorGroupRow(BaseModel):
 
     # 核心指标
     admission_prob: float = Field(ge=0, le=1, description="录取概率")
+    raw_admission_prob: Optional[float] = Field(default=None, ge=0, le=1)
+    probability_is_calibrated: bool = False
+    probability_method: str = "historical_rank_monte_carlo_uncalibrated"
+    probability_calibration_year: Optional[int] = None
+    probability_hazard_scale: float = Field(default=1.0, ge=0, le=1)
+    probability_calibration_source: str = ""
     choice_index: Optional[int] = Field(default=None, description="Ordered volunteer-form row index.")
     survival_before_prob: float = Field(
         default=1.0,
@@ -375,6 +412,8 @@ class MajorGroupRow(BaseModel):
     plan_change_score: float = Field(default=0.0, ge=0, le=1, description="Opportunity signal from enrollment-plan changes")
     plan_change_types: List[str] = Field(default_factory=list, description="Enrollment-plan change mechanisms")
     plan_change_evidence: List[str] = Field(default_factory=list, description="Auditable enrollment-plan change evidence")
+    plan_change_details: List[Dict[str, Any]] = Field(default_factory=list, description="Structured official before/after plan changes")
+    plan_change_explanation: Dict[str, Any] = Field(default_factory=dict, description="Resolved plan-change evidence and conflicts")
     quant_score: float = Field(default=0.0, ge=0, le=1, description="Deterministic quant score from rank buffer, stability, and confidence")
     rank_buffer_score: float = Field(default=0.0, ge=0, le=1, description="Normalized score for predicted rank buffer")
     history_stability_score: float = Field(default=0.0, ge=0, le=1, description="Historical cutoff stability score")
@@ -382,6 +421,7 @@ class MajorGroupRow(BaseModel):
     trend_score: float = Field(default=0.0, ge=0, le=1, description="Recent admissions trend score")
     deterministic_risk_band: str = Field(default="", description="Explainable deterministic risk band")
     quant_evidence: List[str] = Field(default_factory=list, description="Human-readable quant evidence lines")
+    decision_trace: Dict[str, Any] = Field(default_factory=dict, description="Student-facing recommendation rationale and risks")
 
     # 策略标签
     strategy_tag: StrategyTag
@@ -489,6 +529,10 @@ class GameMatrix(BaseModel):
     optimization_summary: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Runtime RL 和组合优化摘要",
+    )
+    data_vintage: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Data years and limitations supporting this recommendation run.",
     )
     volunteer_plan: Optional[VolunteerPlan] = Field(default=None, description="广东志愿表草案")
 

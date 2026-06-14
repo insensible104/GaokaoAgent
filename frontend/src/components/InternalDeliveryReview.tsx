@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileText, ShieldAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  ClipboardCheck,
+  FileText,
+  ShieldAlert,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +31,14 @@ interface DeliveryProfile {
   regret_sensitivity?: number;
   medical_restrictions?: Record<string, boolean>;
   subject_scores?: Record<string, number>;
+  holland_code?: Record<string, number>;
+  riasec_top_codes?: string[];
+  career_assessment_mode?: string;
+  career_assessment_status?: string;
+  mbti_type?: string;
+  mbti_source?: string;
+  career_values?: string[];
+  field_provenance?: Record<string, string>;
 }
 
 interface DeliveryManifest {
@@ -52,6 +67,173 @@ interface DeliveryPreview {
   artifacts: Record<string, string>;
 }
 
+interface AgencyCommandCenter {
+  success: boolean;
+  message: string;
+  scanned_bundle_count: number;
+  audit: {
+    status: string;
+    north_star: {
+      case_count: number;
+      ready_to_deliver_rate: number;
+      blocked_rate: number;
+      average_scores?: Record<string, number>;
+    };
+    institution_health_scorecard: {
+      overall_status: string;
+      next_management_decision: string;
+      scorecard_standard: string;
+      dimensions: Array<{
+        dimension: string;
+        label: string;
+        score: number;
+        status: string;
+        signal: string;
+        management_question: string;
+        next_action: string;
+      }>;
+    };
+    pain_points: Array<{
+      priority: string;
+      gate: string;
+      pain_point: string;
+      affected_case_count: number;
+      affected_rate: number;
+      operator_response: string;
+    }>;
+    executive_decision: {
+      decision: string;
+      priority: string;
+      summary: string;
+      allowed_claims: string[];
+      blocked_claims: string[];
+      required_evidence: string[];
+      review_cadence: string;
+    };
+    client_pain_radar: Array<{
+      priority: string;
+      gate: string;
+      affected_case_count: number;
+      affected_rate: number;
+      user_symptom: string;
+      user_pain: string;
+      advisor_opening: string;
+      proof_to_show: string[];
+      success_signal: string;
+      risk_if_ignored: string;
+      source_pain_point: string;
+    }>;
+    proof_gap_ledger: {
+      status: string;
+      item_count: number;
+      ledger_standard: string;
+      items: Array<{
+        gap_id: string;
+        priority: string;
+        gate: string;
+        owner: string;
+        review_cadence: string;
+        missing_proof: string[];
+        client_risk: string;
+        why_it_matters: string;
+        evidence_standard: string;
+        success_signal: string;
+        unblocks_claims: string[];
+      }>;
+    };
+    communication_guardrails: {
+      status: string;
+      guardrail_standard: string;
+      cards: Array<{
+        priority: string;
+        gate: string;
+        approved_opening: string;
+        must_disclose: string[];
+        forbidden_language: string[];
+        proof_before_claim: string[];
+        escalate_when: string[];
+        safe_close: string;
+      }>;
+    };
+    advisor_lead_brief: Array<{
+      priority: string;
+      focus: string;
+      why: string;
+    }>;
+    advisor_playbook: Array<{
+      priority: string;
+      gate: string;
+      handoff_stage: string;
+      trigger: string;
+      affected_case_count: number;
+      affected_rate: number;
+      manager_sop: Array<{ owner: string; step: string }>;
+      intake_questions: string[];
+      client_language: string;
+      acceptance_evidence: string[];
+    }>;
+    advisor_training_plan: {
+      status: string;
+      modules: Array<{
+        module_id: string;
+        priority: string;
+        source_gate: string;
+        title: string;
+        learning_objective: string;
+        practice_drill: string;
+        qa_rubric: Array<{ criterion: string; standard: string }>;
+      }>;
+      operating_cadence: Array<{
+        cadence: string;
+        owner: string;
+        action: string;
+      }>;
+      pass_condition: string;
+    };
+    action_register: {
+      status: string;
+      item_count: number;
+      register_standard: string;
+      items: Array<{
+        action_id: string;
+        priority: string;
+        source: string;
+        owner: string;
+        cadence: string;
+        action: string;
+        why: string;
+        success_metric: string;
+      }>;
+    };
+    case_rescue_queue: {
+      status: string;
+      item_count: number;
+      queue_standard: string;
+      items: Array<{
+        rescue_id: string;
+        priority: string;
+        case_id: string;
+        status: string;
+        portfolio_score: number;
+        failed_gates: string[];
+        owner: string;
+        cadence: string;
+        rescue_steps: string[];
+        client_update_script: string;
+        do_not_release_until: string[];
+        escalation_reason: string;
+      }>;
+    };
+    escalation_queue: Array<{
+      case_id: string;
+      status: string;
+      portfolio_score: number;
+      failed_gates?: Array<{ gate: string; status: string }>;
+    }>;
+  };
+  markdown: string;
+}
+
 interface InternalDeliveryReviewProps {
   profile: DeliveryProfile | null;
   report: string | null;
@@ -67,14 +249,39 @@ const statusLabel: Record<string, string> = {
   needs_clarification: "待澄清",
   not_provided: "未提供",
   pass: "通过",
+  blocked_for_scale: "规模阻塞",
+  needs_operational_iteration: "需运营迭代",
+  needs_targeted_iteration: "需定向迭代",
+  on_track: "正常推进",
+  no_cases: "暂无案源",
+  collect_evidence_before_scaling: "先收证据",
+  hold_scale: "暂停放大",
+  targeted_iteration: "定向迭代",
+  scale_with_monitoring: "监控放大",
+  critical_attention: "关键关注",
+  needs_management_review: "主管复盘",
+  healthy_with_monitoring: "健康监控",
+  collect_cases_first: "先收案源",
+  daily: "每日复盘",
+  twice_weekly: "每周两次",
+  weekly: "每周复盘",
 };
 
 function statusTone(status: string | undefined) {
   if (!status) return "border-slate-300 bg-slate-50 text-slate-700";
-  if (["ready_to_deliver", "ready_for_recommendation", "pass"].includes(status)) {
+  if (["ready_to_deliver", "ready_for_recommendation", "pass", "on_track", "green"].includes(status)) {
     return "border-emerald-300 bg-emerald-50 text-emerald-700";
   }
-  if (["pending_signoff", "needs_clarification", "not_provided"].includes(status)) {
+  if (
+    [
+      "pending_signoff",
+      "needs_clarification",
+      "not_provided",
+      "needs_operational_iteration",
+      "needs_targeted_iteration",
+      "yellow",
+    ].includes(status)
+  ) {
     return "border-amber-300 bg-amber-50 text-amber-700";
   }
   return "border-red-300 bg-red-50 text-red-700";
@@ -99,8 +306,11 @@ function artifactTitle(id: string) {
 
 export function InternalDeliveryReview({ profile, report }: InternalDeliveryReviewProps) {
   const [preview, setPreview] = useState<DeliveryPreview | null>(null);
+  const [commandCenter, setCommandCenter] = useState<AgencyCommandCenter | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [portfolioError, setPortfolioError] = useState<string | null>(null);
 
   const canRun = Boolean(profile?.score && profile?.subject_group && report);
   const orderedArtifacts = useMemo(() => {
@@ -126,7 +336,7 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
     try {
       const apiUrl = import.meta.env.DEV
         ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "http://localhost:8000";
+        : import.meta.env.VITE_API_URL || "";
       const response = await fetch(`${apiUrl}/api/delivery/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,6 +360,29 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
     }
   }
 
+  async function loadCommandCenter() {
+    setIsPortfolioLoading(true);
+    setPortfolioError(null);
+
+    try {
+      const apiUrl = import.meta.env.DEV
+        ? "http://localhost:8000"
+        : import.meta.env.VITE_API_URL || "";
+      const response = await fetch(`${apiUrl}/api/delivery/portfolio`);
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(body || `机构全局视图加载失败 (${response.status})`);
+      }
+
+      setCommandCenter(await response.json());
+    } catch (err) {
+      setPortfolioError(err instanceof Error ? err.message : "机构全局视图加载失败");
+    } finally {
+      setIsPortfolioLoading(false);
+    }
+  }
+
   return (
     <section className="rounded-xl border border-slate-300 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -170,6 +403,508 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
         >
           {isLoading ? "预检中..." : "生成交付预检"}
         </Button>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <BarChart3 className="mt-0.5 size-5 text-cyan-700" aria-hidden="true" />
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">机构全局案源驾驶舱</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                汇总已生成的交付包，识别重复失败门槛、阻塞个案和顾问主管下一步动作。
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={loadCommandCenter}
+            disabled={isPortfolioLoading}
+            className="border-cyan-700 text-cyan-800 hover:bg-cyan-50"
+          >
+            {isPortfolioLoading ? "扫描中..." : "扫描全局案源"}
+          </Button>
+        </div>
+
+        {portfolioError && (
+          <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+            {portfolioError}
+          </div>
+        )}
+
+        {commandCenter && (
+          <div className="mt-5 space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              {[
+                ["案源数", commandCenter.audit.north_star.case_count, ""],
+                ["可交付率", percent(commandCenter.audit.north_star.ready_to_deliver_rate), ""],
+                ["阻塞率", percent(commandCenter.audit.north_star.blocked_rate), ""],
+                ["状态", statusLabel[commandCenter.audit.status] || commandCenter.audit.status, ""],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="text-xs text-slate-500">{label}</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900">{value}</div>
+                </div>
+              ))}
+            </div>
+
+            {commandCenter.audit.institution_health_scorecard.dimensions.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-800">机构经营体检卡</div>
+                  <Badge
+                    className={statusTone(
+                      commandCenter.audit.institution_health_scorecard.overall_status === "critical_attention"
+                        ? "blocked"
+                        : "pending_signoff"
+                    )}
+                    variant="outline"
+                  >
+                    {statusLabel[commandCenter.audit.institution_health_scorecard.overall_status] ||
+                      commandCenter.audit.institution_health_scorecard.overall_status}
+                  </Badge>
+                </div>
+                <p className="mb-4 text-sm leading-6 text-slate-600">
+                  {commandCenter.audit.institution_health_scorecard.next_management_decision}
+                </p>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  {commandCenter.audit.institution_health_scorecard.dimensions.map((item) => (
+                    <div key={item.dimension} className="rounded-md bg-slate-50 p-3 text-sm">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="font-medium text-slate-800">{item.label}</span>
+                        <Badge className={statusTone(item.status)} variant="outline">
+                          {item.score}
+                        </Badge>
+                      </div>
+                      <p className="mb-2 text-xs leading-5 text-slate-500">{item.signal}</p>
+                      <p className="leading-6 text-slate-700">{item.management_question}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-lg border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-slate-800">主管决策门</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    className={statusTone(
+                      commandCenter.audit.executive_decision.priority === "P0" ? "blocked" : "pending_signoff"
+                    )}
+                    variant="outline"
+                  >
+                    {commandCenter.audit.executive_decision.priority}
+                  </Badge>
+                  <Badge className="border-slate-300 bg-slate-50 text-slate-700" variant="outline">
+                    {statusLabel[commandCenter.audit.executive_decision.decision] ||
+                      commandCenter.audit.executive_decision.decision}
+                  </Badge>
+                  <Badge className="border-cyan-200 bg-cyan-50 text-cyan-800" variant="outline">
+                    {statusLabel[commandCenter.audit.executive_decision.review_cadence] ||
+                      commandCenter.audit.executive_decision.review_cadence}
+                  </Badge>
+                </div>
+              </div>
+              <p className="mb-4 text-sm leading-6 text-slate-600">
+                {commandCenter.audit.executive_decision.summary}
+              </p>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                {[
+                  ["可对外表达", commandCenter.audit.executive_decision.allowed_claims],
+                  ["暂时不能说", commandCenter.audit.executive_decision.blocked_claims],
+                  ["还缺证据", commandCenter.audit.executive_decision.required_evidence],
+                ].map(([title, items]) => (
+                  <div key={String(title)} className="rounded-md bg-slate-50 p-4 text-sm">
+                    <div className="mb-2 font-semibold text-slate-800">{title}</div>
+                    <ul className="list-disc space-y-1 pl-4 leading-6 text-slate-600">
+                      {(items as string[]).slice(0, 3).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {commandCenter.audit.client_pain_radar.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-800">用户痛点雷达</div>
+                  <Badge className="border-slate-300 bg-slate-50 text-slate-700" variant="outline">
+                    {commandCenter.audit.client_pain_radar.length} 个高频痛点
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                  {commandCenter.audit.client_pain_radar.slice(0, 3).map((card) => (
+                    <div key={`${card.gate}-${card.user_pain}`} className="rounded-md bg-slate-50 p-4 text-sm">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge
+                          className={statusTone(card.priority === "P0" ? "blocked" : "pending_signoff")}
+                          variant="outline"
+                        >
+                          {card.priority}
+                        </Badge>
+                        <span className="font-medium text-slate-800">{card.gate}</span>
+                        <span className="text-xs text-slate-500">{Math.round(card.affected_rate * 100)}%</span>
+                      </div>
+                      <p className="mb-2 leading-6 text-slate-700">{card.user_pain}</p>
+                      <div className="mb-3 rounded-md border border-slate-200 bg-white p-3 leading-6 text-slate-600">
+                        {card.advisor_opening}
+                      </div>
+                      <div className="mb-3">
+                        <div className="mb-1 text-xs font-semibold text-slate-500">证据物</div>
+                        <ul className="list-disc space-y-1 pl-4 leading-6 text-slate-600">
+                          {card.proof_to_show.slice(0, 3).map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="text-xs leading-5 text-slate-500">{card.success_signal}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {commandCenter.audit.proof_gap_ledger.items.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-800">证据缺口台账</div>
+                  <Badge className={statusTone("pending_signoff")} variant="outline">
+                    {commandCenter.audit.proof_gap_ledger.item_count} 个待补证据
+                  </Badge>
+                </div>
+                <p className="mb-4 text-sm leading-6 text-slate-600">
+                  {commandCenter.audit.proof_gap_ledger.ledger_standard}
+                </p>
+                <div className="space-y-3">
+                  {commandCenter.audit.proof_gap_ledger.items.slice(0, 4).map((item) => (
+                    <div
+                      key={item.gap_id}
+                      className="grid gap-3 rounded-md bg-slate-50 p-4 text-sm lg:grid-cols-[90px_130px_1.2fr_1fr]"
+                    >
+                      <div className="flex flex-wrap items-start gap-2">
+                        <Badge
+                          className={statusTone(item.priority === "P0" ? "blocked" : "pending_signoff")}
+                          variant="outline"
+                        >
+                          {item.priority}
+                        </Badge>
+                        <span className="font-medium text-slate-800">{item.gate}</span>
+                      </div>
+                      <div className="leading-6 text-slate-600">
+                        <div className="font-medium text-slate-800">{item.owner}</div>
+                        <div>{statusLabel[item.review_cadence] || item.review_cadence}</div>
+                      </div>
+                      <div>
+                        <div className="mb-1 text-xs font-semibold text-slate-500">待补证据</div>
+                        <ul className="list-disc space-y-1 pl-4 leading-6 text-slate-700">
+                          {item.missing_proof.slice(0, 3).map((proof) => (
+                            <li key={proof}>{proof}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="leading-6 text-slate-600">
+                        <div className="mb-1 text-xs font-semibold text-slate-500">验收标准</div>
+                        <p>{item.evidence_standard}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {commandCenter.audit.communication_guardrails.cards.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-800">顾问沟通护栏</div>
+                  <Badge
+                    className={statusTone(
+                      commandCenter.audit.communication_guardrails.status === "restricted"
+                        ? "blocked"
+                        : "pending_signoff"
+                    )}
+                    variant="outline"
+                  >
+                    {commandCenter.audit.communication_guardrails.status === "restricted" ? "受限沟通" : "可用话术"}
+                  </Badge>
+                </div>
+                <p className="mb-4 text-sm leading-6 text-slate-600">
+                  {commandCenter.audit.communication_guardrails.guardrail_standard}
+                </p>
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                  {commandCenter.audit.communication_guardrails.cards.slice(0, 4).map((card) => (
+                    <div key={`${card.gate}-${card.approved_opening}`} className="rounded-md bg-slate-50 p-4 text-sm">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge
+                          className={statusTone(card.priority === "P0" ? "blocked" : "pending_signoff")}
+                          variant="outline"
+                        >
+                          {card.priority}
+                        </Badge>
+                        <span className="font-medium text-slate-800">{card.gate}</span>
+                      </div>
+                      <div className="mb-3 rounded-md border border-slate-200 bg-white p-3 leading-6 text-slate-700">
+                        {card.approved_opening}
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <div className="mb-1 text-xs font-semibold text-slate-500">必须披露</div>
+                          <ul className="list-disc space-y-1 pl-4 leading-6 text-slate-600">
+                            {card.must_disclose.slice(0, 3).map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <div className="mb-1 text-xs font-semibold text-slate-500">禁用表达</div>
+                          <ul className="list-disc space-y-1 pl-4 leading-6 text-slate-600">
+                            {card.forbidden_language.slice(0, 3).map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="mt-3 text-xs leading-5 text-slate-500">{card.safe_close}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 text-sm font-semibold text-slate-800">顾问主管动作</div>
+                <div className="space-y-3">
+                  {commandCenter.audit.advisor_lead_brief.map((item) => (
+                    <div key={`${item.priority}-${item.focus}`} className="text-sm leading-6">
+                      <Badge className={statusTone(item.priority === "P0" ? "blocked" : "pending_signoff")} variant="outline">
+                        {item.priority}
+                      </Badge>
+                      <span className="ml-2 font-medium text-slate-800">{item.focus}</span>
+                      <p className="mt-1 text-slate-600">{item.why}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 text-sm font-semibold text-slate-800">用户痛点聚类</div>
+                <div className="space-y-3">
+                  {commandCenter.audit.pain_points.slice(0, 4).map((point) => (
+                    <div key={point.gate} className="grid gap-2 text-sm md:grid-cols-[70px_1fr]">
+                      <Badge className={statusTone(point.priority === "P0" ? "blocked" : "pending_signoff")} variant="outline">
+                        {point.priority}
+                      </Badge>
+                      <div>
+                        <div className="font-medium text-slate-800">
+                          {point.gate} · {Math.round(point.affected_rate * 100)}%
+                        </div>
+                        <p className="text-slate-600">{point.pain_point}</p>
+                        <p className="text-slate-500">{point.operator_response}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {commandCenter.audit.advisor_playbook.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 text-sm font-semibold text-slate-800">顾问 SOP / 问诊脚本</div>
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                  {commandCenter.audit.advisor_playbook.slice(0, 3).map((card) => (
+                    <div key={`${card.gate}-${card.handoff_stage}`} className="rounded-md bg-slate-50 p-4 text-sm">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge className={statusTone(card.priority === "P0" ? "blocked" : "pending_signoff")} variant="outline">
+                          {card.priority}
+                        </Badge>
+                        <span className="font-medium text-slate-800">{card.gate}</span>
+                        <span className="text-xs text-slate-500">{card.handoff_stage}</span>
+                      </div>
+                      <p className="mb-3 leading-6 text-slate-600">{card.trigger}</p>
+                      <div className="mb-3">
+                        <div className="mb-1 text-xs font-semibold text-slate-500">必问问题</div>
+                        <ol className="list-decimal space-y-1 pl-4 leading-6 text-slate-700">
+                          {card.intake_questions.slice(0, 3).map((question) => (
+                            <li key={question}>{question}</li>
+                          ))}
+                        </ol>
+                      </div>
+                      <div className="mb-3">
+                        <div className="mb-1 text-xs font-semibold text-slate-500">验收证据</div>
+                        <ul className="list-disc space-y-1 pl-4 leading-6 text-slate-700">
+                          {card.acceptance_evidence.slice(0, 2).map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="rounded-md border border-slate-200 bg-white p-3 text-slate-600">
+                        {card.client_language}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {commandCenter.audit.advisor_training_plan.modules.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-800">团队训练与质检节奏</div>
+                  <Badge className={statusTone("pending_signoff")} variant="outline">
+                    {commandCenter.audit.advisor_training_plan.status}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+                  <div className="space-y-3">
+                    {commandCenter.audit.advisor_training_plan.modules.slice(0, 3).map((module) => (
+                      <div key={module.module_id} className="rounded-md bg-slate-50 p-4 text-sm">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <Badge className={statusTone(module.priority === "P0" ? "blocked" : "pending_signoff")} variant="outline">
+                            {module.priority}
+                          </Badge>
+                          <span className="font-medium text-slate-800">{module.title}</span>
+                        </div>
+                        <p className="mb-2 leading-6 text-slate-600">{module.practice_drill}</p>
+                        <div className="space-y-1">
+                          {module.qa_rubric.slice(0, 2).map((item) => (
+                            <div key={item.criterion} className="text-xs leading-5 text-slate-600">
+                              <span className="font-semibold text-slate-700">{item.criterion}：</span>
+                              {item.standard}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-md border border-slate-200 p-4 text-sm">
+                    <div className="mb-2 font-semibold text-slate-800">运营节奏</div>
+                    <div className="space-y-3">
+                      {commandCenter.audit.advisor_training_plan.operating_cadence.map((item) => (
+                        <div key={`${item.cadence}-${item.owner}`} className="leading-6">
+                          <Badge className="border-slate-300 bg-slate-50 text-slate-700" variant="outline">
+                            {item.cadence}
+                          </Badge>
+                          <span className="ml-2 font-medium text-slate-700">{item.owner}</span>
+                          <p className="mt-1 text-slate-600">{item.action}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 rounded-md bg-slate-50 p-3 leading-6 text-slate-600">
+                      {commandCenter.audit.advisor_training_plan.pass_condition}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {commandCenter.audit.action_register.items.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-800">机构行动台账</div>
+                  <Badge className={statusTone(commandCenter.audit.action_register.status === "active" ? "pending_signoff" : "not_provided")} variant="outline">
+                    {commandCenter.audit.action_register.status}
+                  </Badge>
+                </div>
+                <p className="mb-4 text-sm leading-6 text-slate-600">
+                  {commandCenter.audit.action_register.register_standard}
+                </p>
+                <div className="space-y-2">
+                  {commandCenter.audit.action_register.items.slice(0, 6).map((item) => (
+                    <div
+                      key={item.action_id}
+                      className="grid gap-2 rounded-md bg-slate-50 p-3 text-sm lg:grid-cols-[70px_110px_90px_1fr_1fr]"
+                    >
+                      <Badge className={statusTone(item.priority === "P0" ? "blocked" : "pending_signoff")} variant="outline">
+                        {item.priority}
+                      </Badge>
+                      <span className="font-medium text-slate-800">{item.owner}</span>
+                      <span className="text-slate-600">{item.cadence}</span>
+                      <div>
+                        <div className="text-xs text-slate-500">{item.source}</div>
+                        <div className="leading-6 text-slate-800">{item.action}</div>
+                      </div>
+                      <div className="leading-6 text-slate-600">{item.success_metric}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {commandCenter.audit.case_rescue_queue.items.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold text-slate-800">个案救援队列</div>
+                  <Badge className={statusTone("blocked")} variant="outline">
+                    {commandCenter.audit.case_rescue_queue.item_count} 个待救援
+                  </Badge>
+                </div>
+                <p className="mb-4 text-sm leading-6 text-slate-600">
+                  {commandCenter.audit.case_rescue_queue.queue_standard}
+                </p>
+                <div className="space-y-3">
+                  {commandCenter.audit.case_rescue_queue.items.slice(0, 5).map((item) => (
+                    <div key={item.rescue_id} className="rounded-md bg-slate-50 p-4 text-sm">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <Badge
+                          className={statusTone(item.priority === "P0" ? "blocked" : "pending_signoff")}
+                          variant="outline"
+                        >
+                          {item.priority}
+                        </Badge>
+                        <span className="font-semibold text-slate-800">{item.case_id}</span>
+                        <span className="text-slate-500">{statusLabel[item.status] || item.status}</span>
+                        <span className="text-slate-500">{percent(item.portfolio_score)}</span>
+                      </div>
+                      <div className="grid gap-3 lg:grid-cols-[140px_1.3fr_1fr]">
+                        <div className="leading-6 text-slate-600">
+                          <div className="font-medium text-slate-800">{item.owner}</div>
+                          <div>{statusLabel[item.cadence] || item.cadence}</div>
+                          <div>{item.failed_gates.join(" / ") || "none"}</div>
+                        </div>
+                        <div>
+                          <div className="mb-1 text-xs font-semibold text-slate-500">救援步骤</div>
+                          <ul className="list-disc space-y-1 pl-4 leading-6 text-slate-700">
+                            {item.rescue_steps.slice(0, 4).map((step) => (
+                              <li key={step}>{step}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="leading-6 text-slate-600">
+                          <div className="mb-1 text-xs font-semibold text-slate-500">客户同步</div>
+                          <p>{item.client_update_script}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {commandCenter.audit.escalation_queue.length > 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="mb-3 text-sm font-semibold text-slate-800">升级队列</div>
+                <div className="space-y-2">
+                  {commandCenter.audit.escalation_queue.slice(0, 5).map((item) => (
+                    <div
+                      key={item.case_id}
+                      className="grid gap-2 rounded-md bg-slate-50 p-3 text-sm md:grid-cols-[1fr_120px_90px]"
+                    >
+                      <span className="font-medium text-slate-800">{item.case_id}</span>
+                      <Badge className={statusTone(item.status)} variant="outline">
+                        {statusLabel[item.status] || item.status}
+                      </Badge>
+                      <span className="text-slate-600">{percent(item.portfolio_score)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {!canRun && (

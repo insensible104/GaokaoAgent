@@ -73,6 +73,14 @@ def _is_safe_anchor(row: MajorGroupRow) -> bool:
     return row.strategy_tag == StrategyTag.SAFE
 
 
+def _strategy_prefix_priority(row: MajorGroupRow) -> int:
+    return {
+        StrategyTag.RUSH: 2,
+        StrategyTag.TARGET: 1,
+        StrategyTag.SAFE: 0,
+    }.get(row.strategy_tag, 0)
+
+
 def _is_reckless(row: MajorGroupRow, profile: UserProfile) -> bool:
     rebound = max(row.rebound_risk, row.segment_rebound_risk, row.publicity_rebound_risk)
     return (
@@ -140,6 +148,7 @@ def optimize_prefix_order(
     opportunity = sorted(
         opportunity,
         key=lambda row: (
+            _strategy_prefix_priority(row),
             prefix_value_score(row, profile),
             row.front_major_arbitrage_score,
             row.major_utility_mean,
@@ -184,7 +193,7 @@ def optimize_prefix_order(
     front_anchor = reliable_anchor[:front_anchor_count]
     reserved_safe = safe[:safe_anchor_count]
     fill_limit = max(0, limit - len(front_anchor) - len(reserved_safe))
-    ordered = front_anchor + clean_opportunity[:fill_limit] + reserved_safe
+    ordered = clean_opportunity[:fill_limit] + front_anchor + reserved_safe
     if len(ordered) < limit:
         remaining_safe = [row for row in safe if row not in reserved_safe]
         remaining_anchor = [row for row in reliable_anchor if row not in front_anchor]

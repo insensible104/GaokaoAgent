@@ -189,6 +189,8 @@ def test_late_research_refresh_updates_game_matrix_and_volunteer_plan() -> None:
 
     assert update["current_agent"] == "research_evidence_refresh"
     assert refreshed_row.plan_change_score > 0
+    assert refreshed_row.decision_trace["summary"]
+    assert refreshed_row.decision_trace["confidence_level"] == "low"
     assert any(card["signal_type"] == "plan_change_signal" for card in refreshed_row.market_evidence_cards)
     assert any(card["signal_type"] == "plan_change_signal" for card in refreshed_choice.market_evidence_cards)
 
@@ -201,9 +203,76 @@ def test_late_research_refresh_updates_game_matrix_and_volunteer_plan() -> None:
     assert len(keys) == len(set(keys))
 
 
+def test_late_research_refresh_preserves_prefix_strategy_order() -> None:
+    profile = UserProfile(
+        score=620,
+        rank=12000,
+        subject_group="physics",
+        risk_tolerance=RiskTolerance.BALANCED,
+        school_major_preference=SchoolMajorPreference.BALANCED,
+    )
+    base = MajorGroupRow(
+        school_name="Base University",
+        school_code="90001",
+        major_group_code="801",
+        major_list=["computer science"],
+        major_count=1,
+        admission_prob=0.55,
+        min_rank_pred=12500,
+        rank_diff=500,
+        rank_ci_lower=11000,
+        rank_ci_upper=14000,
+        volatility=VolatilityLevel.MEDIUM,
+        tail_assignment_risk=0.10,
+        major_utility_mean=0.70,
+        major_utility_min=0.70,
+        strategy_tag=StrategyTag.TARGET,
+        comprehensive_score=0.70,
+        tradeoff_breakdown={"school_value": 0.70, "city_value": 0.50},
+    )
+    rush = base.model_copy(
+        update={"school_name": "Rush University", "school_code": "90002", "strategy_tag": StrategyTag.RUSH}
+    )
+    target = base.model_copy(
+        update={"school_name": "Target University", "school_code": "90003", "strategy_tag": StrategyTag.TARGET}
+    )
+    safe = base.model_copy(
+        update={"school_name": "Safe University", "school_code": "90004", "strategy_tag": StrategyTag.SAFE}
+    )
+    rows = [safe, target, rush]
+    matrix = GameMatrix(
+        major_group_rows=rows,
+        volunteer_plan=build_volunteer_plan(rows, profile, optimize_prefix=True),
+    )
+    state = {
+        "user_profile": profile,
+        "game_matrix": matrix,
+        "research_evidence_cards": [
+            {
+                "signal_type": "external_research",
+                "source_type": "official_or_school",
+                "value": 0.8,
+                "confidence": 0.9,
+                "claim": "2026 招生计划已更新。",
+                "source": "https://example.edu/plan",
+                "usable_for_prediction": True,
+            }
+        ],
+    }
+
+    refreshed = refresh_game_matrix_research_evidence(state)["game_matrix"]
+
+    assert [choice.strategy_tag for choice in refreshed.volunteer_plan.choices] == [
+        StrategyTag.RUSH,
+        StrategyTag.TARGET,
+        StrategyTag.SAFE,
+    ]
+
+
 if __name__ == "__main__":
     test_normalize_percent_score_clamps_to_schema_range()
     test_precision_candidate_limit_keeps_rank_bands()
     test_game_agent_arbitrage_helper_consumes_research_evidence_cards()
     test_late_research_refresh_updates_game_matrix_and_volunteer_plan()
+    test_late_research_refresh_preserves_prefix_strategy_order()
     print("game agent score bounds smoke tests passed")

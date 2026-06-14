@@ -1,0 +1,69 @@
+{
+  "protocol_version": "career-profile-fidelity-audit-v1",
+  "generated_at": "2026-06-14T15:09:54.066089+00:00",
+  "evaluation_type": "deterministic_boundary_probe",
+  "case_count": 4,
+  "gates": {
+    "riasec_changes_major_utility": true,
+    "mbti_major_utility_invariant": true,
+    "admission_probability_invariant_under_riasec": true,
+    "admission_probability_invariant_under_mbti": true,
+    "blacklist_remains_hard_boundary": true
+  },
+  "cases": {
+    "investigative_vs_enterprising": {
+      "major": "计算机科学与技术",
+      "investigative_utility": 0.505,
+      "enterprising_utility": 0.37,
+      "investigative_career_fit": 0.775,
+      "enterprising_career_fit": 0.10000000000000002,
+      "utility_delta": 0.135
+    },
+    "mbti_swap": {
+      "major": "计算机科学与技术",
+      "mbti_a": "INTJ",
+      "mbti_b": "ENFP",
+      "major_utility_a": 0.45,
+      "major_utility_b": 0.45,
+      "major_utility_delta": 0.0,
+      "raw_probability_a": 0.571276951708,
+      "raw_probability_b": 0.571276951708,
+      "raw_probability_delta": 0,
+      "calibrated_probability_a": 0.542997,
+      "calibrated_probability_b": 0.542997,
+      "calibrated_probability_delta": 0
+    },
+    "riasec_probability_boundary": {
+      "raw_probability_investigative": 0.571276951708,
+      "raw_probability_enterprising": 0.571276951708,
+      "raw_probability_delta": 0,
+      "calibrated_probability_investigative": 0.542997,
+      "calibrated_probability_enterprising": 0.542997,
+      "calibrated_probability_delta": 0,
+      "probability_inputs": {
+        "score": 620,
+        "rank": 12000,
+        "subject_group": "physics",
+        "historical_min_ranks": [
+          11800,
+          12200,
+          12050
+        ],
+        "quotas": [
+          80,
+          85,
+          90
+        ]
+      }
+    },
+    "blacklist_boundary": {
+      "major": "计算机科学与技术",
+      "utility": 0.0,
+      "is_blacklisted": true,
+      "is_acceptable": false,
+      "career_fit_score": 0.775
+    }
+  },
+  "quality_claim_allowed": false,
+  "claim_boundary": "This audit proves deterministic career-profile influence boundaries: RIASEC may move major utility, MBTI does not move utility or admission probability, and admission probability is invariant to career-profile swaps when score/rank/subject/history are fixed. It does not prove improved admission outcomes."
+}

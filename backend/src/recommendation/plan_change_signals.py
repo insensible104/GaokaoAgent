@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from functools import lru_cache
+import json
+from pathlib import Path
 from typing import Iterable
 
 from models.game_matrix import MajorGroupRow
@@ -54,6 +57,48 @@ def _score_events(events: list[EnrollmentDiffEvent], row: MajorGroupRow) -> floa
     return max(0.0, min(1.0, raw))
 
 
+@lru_cache(maxsize=4)
+def _load_online_plan_change_events_cached(path_text: str) -> tuple[EnrollmentDiffEvent, ...]:
+    path = Path(path_text)
+    if not path.exists():
+        return ()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw_events = payload.get("events") if isinstance(payload, dict) else payload
+    if not isinstance(raw_events, list):
+        return ()
+    events: list[EnrollmentDiffEvent] = []
+    for item in raw_events:
+        if not isinstance(item, dict):
+            continue
+        change_type = str(item.get("change_type") or "")
+        before = item.get("before")
+        after = item.get("after")
+        if change_type not in {"quota_increase", "quota_decrease"}:
+            continue
+        if before is None or after is None:
+            continue
+        events.append(
+            EnrollmentDiffEvent(
+                change_type=change_type,
+                school_code=str(item.get("school_code") or ""),
+                school_name=str(item.get("school_name") or ""),
+                subject_group=str(item.get("subject_group") or ""),
+                major_group_code=str(item.get("major_group_code") or ""),
+                major_code=str(item.get("major_code") or ""),
+                major_name=str(item.get("major_name") or ""),
+                before=before,
+                after=after,
+                evidence=str(item.get("evidence") or ""),
+            )
+        )
+    return tuple(events)
+
+
+def load_online_plan_change_events(path: str | Path) -> list[EnrollmentDiffEvent]:
+    """Load only exact official quota changes suitable for online ranking."""
+    return list(_load_online_plan_change_events_cached(str(Path(path).resolve())))
+
+
 def attach_plan_change_signals(
     rows: Iterable[MajorGroupRow],
     events: Iterable[EnrollmentDiffEvent],
@@ -78,6 +123,19 @@ def attach_plan_change_signals(
                 f"{event.change_type}: {event.major_name or event.major_group_code}"
                 + (f" ({event.evidence})" if event.evidence else "")
             )
+            for event in matching_events[:8]
+        ]
+        row.plan_change_details = [
+            {
+                "change_type": event.change_type,
+                "major_name": event.major_name,
+                "before": event.before,
+                "after": event.after,
+                "evidence": event.evidence,
+                "source_tier": "official_diff",
+                "source": "local_official_plan_diff",
+                "applied_to_ranking": event.change_type == "quota_increase",
+            }
             for event in matching_events[:8]
         ]
         if row.plan_change_score >= 0.35 and "plan_change_pool" not in row.opportunity_pools:

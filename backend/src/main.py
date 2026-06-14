@@ -1,6 +1,7 @@
 """GaokaoAgent FastAPI server."""
 
 import asyncio
+import json
 import logging
 import os
 import pathlib
@@ -23,6 +24,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from graph.dual_loop_supervisor import supervisor_graph
 from models.state import SupervisorState
+from recommendation.student_profile_assessment import (
+    CareerAssessmentInput,
+    score_career_assessment,
+)
 from utils.audit_logger import audit_logger
 from utils.rate_limiter import RateLimiter
 
@@ -73,7 +78,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https:; "
             "font-src 'self' data:; "
-            "connect-src 'self' http://localhost:*"
+            "connect-src 'self' http://localhost:* http://127.0.0.1:*"
         )
         if IS_PRODUCTION:
             response.headers["Strict-Transport-Security"] = (
@@ -86,8 +91,13 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 allowed_origins = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 if IS_PRODUCTION:
@@ -118,6 +128,36 @@ class SubjectScores(BaseModel):
     geography: Optional[int] = None
 
 
+class RecommendationProfileInput(BaseModel):
+    """User-stated recommendation preferences carried as an explicit contract."""
+
+    score: Optional[int] = Field(None, ge=0, le=900)
+    rank: Optional[int] = Field(None, ge=1, le=1_000_000)
+    subject_group: Optional[str] = Field(None, min_length=1)
+    preferred_cities: Optional[list[str]] = None
+    excluded_cities: Optional[list[str]] = None
+    preferred_majors: Optional[list[str]] = None
+    blacklist_majors: Optional[list[str]] = None
+    risk_tolerance: Optional[str] = None
+    school_major_preference: Optional[str] = None
+    stated_misconceptions: Optional[list[str]] = None
+    emotional_concerns: Optional[list[str]] = None
+    family_pressure_points: Optional[list[str]] = None
+    preference_assumptions: Optional[list[str]] = None
+    preference_confidence: Optional[float] = Field(None, ge=0, le=1)
+    major_cognition_risk: Optional[float] = Field(None, ge=0, le=1)
+    regret_sensitivity: Optional[float] = Field(None, ge=0, le=1)
+    medical_restrictions: Optional[dict[str, bool]] = None
+    subject_scores: Optional[dict[str, int]] = None
+    career_assessment: Optional[CareerAssessmentInput] = None
+
+    @field_validator("subject_group", mode="before")
+    @classmethod
+    def normalize_recommendation_subject_group(cls, value):
+        """Normalize recommendation-profile subject groups."""
+        return QueryRequest.normalize_subject_group(value)
+
+
 class QueryRequest(BaseModel):
     """Request payload for Gaokao planning."""
 
@@ -130,6 +170,7 @@ class QueryRequest(BaseModel):
         description="Subject group",
     )
     scores: Optional[SubjectScores] = None
+    delivery_profile: Optional[RecommendationProfileInput] = None
 
     @field_validator("subject_group", mode="before")
     @classmethod
@@ -186,12 +227,64 @@ class DeliveryProfileInput(BaseModel):
     regret_sensitivity: float = Field(0.5, ge=0, le=1)
     medical_restrictions: dict[str, bool] = Field(default_factory=dict)
     subject_scores: Optional[dict[str, int]] = None
+    holland_code: Optional[dict[str, float]] = None
+    riasec_top_codes: list[str] = Field(default_factory=list)
+    career_assessment_mode: str = "skip"
+    career_assessment_status: str = "not_taken"
+    mbti_type: Optional[str] = None
+    mbti_source: Optional[str] = None
+    career_values: list[str] = Field(default_factory=list)
+    field_provenance: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("subject_group", mode="before")
     @classmethod
     def normalize_delivery_subject_group(cls, value):
         """Reuse the public API's subject-group normalization behavior."""
         return QueryRequest.normalize_subject_group(value)
+
+
+def build_explicit_profile_payload(request: QueryRequest) -> dict[str, Any]:
+    """Combine explicit core inputs and form preferences into one authoritative payload."""
+    payload: dict[str, Any] = {}
+    if request.score is not None:
+        payload["score"] = request.score
+    if request.rank is not None:
+        payload["rank"] = request.rank
+    if request.subject_group:
+        payload["subject_group"] = request.subject_group
+    if request.scores is not None:
+        subject_scores = request.scores.model_dump(exclude_none=True)
+        if subject_scores:
+            payload["subject_scores"] = subject_scores
+
+    if request.delivery_profile is not None:
+        profile_payload = request.delivery_profile.model_dump(
+            exclude_none=True,
+            exclude={"career_assessment"},
+        )
+        payload.update(profile_payload)
+
+        if request.delivery_profile.career_assessment is not None:
+            result = score_career_assessment(request.delivery_profile.career_assessment)
+            payload["career_assessment_mode"] = result.mode
+            payload["career_assessment_status"] = result.status
+            provenance = payload.setdefault("_field_provenance", {})
+            provenance["career_assessment_mode"] = "measured_assessment"
+            provenance["career_assessment_status"] = "measured_assessment"
+            if result.holland_code is not None:
+                payload["holland_code"] = result.holland_code.model_dump()
+                payload["riasec_top_codes"] = result.top_codes
+                provenance["holland_code"] = "measured_assessment"
+                provenance["riasec_top_codes"] = "measured_assessment"
+            if result.mbti_type:
+                payload["mbti_type"] = result.mbti_type
+                payload["mbti_source"] = "self_reported"
+                provenance["mbti_type"] = "user_explicit"
+                provenance["mbti_source"] = "user_explicit"
+            if result.career_values:
+                payload["career_values"] = result.career_values
+                provenance["career_values"] = "user_explicit"
+    return payload
 
 
 class DeliveryPreviewRequest(BaseModel):
@@ -211,6 +304,16 @@ class DeliveryPreviewResponse(BaseModel):
     output_dir: str
     manifest: dict[str, Any]
     artifacts: dict[str, str]
+
+
+class AgencyCommandCenterResponse(BaseModel):
+    """Agency-level command center built from saved delivery bundles."""
+
+    success: bool
+    message: str
+    scanned_bundle_count: int
+    audit: dict[str, Any]
+    markdown: str
 
 
 def _to_plain_data(value: Any) -> Any:
@@ -243,9 +346,45 @@ def _safe_case_id(raw_case_id: str | None) -> str:
     return f"case-{timestamp}-{uuid4().hex[:8]}"
 
 
+def _load_delivery_bundle_manifests(logs_dir: Path) -> list[dict[str, Any]]:
+    """Read delivery bundle manifests from a delivery-bundles log directory."""
+    manifests: list[dict[str, Any]] = []
+    if not logs_dir.exists():
+        return manifests
+    for path in sorted(logs_dir.glob("*/delivery_bundle.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                payload.setdefault("case_id", path.parent.name)
+                manifests.append(payload)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Skipping invalid delivery bundle %s: %s", path, exc)
+    return manifests
+
+
+def build_agency_command_center_from_logs(logs_dir: Path | None = None) -> dict[str, Any]:
+    """Build an agency command-center response from saved delivery bundles."""
+    from evaluation.agency_command_center import (
+        build_agency_command_center,
+        build_markdown_agency_command_center,
+    )
+
+    bundle_dir = logs_dir or (BACKEND_ROOT / "logs" / "delivery_bundles")
+    manifests = _load_delivery_bundle_manifests(bundle_dir)
+    audit = build_agency_command_center(manifests)
+    markdown = build_markdown_agency_command_center(audit)
+    return {
+        "success": True,
+        "message": f"机构全局交付驾驶舱已生成：{len(manifests)} 个案源",
+        "scanned_bundle_count": len(manifests),
+        "audit": audit,
+        "markdown": markdown,
+    }
+
+
 def _build_delivery_profile(input_profile: DeliveryProfileInput):
     """Convert API input to the canonical UserProfile model."""
-    from models.user_profile import RiskTolerance, SchoolMajorPreference, UserProfile
+    from models.user_profile import HollandCode, RiskTolerance, SchoolMajorPreference, UserProfile
 
     try:
         risk_tolerance = RiskTolerance(input_profile.risk_tolerance)
@@ -278,6 +417,14 @@ def _build_delivery_profile(input_profile: DeliveryProfileInput):
         regret_sensitivity=input_profile.regret_sensitivity,
         medical_restrictions=input_profile.medical_restrictions,
         subject_scores=input_profile.subject_scores,
+        holland_code=HollandCode(**input_profile.holland_code) if input_profile.holland_code else None,
+        riasec_top_codes=input_profile.riasec_top_codes,
+        career_assessment_mode=input_profile.career_assessment_mode,
+        career_assessment_status=input_profile.career_assessment_status,
+        mbti_type=input_profile.mbti_type,
+        mbti_source=input_profile.mbti_source,
+        career_values=input_profile.career_values,
+        field_provenance=input_profile.field_provenance,
     )
 
 
@@ -336,6 +483,7 @@ def get_runtime_status() -> dict[str, Any]:
                 "/api/status",
                 "/api/analyze",
                 "/api/delivery/preview",
+                "/api/delivery/portfolio",
                 "/api/stats",
             ],
             "cli_commands": [
@@ -390,9 +538,11 @@ async def analyze_application(request: QueryRequest, req: Request):
 
     try:
         user_message = build_user_message(request)
+        explicit_profile = build_explicit_profile_payload(request)
 
         initial_state: SupervisorState = {
             "messages": [HumanMessage(content=user_message)],
+            "explicit_profile": explicit_profile or None,
             "intent_classification": None,
             "active_loop": None,
             "loop_history": [],
@@ -558,6 +708,18 @@ async def preview_delivery_bundle(request: DeliveryPreviewRequest):
         logger.error("Delivery preview failed", exc_info=True)
         if IS_PRODUCTION:
             raise HTTPException(status_code=500, detail="Unable to build delivery preview") from exc
+        raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
+
+
+@app.get("/api/delivery/portfolio", response_model=AgencyCommandCenterResponse)
+async def get_delivery_portfolio():
+    """Return the agency-level command center across saved delivery bundles."""
+    try:
+        return AgencyCommandCenterResponse(**build_agency_command_center_from_logs())
+    except Exception as exc:
+        logger.error("Agency command center failed", exc_info=True)
+        if IS_PRODUCTION:
+            raise HTTPException(status_code=500, detail="Unable to build agency command center") from exc
         raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
 
 

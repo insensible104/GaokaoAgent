@@ -32,9 +32,21 @@ class HollandCode(BaseModel):
 class UserProfile(BaseModel):
     """用户完整画像"""
     # 硬性指标
-    score: int = Field(description="高考总分")
+    score: Optional[int] = Field(None, description="高考总分；未提供时不得生成正式量化推荐")
     rank: Optional[int] = Field(None, description="全省位次")  # 修复新问题6：允许为None
     subject_group: str = Field(description="选科组合，如 '物理' 或 '历史'")
+    recommendation_ready: bool = Field(
+        default=True,
+        description="Whether critical inputs are sufficient for a formal quant recommendation.",
+    )
+    missing_critical_fields: List[str] = Field(
+        default_factory=list,
+        description="Critical inputs still required before formal recommendation.",
+    )
+    field_provenance: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Per-field source: user_explicit, inferred, or validated_correction.",
+    )
 
     # 地理偏好
     preferred_cities: List[str] = Field(default_factory=list, description="偏好城市")
@@ -47,9 +59,14 @@ class UserProfile(BaseModel):
         description="🚨 负面清单：绝对不学的专业关键词"
     )
 
-    # 隐性权重（简化版：后期可用 LLM 推断）
-    holland_code: Optional[HollandCode] = Field(default_factory=HollandCode)
-    mbti_type: Optional[str] = Field(None, description="MBTI 类型，如 INTJ（暂不实现）")
+    # 职业兴趣与自我描述。未完成测评时不得伪造中性分数。
+    holland_code: Optional[HollandCode] = None
+    riasec_top_codes: List[str] = Field(default_factory=list)
+    career_assessment_mode: str = "skip"
+    career_assessment_status: str = "not_taken"
+    mbti_type: Optional[str] = Field(None, description="学生自报 MBTI 类型，仅用于沟通与自我描述")
+    mbti_source: Optional[str] = None
+    career_values: List[str] = Field(default_factory=list)
 
     # 风险定价
     risk_tolerance: RiskTolerance = RiskTolerance.BALANCED
@@ -122,12 +139,16 @@ class UserProfile(BaseModel):
             "emotional_concerns",
             "family_pressure_points",
             "preference_assumptions",
+            "riasec_top_codes",
+            "career_values",
         ):
             if data.get(key) is None:
                 data[key] = []
 
         if data.get("medical_restrictions") is None:
             data["medical_restrictions"] = {}
+        if data.get("field_provenance") is None:
+            data["field_provenance"] = {}
 
         return data
 

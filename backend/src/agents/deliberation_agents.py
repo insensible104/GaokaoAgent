@@ -204,6 +204,8 @@ def risk_guardian_agent_node(state: SupervisorState) -> dict:
         recipients=["risk_guardian_agent"],
     )
     prior_memories = get_agent_memories(state, "risk_guardian_agent")
+    intent = state.get("intent_classification")
+    needs_search = bool(intent.requires_search) if intent else False
     proposal = inbound[-1] if inbound else None
     proposal_safe_count = int((proposal.metadata or {}).get("safe_count", stats["safe_count"])) if proposal else stats["safe_count"]
     should_research = (
@@ -211,8 +213,12 @@ def risk_guardian_agent_node(state: SupervisorState) -> dict:
         or proposal_safe_count == 0
         or stats["risk"] > 0.22
         or stats["key_high_tail_count"] > 0
-        or stats["bait_group_count"] > 0
-        or (stats["high_crowding_count"] > 0 and stats["key_high_tail_count"] > 0)
+        or (needs_search and stats["bait_group_count"] > 0)
+        or (
+            needs_search
+            and stats["high_crowding_count"] > 0
+            and stats["key_high_tail_count"] > 0
+        )
         or any("[TRIGGER_DEEP_RESEARCH]" in log for log in state.get("debug_logs", []))
     )
     action = "deep_research" if should_research else "report_agent"
@@ -278,12 +284,16 @@ def opportunity_advocate_agent_node(state: SupervisorState) -> dict:
         recipients=["opportunity_advocate_agent"],
     )
     prior_memories = get_agent_memories(state, "opportunity_advocate_agent")
+    intent = state.get("intent_classification")
+    needs_search = bool(intent.requires_search) if intent else False
     proposal = inbound[-1] if inbound else None
     proposal_rush_count = int((proposal.metadata or {}).get("rush_count", stats["rush_count"])) if proposal else stats["rush_count"]
     should_research = (
         proposal_rush_count == 0 and stats["expected_utility"] < 0.7
     ) or (stats["has_volunteer_plan"] and stats["key_prefix_count"] == 0) or (
-        stats["high_crowding_count"] > 0 and stats["hidden_opportunity_count"] == 0
+        needs_search
+        and stats["high_crowding_count"] > 0
+        and stats["hidden_opportunity_count"] == 0
     )
     action = "deep_research" if should_research else "report_agent"
     confidence = 0.60 if should_research else 0.82
@@ -353,11 +363,7 @@ def evidence_guardian_agent_node(state: SupervisorState) -> dict:
     needs_search = bool(intent.requires_search) if intent else False
     search_done = bool(state.get("search_queries") or state.get("web_research_results") or state.get("research_report"))
     proposal_candidate_count = int((proposal.metadata or {}).get("candidate_count", stats["candidate_count"])) if proposal else stats["candidate_count"]
-    should_research = (needs_search and not search_done) or (
-        stats["key_high_tail_count"] > 0 and not search_done
-    ) or (
-        (stats["high_crowding_count"] > 0 or stats["bait_group_count"] > 0) and not search_done
-    )
+    should_research = needs_search and not search_done
     action = "deep_research" if should_research else "report_agent"
     confidence = 0.90 if should_research else 0.70
     content = (

@@ -45,6 +45,31 @@ const intentDisplayNames: Record<string, string> = {
   'multimodal': '图像解析'
 };
 
+const formatAgentName = (agent: string): string => {
+  if (agentDisplayNames[agent]) return agentDisplayNames[agent];
+  const normalized = agent.toLowerCase();
+  if (normalized.includes('router')) return '🎯 意图识别路由';
+  if (normalized.includes('profiling')) return '👤 用户画像分析';
+  if (normalized.includes('report')) return '📊 报告生成';
+  if (normalized.includes('plan_fell_back')) return '🎯 研究规划';
+  if (normalized.includes('reflect_fell_back')) return '🤔 证据评估';
+  if (normalized.includes('synthesize_fell_back')) return '📊 研究结论';
+  return agent;
+};
+
+const formatProgressMessage = (step: AgentStep): string => {
+  const message = step.message || '';
+  const technicalConnectionFailure =
+    /HTTPConnectionPool|NewConnectionError|WinError|localhost:11434|\/api\/chat/i.test(message);
+  if (technicalConnectionFailure) {
+    if (step.agent.toLowerCase().includes('report')) {
+      return '生成式报告服务暂不可用，已使用结构化报告完成本次分析。';
+    }
+    return '智能分析服务暂不可用，已切换到稳定量化方案。';
+  }
+  return message.length > 240 ? `${message.slice(0, 237)}...` : message;
+};
+
 export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   steps,
   currentLoop,
@@ -158,13 +183,13 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-semibold text-sky-900">
-                  {agentDisplayNames[step.agent] || step.agent}
+                  {formatAgentName(step.agent)}
                 </span>
                 {step.timestamp && (
                   <span className="text-xs text-sky-600">{step.timestamp}</span>
                 )}
               </div>
-              <p className="text-sm text-sky-800 leading-relaxed">{step.message}</p>
+              <p className="text-sm text-sky-800 leading-relaxed">{formatProgressMessage(step)}</p>
             </div>
           </div>
           );

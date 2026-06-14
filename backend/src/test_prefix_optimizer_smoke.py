@@ -263,7 +263,7 @@ def test_prefix_optimizer_defers_tail_heavy_opportunity_when_clean_option_is_com
     assert ordered.index(tail_heavy) > ordered.index(safe_anchor)
 
 
-def test_prefix_optimizer_promotes_reliable_value_anchor_before_ordinary_rush():
+def test_prefix_optimizer_keeps_reliable_value_anchor_after_ordinary_opportunity():
     ordinary_rush = _row(
         school_name="Ordinary Rush Brand",
         admission_prob=0.62,
@@ -289,7 +289,38 @@ def test_prefix_optimizer_promotes_reliable_value_anchor_before_ordinary_rush():
         max_choices=2,
     )
 
-    assert ordered[0].school_name == "Reliable Value Anchor"
+    assert ordered[0].school_name == "Ordinary Rush Brand"
+    assert ordered[-1].school_name == "Reliable Value Anchor"
+
+
+def test_prefix_optimizer_places_clean_rush_before_target() -> None:
+    clean_rush = _row(
+        school_name="Clean Rush Opportunity",
+        admission_prob=0.52,
+        major_utility=0.58,
+        tail_risk=0.12,
+        strategy=StrategyTag.RUSH,
+        arbitrage=0.38,
+        front_major=0.12,
+    )
+    attractive_target = _row(
+        school_name="Attractive Target",
+        admission_prob=0.86,
+        major_utility=0.82,
+        tail_risk=0.10,
+        strategy=StrategyTag.TARGET,
+        arbitrage=0.62,
+        front_major=0.30,
+    )
+
+    ordered = optimize_prefix_order(
+        rows=[attractive_target, clean_rush],
+        profile=_profile(),
+        max_choices=2,
+    )
+
+    assert ordered[0].school_name == "Clean Rush Opportunity"
+    assert ordered[1].school_name == "Attractive Target"
 
 
 if __name__ == "__main__":
@@ -299,5 +330,6 @@ if __name__ == "__main__":
     test_prefix_optimizer_keeps_high_probability_target_as_opportunity()
     test_build_volunteer_plan_can_apply_prefix_optimizer()
     test_prefix_optimizer_defers_tail_heavy_opportunity_when_clean_option_is_comparable()
-    test_prefix_optimizer_promotes_reliable_value_anchor_before_ordinary_rush()
+    test_prefix_optimizer_keeps_reliable_value_anchor_after_ordinary_opportunity()
+    test_prefix_optimizer_places_clean_rush_before_target()
     print("prefix optimizer smoke tests passed")

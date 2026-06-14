@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from langchain_core.messages import HumanMessage
+
 from models.game_matrix import GameMatrix, MajorGroupRow, StrategyTag, VolatilityLevel
 from models.intent import LoopType
 from models.report import ReportDraft
@@ -191,6 +193,70 @@ def test_critic_emits_protocol_message_on_pass() -> None:
     assert result["agent_memories"], "critic should emit local memory"
 
 
+def test_critic_does_not_apply_uncalibrated_safe_threshold_to_calibrated_rows() -> None:
+    rows = []
+    for index in range(30):
+        row = _make_row(f"Calibrated{index}", StrategyTag.SAFE, 0.459266)
+        row.raw_admission_prob = 0.95
+        row.probability_is_calibrated = True
+        row.probability_method = "historical_isotonic"
+        row.probability_calibration_year = 2025
+        row.probability_hazard_scale = 0.2
+        rows.append(row)
+    plan = build_volunteer_plan(rows, _profile())
+    matrix = GameMatrix(major_group_rows=rows, volunteer_plan=plan)
+    matrix.calculate_statistics()
+    report = ReportDraft(
+        executive_summary="summary",
+        strategy_analysis="analysis",
+        school_recommendations=["历史校准方案"],
+        risk_warnings=[plan.probability_warning],
+        regret_value=100,
+    )
+    report.generate_markdown()
+
+    audit = audit_fast_loop(report, matrix, _profile(), retry_count=0)
+
+    assert plan.admission_probability_upper_bound > 0.90
+    assert not any("保底校录取概率过低" in issue for issue in audit.issues)
+    assert audit.reroute_to != "game_agent"
+
+
+def test_observational_step_rewards_do_not_reroute_a_valid_fallback_run(monkeypatch) -> None:
+    monkeypatch.delenv("GAOKAO_STEP_REWARD_ENFORCE", raising=False)
+    matrix = GameMatrix(
+        major_group_rows=[
+            _make_row("A大学", StrategyTag.SAFE, 0.95),
+            _make_row("B大学", StrategyTag.TARGET, 0.86),
+            _make_row("C大学", StrategyTag.RUSH, 0.58),
+        ]
+    )
+    matrix.calculate_statistics()
+    report = ReportDraft(
+        executive_summary="summary",
+        strategy_analysis="analysis",
+        school_recommendations=["A大学", "B大学", "C大学"],
+        risk_warnings=["warning"],
+        regret_value=300.0,
+    )
+    report.generate_markdown()
+    state = {
+        "report_draft": report,
+        "game_matrix": matrix,
+        "user_profile": _profile(),
+        "retry_count": 0,
+        "messages": [HumanMessage(content="请计算录取概率并给出冲稳保方案")],
+        "active_loop": LoopType.FAST,
+        "search_queries": ["generic query one", "generic query two"],
+        "pdf_sources": [],
+    }
+
+    result = critic_agent_node(state)
+
+    assert result["audit_result"].is_approved
+    assert "reflection_history" not in result
+
+
 if __name__ == "__main__":
     test_deep_research_failure_emits_protocol_message()
     test_report_failure_emits_protocol_message()
@@ -198,4 +264,5 @@ if __name__ == "__main__":
     test_report_payload_includes_decision_evidence_cards()
     test_critic_rejects_key_prefix_report_missing_decision_evidence()
     test_critic_emits_protocol_message_on_pass()
+    test_critic_does_not_apply_uncalibrated_safe_threshold_to_calibrated_rows()
     print("agent protocol smoke tests passed")

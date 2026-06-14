@@ -41,8 +41,8 @@ export function ReportView({ result, error, onReset }: ReportViewProps) {
       </div>
 
       {/* Report Content */}
-      <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-slate-700">
-        <div className="prose prose-invert max-w-none">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-700 bg-slate-800/50 p-4 shadow-2xl backdrop-blur-sm sm:p-8">
+        <div className="prose prose-invert max-w-none [overflow-wrap:anywhere]">
           {result.report ? (
             <ReactMarkdown
               components={{
@@ -105,7 +105,7 @@ export function ReportView({ result, error, onReset }: ReportViewProps) {
           <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
             调试日志 ({result.debug_logs.length} 条)
           </summary>
-          <div className="mt-4 space-y-1 font-mono text-sm">
+          <div className="mt-4 min-w-0 space-y-1 font-mono text-sm [overflow-wrap:anywhere]">
             {result.debug_logs.map((log, i) => (
               <div key={i} className="text-gray-500">
                 {log}
@@ -116,7 +116,7 @@ export function ReportView({ result, error, onReset }: ReportViewProps) {
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <Button
           onClick={onReset}
           className="flex-1 bg-blue-600 hover:bg-blue-700 py-6 text-lg"

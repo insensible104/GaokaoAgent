@@ -197,6 +197,29 @@ def test_deliberation_recommends_report_when_evidence_is_sufficient() -> None:
     }
 
 
+def test_market_risk_flags_do_not_force_research_without_search_intent() -> None:
+    rows = (
+        [_make_row(f"S{i}大学", StrategyTag.SAFE, 0.94) for i in range(5)]
+        + [_make_row(f"T{i}大学", StrategyTag.TARGET, 0.83) for i in range(5)]
+        + [_make_row(f"R{i}大学", StrategyTag.RUSH, 0.62) for i in range(5)]
+    )
+    rows[0].pain_point_flags = ["bait_major_group", "herding_crowding"]
+    rows[0].tradeoff_breakdown = {"crowding_risk": 0.80}
+    state = _base_state(requires_search=False, rows=rows)
+    for node in (
+        risk_guardian_agent_node,
+        opportunity_advocate_agent_node,
+        evidence_guardian_agent_node,
+        deliberation_coordinator_node,
+    ):
+        state = _merge_state(state, node(state))
+
+    summary = state["deliberation_summaries"][-1]
+
+    assert summary.recommended_action == "report_agent"
+    assert all(action == "report_agent" for action in summary.advisor_actions.values())
+
+
 def test_coordinator_blocks_incomplete_protocol() -> None:
     state = _base_state(
         requires_search=False,

@@ -134,7 +134,7 @@ def test_key_prefix_tail_risk_triggers_research() -> None:
     assert decision.metadata["first_hit_reason"] == "key_prefix_high_tail_risk"
 
 
-def test_key_prefix_market_game_triggers_research() -> None:
+def test_key_prefix_market_game_stays_in_fast_loop_without_search_intent() -> None:
     policy = HeuristicSupervisorPolicy()
     state = _base_state()
     option = MajorOption(
@@ -144,8 +144,7 @@ def test_key_prefix_market_game_triggers_research() -> None:
         major_name="Computer Science",
         user_utility=0.9,
     )
-    rows = [
-        MajorGroupRow(
+    crowded_row = MajorGroupRow(
             school_name="Crowded School",
             school_code="10002",
             major_group_code="301",
@@ -168,14 +167,27 @@ def test_key_prefix_market_game_triggers_research() -> None:
             pain_point_flags=["bait_major_group", "herding_crowding"],
             market_behavior_notes=["crowding_risk: obvious school/major signal"],
         )
-    ]
+    rows = [crowded_row]
+    rows.extend(
+        crowded_row.model_copy(
+            update={
+                "school_name": f"Ordinary School {index}",
+                "school_code": f"20{index:03d}",
+                "major_group_code": f"40{index:02d}",
+                "pain_point_flags": [],
+                "market_behavior_notes": [],
+                "tradeoff_breakdown": {"crowding_risk": 0.20},
+                "strategy_tag": StrategyTag.TARGET,
+            }
+        )
+        for index in range(14)
+    )
     plan = build_volunteer_plan(rows, UserProfile(score=610, rank=20000, subject_group="physics"))
     state["game_matrix"] = GameMatrix(major_group_rows=rows, volunteer_plan=plan)
 
     decision = policy.decide_after_game(state)
 
-    assert decision.selected_action == "deep_research"
-    assert decision.metadata["first_hit_reason"] == "market_game_requires_evidence"
+    assert decision.selected_action == "report_agent"
     assert decision.observation.high_crowding_count == 1
     assert decision.observation.bait_group_count == 1
 
@@ -277,7 +289,7 @@ if __name__ == "__main__":
     test_mixed_intent_triggers_research()
     test_small_candidate_pool_triggers_research()
     test_key_prefix_tail_risk_triggers_research()
-    test_key_prefix_market_game_triggers_research()
+    test_key_prefix_market_game_stays_in_fast_loop_without_search_intent()
     test_repeated_critic_failure_triggers_root_cause_research()
     test_route_after_critic_maps_business_end_to_langgraph_end()
     test_episode_summary_reward_is_bounded()

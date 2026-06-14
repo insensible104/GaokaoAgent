@@ -111,6 +111,7 @@ DEFAULT_SMOKE_TESTS = [
     "test_expectation_packet_smoke.py",
     "test_delivery_bundle_smoke.py",
     "test_delivery_portfolio_smoke.py",
+    "test_agency_command_center_smoke.py",
     "test_ablation_2025_smoke.py",
     "test_market_evidence_smoke.py",
     "test_market_simulation_smoke.py",

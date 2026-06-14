@@ -44,6 +44,20 @@ interface DeliveryProfile {
   regret_sensitivity?: number;
   medical_restrictions?: Record<string, boolean>;
   subject_scores?: Record<string, number>;
+  field_provenance?: Record<string, string>;
+  career_assessment?: {
+    mode: "skip" | "quick" | "complete";
+    answers: Record<string, number>;
+    mbti_type?: string;
+    career_values: string[];
+  };
+  holland_code?: Record<string, number>;
+  riasec_top_codes?: string[];
+  career_assessment_mode?: string;
+  career_assessment_status?: string;
+  mbti_type?: string;
+  mbti_source?: string;
+  career_values?: string[];
 }
 
 interface AnalysisRequest {
@@ -103,6 +117,14 @@ const asNumberRecord = (value: unknown): Record<string, number> | undefined => {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
+const asStringRecord = (value: unknown): Record<string, string> | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string"
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
 const normalizeDeliveryProfile = (
   rawProfile: Record<string, unknown> | null | undefined,
   fallback: DeliveryProfile | null
@@ -142,6 +164,23 @@ const normalizeDeliveryProfile = (
     regret_sensitivity: typeof raw.regret_sensitivity === "number" ? raw.regret_sensitivity : 0.5,
     medical_restrictions: asBooleanRecord(raw.medical_restrictions),
     subject_scores: asNumberRecord(raw.subject_scores) ?? fallback?.subject_scores,
+    field_provenance: asStringRecord(raw.field_provenance) ?? fallback?.field_provenance,
+    career_assessment: fallback?.career_assessment,
+    holland_code: asNumberRecord(raw.holland_code) ?? fallback?.holland_code,
+    riasec_top_codes: asStringArray(raw.riasec_top_codes),
+    career_assessment_mode:
+      typeof raw.career_assessment_mode === "string"
+        ? raw.career_assessment_mode
+        : fallback?.career_assessment_mode,
+    career_assessment_status:
+      typeof raw.career_assessment_status === "string"
+        ? raw.career_assessment_status
+        : fallback?.career_assessment_status,
+    mbti_type: typeof raw.mbti_type === "string" ? raw.mbti_type : fallback?.mbti_type,
+    mbti_source: typeof raw.mbti_source === "string" ? raw.mbti_source : fallback?.mbti_source,
+    career_values: asStringArray(raw.career_values).length
+      ? asStringArray(raw.career_values)
+      : fallback?.career_values ?? fallback?.career_assessment?.career_values ?? [],
   };
 };
 
@@ -189,7 +228,7 @@ function AppContent() {
     try {
       const apiUrl = import.meta.env.DEV
         ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "http://localhost:8000";
+        : import.meta.env.VITE_API_URL || "";
 
       if (isDev) console.log("[DEBUG] Sending request to:", `${apiUrl}/api/analyze`);
 
@@ -207,6 +246,7 @@ function AppContent() {
             rank: data.rank,
             subject_group: data.subject_group,
             scores: data.scores,
+            delivery_profile: data.delivery_profile,
           }),
           signal: abortControllerRef.current.signal,
         },
@@ -265,7 +305,7 @@ function AppContent() {
         } else if (err.message.includes("timeout") || err.name === "TimeoutError") {
           errorMessage = "请求超时，请检查网络连接或稍后重试";
         } else if (err.message.includes("NetworkError") || err.message.includes("Failed to fetch")) {
-          errorMessage = "网络错误，请检查后端服务是否运行 (http://localhost:8000)";
+          errorMessage = "网络连接失败，请稍后重试";
         } else {
           errorMessage = err.message;
         }
@@ -468,7 +508,7 @@ function AppContent() {
                   (result.game_matrix.major_group_rows && result.game_matrix.major_group_rows.length > 0) ||
                   (result.game_matrix.rows && result.game_matrix.rows.length > 0)
                 ) && (
-                  <GameMatrixView gameMatrix={result.game_matrix} />
+                  <GameMatrixView gameMatrix={result.game_matrix} userProfile={deliveryProfile} />
                 )}
 
                 <InternalDeliveryReview

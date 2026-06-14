@@ -4,7 +4,21 @@ from __future__ import annotations
 
 from models.game_matrix import MajorOption
 from models.user_profile import SchoolMajorPreference, UserProfile
-from recommendation.major_taxonomy import classify_major, infer_preferred_categories
+from recommendation.major_taxonomy import (
+    career_fit_for_category,
+    classify_major,
+    infer_preferred_categories,
+)
+
+
+RIASEC_FIELD_CODES = {
+    "R": "realistic",
+    "I": "investigative",
+    "A": "artistic",
+    "S": "social",
+    "E": "enterprising",
+    "C": "conventional",
+}
 
 
 def _contains_any(text: str, keywords: list[str]) -> bool:
@@ -49,6 +63,14 @@ def score_major_utility(option: MajorOption, profile: UserProfile) -> MajorOptio
     is_keyword_preferred = _contains_any(name, profile.preferred_majors)
     is_category_preferred = bool(preferred_categories and category in preferred_categories)
 
+    career_fit_score = None
+    if profile.career_assessment_status == "completed" and profile.holland_code is not None:
+        riasec_scores = {
+            code: getattr(profile.holland_code, field_name)
+            for code, field_name in RIASEC_FIELD_CODES.items()
+        }
+        career_fit_score = career_fit_for_category(category, riasec_scores)
+
     if is_blacklisted:
         utility = 0.0
         reasons.append("命中用户黑名单专业")
@@ -78,6 +100,15 @@ def score_major_utility(option: MajorOption, profile: UserProfile) -> MajorOptio
             utility -= 0.03
             reasons.append("专业计划数较少，组内专业分配不确定性更高")
 
+        if career_fit_score is not None:
+            # The maximum adjustment is 0.10, deliberately below explicit
+            # keyword/category preferences and never able to override a blacklist.
+            utility += (career_fit_score - 0.5) * 0.20
+            if career_fit_score >= 0.62:
+                reasons.append("职业兴趣画像与该专业方向较匹配")
+            elif career_fit_score <= 0.38:
+                reasons.append("职业兴趣画像与该专业方向匹配度偏低，建议结合课程体验复核")
+
         utility = max(0.0, min(1.0, utility))
 
     major_rank_risk = _rank_risk_from_history(option, profile.rank)
@@ -91,6 +122,7 @@ def score_major_utility(option: MajorOption, profile: UserProfile) -> MajorOptio
             "is_acceptable": is_acceptable,
             "is_blacklisted": is_blacklisted,
             "major_rank_risk": major_rank_risk,
+            "career_fit_score": career_fit_score,
             "risk_reasons": reasons,
         }
     )
@@ -99,4 +131,3 @@ def score_major_utility(option: MajorOption, profile: UserProfile) -> MajorOptio
 def score_major_options(options: list[MajorOption], profile: UserProfile) -> list[MajorOption]:
     """Score every major option for a user."""
     return [score_major_utility(option, profile) for option in options]
-

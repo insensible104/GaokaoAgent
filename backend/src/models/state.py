@@ -28,6 +28,7 @@ class SupervisorState(TypedDict):
     # === 快思考循环（Fast Loop - Quant）===
     # Agent 1 输出
     user_profile: Optional[UserProfile]
+    explicit_profile: Optional[dict]
 
     # Agent 2 输出
     game_matrix: Optional[GameMatrix]

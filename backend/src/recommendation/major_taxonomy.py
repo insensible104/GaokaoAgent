@@ -22,6 +22,38 @@ CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
 }
 
 
+# RIASEC is a soft preference signal, not an eligibility rule. Weights describe
+# the typical activity mix of a broad major category and intentionally sum to 1.
+CATEGORY_RIASEC_WEIGHTS: dict[str, dict[str, float]] = {
+    "computer": {"I": 0.55, "R": 0.25, "C": 0.20},
+    "electronic_info": {"R": 0.45, "I": 0.40, "C": 0.15},
+    "math_physics": {"I": 0.65, "C": 0.20, "R": 0.15},
+    "finance": {"E": 0.40, "C": 0.35, "I": 0.25},
+    "law": {"E": 0.40, "S": 0.35, "I": 0.25},
+    "medicine": {"I": 0.45, "S": 0.35, "R": 0.20},
+    "teacher": {"S": 0.60, "A": 0.20, "I": 0.20},
+    "language": {"A": 0.45, "S": 0.35, "E": 0.20},
+    "civil_architecture": {"R": 0.50, "I": 0.35, "C": 0.15},
+    "materials_chem_env": {"I": 0.50, "R": 0.35, "C": 0.15},
+    "bio_food_agri": {"I": 0.45, "R": 0.35, "S": 0.20},
+    "mechanical_energy": {"R": 0.55, "I": 0.30, "C": 0.15},
+    "transportation": {"R": 0.50, "C": 0.30, "I": 0.20},
+    "management": {"E": 0.55, "C": 0.25, "S": 0.20},
+    "art_design": {"A": 0.65, "S": 0.20, "E": 0.15},
+}
+
+
+def career_fit_for_category(category: str, riasec_scores: dict[str, float]) -> float | None:
+    """Return a broad-category RIASEC affinity score in [0, 1]."""
+    weights = CATEGORY_RIASEC_WEIGHTS.get(category)
+    if not weights:
+        return None
+    return max(
+        0.0,
+        min(1.0, sum(riasec_scores.get(code, 0.5) * weight for code, weight in weights.items())),
+    )
+
+
 def classify_major(major_name: str) -> str:
     """Classify a major name into a coarse domain category."""
     name = major_name or ""
@@ -39,4 +71,3 @@ def infer_preferred_categories(preferred_majors: list[str]) -> set[str]:
         if category != "other":
             categories.add(category)
     return categories
-
