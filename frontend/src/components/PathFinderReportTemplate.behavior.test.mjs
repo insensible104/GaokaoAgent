@@ -105,7 +105,7 @@ assert.equal(reportData.rows[0].school, "真实大学");
 assert.match(reportData.rows[0].evidence, /真实证据/);
 assert.match(reportData.profileLine, /广州/);
 assert.match(reportData.profileLine, /电子信息/);
-assert.match(reportData.strategyLine, /Rush 1 \/ Target 1 \/ Safe 1/);
+assert.match(reportData.strategyLine, /冲刺 1 \/ 稳健 1 \/ 保底 1/);
 assert.match(reportData.focusLine, /关键前缀 1/);
 assert.doesNotMatch(reportData.profileLine, /示例29|北京|南京|成都|大连/);
 assert.doesNotMatch(reportData.strategyLine, /985 院校 24|A\+ 学科 36/);

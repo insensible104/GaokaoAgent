@@ -120,14 +120,14 @@ export function buildDeliveryReadinessSummary(input: DeliveryReadinessInput): De
       label: "证据包",
       status: hasEvidence ? "ready" : "needs_review",
       signal: hasEvidence ? "已附带审计摘要或量化证据" : "缺少可追踪审计摘要",
-      action: hasEvidence ? "保留证据账本和口径边界" : "补充 plan_audit_summary 或 quant_evidence",
+      action: hasEvidence ? "保留证据账本和口径边界" : "补充结构审计摘要或量化证据",
     },
     {
       id: "report_package",
       label: "报告包",
       status: input.report || hasPlanRows ? "needs_review" : "blocked",
       signal: input.report ? "已生成报告正文，可进入交付预览" : "仅有结构化数据，报告正文待补",
-      action: "打开 A4 报告预览，检查证据账本、风险账本和措辞边界",
+      action: "打开报告预览，检查证据账本、风险账本和措辞边界",
     },
     {
       id: "human_review",

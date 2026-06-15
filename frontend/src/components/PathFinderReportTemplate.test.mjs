@@ -27,7 +27,7 @@ for (const token of [
   "RiskLedger",
   "DecisionEvidenceCard",
   "DataBoundary",
-  "RIASEC",
+  "霍兰德兴趣",
   "MBTI",
   "first_hit_prob",
   "tail_assignment_risk",
@@ -55,8 +55,8 @@ for (const token of [
   "mbti-intj",
   "canva-editorial-cover",
   "reference-summary-strip",
-  "semiconductor-track",
-  "instrument-major-track",
+  "半导体方向",
+  "仪器类",
 ]) {
   assert(
     source.includes(token),

@@ -132,6 +132,64 @@ const formatPercent = (value?: number) => {
   return `${Math.round(value * 100)}%`;
 };
 
+const formatStrategyLabel = (value?: string) => {
+  const key = String(value ?? "").toLowerCase();
+  if (key === "rush") return "冲刺";
+  if (key === "target") return "稳健";
+  if (key === "safe") return "保底";
+  if (key === "unclassified") return "待研判";
+  return value || "待研判";
+};
+
+const strategyToneClass = (value?: string) => {
+  const key = String(value ?? "").toLowerCase();
+  if (key === "rush" || value === "冲刺") return "rush";
+  if (key === "target" || value === "稳健") return "target";
+  if (key === "safe" || value === "保底") return "safe";
+  return "target";
+};
+
+const formatRiskLabel = (value?: string) => {
+  const key = String(value ?? "").toLowerCase();
+  if (key === "high") return "高";
+  if (key === "medium") return "中";
+  if (key === "low") return "低";
+  return value || "待复核";
+};
+
+const riskToneClass = (value?: string) => {
+  const key = String(value ?? "").toLowerCase();
+  if (key === "high" || value === "高") return "high";
+  if (key === "medium" || value === "中") return "medium";
+  if (key === "low" || value === "低") return "low";
+  return "medium";
+};
+
+const formatGateStatus = (value?: string) => {
+  const key = String(value ?? "").toLowerCase();
+  if (key === "ready") return "已就绪";
+  if (key === "needs_review") return "待复核";
+  if (key === "blocked") return "暂不可交付";
+  return value || "待复核";
+};
+
+const formatRiasecLabel = (value?: string) => {
+  const normalized = String(value ?? "").replace(/\s/g, "");
+  if (!normalized) return "研究型 / 实用型";
+  const labels: Record<string, string> = {
+    R: "实用型",
+    I: "研究型",
+    A: "艺术型",
+    S: "社会型",
+    E: "企业型",
+    C: "常规型",
+  };
+  return normalized
+    .split("/")
+    .map((code) => labels[code.toUpperCase()] ?? code)
+    .join(" / ");
+};
+
 const defaultSummaryMetrics: Metric[] = [
   { label: "985 院校", value: "24", note: "覆盖 985 层次可达院校与专业组", tone: "positive" },
   { label: "211 院校", value: "4", note: "补充稳健层次与区域选择", tone: "neutral" },
@@ -146,50 +204,50 @@ const defaultMatrixRows: MatrixRow[] = [
     order: "01",
     school: "北京航空航天大学",
     group: "计算机类 / 软件工程 / 人工智能",
-    strategy: "Rush",
+    strategy: "冲刺",
     probability_range: "刚刚好",
     first_hit_prob: "12%",
-    tail_assignment_risk: "Medium",
+    tail_assignment_risk: "中",
     evidence: "985；A+ 学科；物化生路径可报，需重点复核专业组内分流。",
   },
   {
     order: "02",
     school: "北京理工大学",
     group: "电子信息类 / 自动化类 / 兵器类",
-    strategy: "Rush",
+    strategy: "冲刺",
     probability_range: "超过1分",
     first_hit_prob: "10%",
-    tail_assignment_risk: "Medium",
+    tail_assignment_risk: "中",
     evidence: "985；工科平台强，适合偏工程实践和国防科技方向。",
   },
   {
     order: "03",
     school: "电子科技大学",
     group: "电子信息类 / 半导体方向",
-    strategy: "Target",
+    strategy: "稳健",
     probability_range: "压线",
     first_hit_prob: "18%",
-    tail_assignment_risk: "Low",
-    evidence: "211/985 平台；电子信息优势明显，semiconductor-track 作为重点解释对象。",
+    tail_assignment_risk: "低",
+    evidence: "211/985 平台；电子信息优势明显，半导体方向作为重点解释对象。",
   },
   {
     order: "04",
     school: "东南大学",
     group: "仪器类 / 电子信息类 / 计算机类",
-    strategy: "Target",
+    strategy: "稳健",
     probability_range: "超过2分",
     first_hit_prob: "16%",
-    tail_assignment_risk: "Low",
-    evidence: "985；instrument-major-track 与电子信息方向形成稳健组合。",
+    tail_assignment_risk: "低",
+    evidence: "985；仪器类与电子信息方向形成稳健组合。",
   },
   {
     order: "05",
     school: "大连理工大学",
     group: "机械类 / 材料类 / 自动化类",
-    strategy: "Safe",
+    strategy: "保底",
     probability_range: "超过6分",
     first_hit_prob: "9%",
-    tail_assignment_risk: "Low",
+    tail_assignment_risk: "低",
     evidence: "985；作为保底层次补足工科平台，不与黑名单方向冲突。",
   },
 ];
@@ -206,7 +264,7 @@ const defaultEvidenceLedger: EvidenceItem[] = [
     boundary: "显式填写内容优先于对话推断",
   },
   {
-    source: "RIASEC 兴趣测评",
+    source: "霍兰德兴趣测评",
     usage: "解释半导体、仪器类、电子信息等方向的适配原因",
     boundary: "不改变录取概率，不覆盖黑名单",
   },
@@ -258,24 +316,24 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
           order: String(choice.choice_index ?? index + 1).padStart(2, "0"),
           school: choice.school_name ?? "待定院校",
           group: choice.major_group_code ?? "待定专业组",
-          strategy: String(choice.strategy_tag ?? "unclassified"),
+          strategy: formatStrategyLabel(choice.strategy_tag),
           probability_range:
             choice.admission_probability_lower_bound !== undefined || choice.admission_probability_upper_bound !== undefined
               ? `${formatPercent(choice.admission_probability_lower_bound)}-${formatPercent(choice.admission_probability_upper_bound)}`
               : formatPercent(choice.group_admission_prob),
           first_hit_prob: formatPercent(choice.first_hit_prob),
           tail_assignment_risk: formatPercent(choice.tail_assignment_risk),
-          evidence: choice.quant_evidence?.[0] ?? "Awaiting detailed evidence note",
+          evidence: choice.quant_evidence?.[0] ?? "证据说明待补充",
         }))
       : majorRows.slice(0, 10).map((row, index) => ({
           order: String(index + 1).padStart(2, "0"),
           school: row.school_name ?? "待定院校",
           group: row.major_group_code ?? "待定专业组",
-          strategy: String(row.strategy_tag ?? "unclassified"),
+          strategy: formatStrategyLabel(row.strategy_tag),
           probability_range: formatPercent(row.admission_prob),
           first_hit_prob: formatPercent(row.first_hit_prob),
           tail_assignment_risk: formatPercent(row.tail_assignment_risk),
-          evidence: row.quant_evidence?.[0] ?? "Awaiting detailed evidence note",
+          evidence: row.quant_evidence?.[0] ?? "证据说明待补充",
         }));
   const deficits = audit?.coverage?.deficits ?? {};
   const deficitCount = Object.values(deficits).reduce((total, value) => total + Number(value || 0), 0);
@@ -283,42 +341,42 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
   const metrics: Metric[] = gameMatrix
     ? [
         {
-          label: "Formal rows",
+          label: "正式行数",
           value: String(choices.length || majorRows.length || 0),
-          note: "Current analyzed volunteer slate",
+          note: "当前已纳入分析的志愿行",
           tone: "neutral",
         },
         {
-          label: "Expected range",
+          label: "预计区间",
           value:
             plan?.admission_probability_lower_bound !== undefined || plan?.admission_probability_upper_bound !== undefined
               ? `${formatPercent(plan?.admission_probability_lower_bound)}-${formatPercent(plan?.admission_probability_upper_bound)}`
               : formatPercent(plan?.expected_admission_prob),
-          note: "Plan-level calibrated or heuristic band",
+          note: "整表层面的校准区间",
           tone: "positive",
         },
         {
-          label: "Key prefix rows",
+          label: "关键前序",
           value: String(plan?.key_prefix_count ?? 0),
-          note: "Rows that materially decide outcome",
+          note: "真正影响录取落点的行",
           tone: "warning",
         },
         {
-          label: "Hard exclusions",
+          label: "硬性排除",
           value: String(plan?.blacklist_violation_count ?? 0),
-          note: "Blacklist exposure after audit",
+          note: "黑名单方向暴露情况",
           tone: (plan?.blacklist_violation_count ?? 0) > 0 ? "warning" : "positive",
         },
         {
-          label: "Coverage deficit",
+          label: "覆盖缺口",
           value: String(deficitCount),
-          note: audit?.coverage?.coverage_sufficient ? "No obvious rush/target/safe gap" : "Needs manual mix review",
+          note: audit?.coverage?.coverage_sufficient ? "冲稳保结构暂无明显缺口" : "需要人工复核结构",
           tone: deficitCount > 0 ? "warning" : "positive",
         },
         {
-          label: "Data vintage",
+          label: "数据年份",
           value: String(dataBoundary?.target_year ?? gameMatrix.data_vintage?.latest_historical_admission_year ?? "N/A"),
-          note: formalReady ? "Current-year formal data ready" : "Current-year data boundary applies",
+          note: formalReady ? "当年正式数据已可用" : "仍需披露数据边界",
           tone: formalReady ? "positive" : "warning",
         },
       ]
@@ -326,28 +384,28 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
   const evidence: EvidenceItem[] = gameMatrix
     ? [
         {
-          source: "Current GameMatrix response",
-          usage: "VolunteerMatrix, probability_range, first_hit_prob, and plan audit metrics",
-          boundary: "Rendered from the latest analyzed response stored in sessionStorage.",
+          source: "当前志愿分析结果",
+          usage: "志愿矩阵、命中概率、调剂风险与结构审计",
+          boundary: "来自本次分析结果，正式交付前仍需人工复核。",
         },
         {
-          source: "Structured deliveryProfile",
-          usage: "Profile lock, city preference, major preference, blacklist, and career appendix",
-          boundary: "Explicit user fields override inferred conversation text.",
+          source: "结构化学生画像",
+          usage: "锁定选科、城市、专业偏好、黑名单与职业适配附录",
+          boundary: "用户明确填写的信息优先于对话推断。",
         },
         {
-          source: "Plan audit summary",
-          usage: "RiskLedger, DataBoundary, coverage deficit, and key-prefix disclosure",
-          boundary: "Audit diagnoses structure and evidence boundaries; it does not guarantee outcomes.",
+          source: "志愿结构审计",
+          usage: "风险账本、数据边界、覆盖缺口与关键前序披露",
+          boundary: "审计只说明结构和证据边界，不保证录取结果。",
         },
       ]
     : defaultEvidenceLedger;
   const risks: RiskItem[] = audit?.student_facing_items?.length
     ? audit.student_facing_items.slice(0, 6).map((item) => ({
-        risk: item.title ?? item.type ?? "Plan audit item",
+        risk: item.title ?? item.type ?? "计划审计项",
         level: item.severity === "P1" ? "High" : item.severity === "P2" ? "Medium" : "Low",
         signal: item.type ?? audit.status ?? "audit",
-        action: item.detail ?? "Review before final submission.",
+        action: item.detail ?? "正式提交前复核。",
       }))
     : defaultRiskLedger;
   const isSampleMode = !gameMatrix;
@@ -362,7 +420,7 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
         : isSampleMode
           ? "物化生"
           : deliveryProfile?.subject_group || "科类待补";
-  const riasec = deliveryProfile?.riasec_top_codes?.join("/") || "I/R";
+  const riasec = formatRiasecLabel(deliveryProfile?.riasec_top_codes?.join("/") || "I/R");
   const mbti = deliveryProfile?.mbti_type || "INTJ";
   const deliveryReadiness =
     payload?.deliveryReadiness ??
@@ -381,8 +439,8 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
       ? `示例29；选科：${subjectGroup}；城市：${preferredCities}；专业：${preferredMajors}；不建议调剂方向：${blacklist}。`
       : `选科：${subjectGroup}；城市：${preferredCities}；专业：${preferredMajors}；黑名单：${blacklist}。`,
     strategyLine: isSampleMode
-      ? "参考报告口径：985 院校 24 所 / 211 院校 4 所 / A+ 学科 36 个；PathFinder 仍保留概率边界与复核动作。"
-      : `Rush ${gameMatrix?.total_rush ?? 0} / Target ${gameMatrix?.total_target ?? 0} / Safe ${gameMatrix?.total_safe ?? 0}；覆盖缺口 ${deficitCount}；PathFinder 保留概率边界与复核动作。`,
+      ? "参考报告口径：985 院校 24 所 / 211 院校 4 所 / A+ 学科 36 个；本模板仍保留概率边界与复核动作。"
+      : `冲刺 ${gameMatrix?.total_rush ?? 0} / 稳健 ${gameMatrix?.total_target ?? 0} / 保底 ${gameMatrix?.total_safe ?? 0}；覆盖缺口 ${deficitCount}；本模板保留概率边界与复核动作。`,
     focusLine: isSampleMode
       ? "优先解释半导体、仪器类、电子信息等可落地专业方向；尾部保底只作为风险缓冲，不包装成同等推荐。"
       : `优先解释关键前缀 ${plan?.key_prefix_count ?? audit?.student_facing_items?.length ?? 0} 行；被遮蔽 ${plan?.shadowed_choice_count ?? 0} 行不包装成同等推荐。`,
@@ -392,16 +450,16 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
       : "672 / 3184",
     dataBoundaryText:
       dataBoundary?.limitations?.join("；") ||
-      "probability_range、first_hit_prob 与 tail_assignment_risk 均为基于历史数据、学生约束和当前候选池的启发式决策信号。正式填报前必须复核当年招生计划、招生章程和考试院公告。",
+      "分数区间、关键命中与调剂风险均为基于历史数据、学生约束和当前候选池的启发式决策信号。正式填报前必须复核当年招生计划、招生章程和考试院公告。",
     careerCards: [
       {
         score: riasec,
-        title: "RIASEC",
+        title: "霍兰德兴趣",
         body: "用于解释专业兴趣与志愿选择之间的软匹配，不覆盖录取概率和硬过滤条件。",
       },
       {
         score: subjectGroup,
-        title: "Subject track",
+        title: "选科口径",
         body: "报告只在当前选科口径下解释院校专业组，不跨科类外推。",
       },
       {
@@ -416,10 +474,10 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
 const DeliveryReadiness = ({ summary }: { summary: DeliveryReadinessSummary }) => (
   <section className="report-readiness">
     <div className="section-heading">
-      <p>DR</p>
+      <p>01</p>
       <div>
         <h2 className="section-heading__cn">交付准备度</h2>
-        <span className="section-heading__en">Delivery readiness gates</span>
+        <span className="section-heading__en">交付前复核门槛</span>
       </div>
     </div>
     <div className="readiness-summary">
@@ -432,7 +490,7 @@ const DeliveryReadiness = ({ summary }: { summary: DeliveryReadinessSummary }) =
     <div className="readiness-grid">
       {summary.gates.map((gate) => (
         <article key={gate.id} className={`readiness-gate readiness-gate--${gate.status}`}>
-          <span>{gate.status}</span>
+          <span>{formatGateStatus(gate.status)}</span>
           <h3>{gate.label}</h3>
           <p>{gate.signal}</p>
           <b>{gate.action}</b>
@@ -446,7 +504,7 @@ const DeliveryReadiness = ({ summary }: { summary: DeliveryReadinessSummary }) =
 const DataBoundary = ({ text }: { text: string }) => (
   <section className="report-callout">
     <div>
-      <p className="eyebrow">DataBoundary</p>
+      <p className="eyebrow">数据边界</p>
       <h3>本报告给出的是可审计决策建议，不是录取承诺</h3>
     </div>
     <p>{text}</p>
@@ -468,26 +526,26 @@ const DecisionEvidenceCard = () => (
   <section className="decision-card">
     <div className="decision-card__header">
       <div>
-        <p className="eyebrow">DecisionEvidenceCard</p>
+        <p className="eyebrow">关键志愿解释</p>
         <h3>关键前缀志愿解释</h3>
       </div>
-      <span>Row 06</span>
+      <span>第 06 行</span>
     </div>
     <div className="decision-card__grid">
       <div>
-        <span>机会 thesis</span>
+        <span>机会判断</span>
         <strong>深圳大学 214 计算机类</strong>
-        <p>命中概率与城市偏好同时满足，且专业方向与 RIASEC 工程/研究倾向一致。</p>
+        <p>命中概率与城市偏好同时满足，且专业方向与霍兰德工程/研究倾向一致。</p>
       </div>
       <div>
-        <span>风险 guard</span>
+        <span>风险控制</span>
         <strong>尾部风险低</strong>
         <p>组内专业没有黑名单碰撞，建议服从调剂，但需复核当年单科和体检规则。</p>
       </div>
       <div>
-        <span>排序 reason</span>
+        <span>排序原因</span>
         <strong>前序失败后的主要承接</strong>
-        <p>该行不是装饰性推荐，first_hit_prob 达 28%，会真实影响整张表的落点。</p>
+        <p>该行不是装饰性推荐，关键命中概率达 28%，会真实影响整张表的落点。</p>
       </div>
     </div>
   </section>
@@ -496,10 +554,10 @@ const DecisionEvidenceCard = () => (
 const VolunteerMatrix = ({ rows }: { rows: MatrixRow[] }) => (
   <section>
     <div className="section-heading">
-      <p>VM</p>
+      <p>02</p>
       <div>
         <h2 className="section-heading__cn">志愿矩阵</h2>
-        <span className="section-heading__en">VolunteerMatrix</span>
+        <span className="section-heading__en">院校专业组对比</span>
       </div>
     </div>
     <table className="report-table">
@@ -509,9 +567,9 @@ const VolunteerMatrix = ({ rows }: { rows: MatrixRow[] }) => (
           <th>院校</th>
           <th>专业方向</th>
           <th>定位</th>
-          <th>分数差距<span className="th-en">probability_range</span></th>
-          <th>关键命中<span className="th-en">first_hit_prob</span></th>
-          <th>调剂风险<span className="th-en">tail_assignment_risk</span></th>
+          <th>分数差距<span className="th-en">区间口径</span></th>
+          <th>关键命中<span className="th-en">首轮承接</span></th>
+          <th>调剂风险<span className="th-en">尾部风险</span></th>
           <th>选择理由</th>
         </tr>
       </thead>
@@ -521,7 +579,7 @@ const VolunteerMatrix = ({ rows }: { rows: MatrixRow[] }) => (
             <td>{row.order}</td>
             <td>{row.school}</td>
             <td>{row.group}</td>
-            <td><span className={`strategy strategy--${row.strategy.toLowerCase()}`}>{row.strategy}</span></td>
+            <td><span className={`strategy strategy--${strategyToneClass(row.strategy)}`}>{formatStrategyLabel(row.strategy)}</span></td>
             <td>{row.probability_range}</td>
             <td>{row.first_hit_prob}</td>
             <td>{row.tail_assignment_risk}</td>
@@ -536,18 +594,18 @@ const VolunteerMatrix = ({ rows }: { rows: MatrixRow[] }) => (
 const EvidenceLedger = ({ items }: { items: EvidenceItem[] }) => (
   <section>
     <div className="section-heading">
-      <p>EL</p>
+      <p>03</p>
       <div>
         <h2 className="section-heading__cn">证据账本</h2>
-        <span className="section-heading__en">EvidenceLedger</span>
+        <span className="section-heading__en">证据来源与使用边界</span>
       </div>
     </div>
     <div className="ledger">
       {items.map((item) => (
         <article key={item.source}>
           <h3>{item.source}</h3>
-          <p><b>Used for</b> {item.usage}</p>
-          <p><b>Boundary</b> {item.boundary}</p>
+          <p><b>用途</b> {item.usage}</p>
+          <p><b>边界</b> {item.boundary}</p>
         </article>
       ))}
     </div>
@@ -557,10 +615,10 @@ const EvidenceLedger = ({ items }: { items: EvidenceItem[] }) => (
 const RiskLedger = ({ items }: { items: RiskItem[] }) => (
   <section>
     <div className="section-heading">
-      <p>RL</p>
+      <p>04</p>
       <div>
         <h2 className="section-heading__cn">风险账本</h2>
-        <span className="section-heading__en">RiskLedger</span>
+        <span className="section-heading__en">风险触发与处理动作</span>
       </div>
     </div>
     <table className="report-table report-table--risk">
@@ -576,7 +634,7 @@ const RiskLedger = ({ items }: { items: RiskItem[] }) => (
         {items.map((item) => (
           <tr key={item.risk}>
             <td>{item.risk}</td>
-            <td><span className={`risk risk--${item.level.toLowerCase()}`}>{item.level}</span></td>
+            <td><span className={`risk risk--${riskToneClass(item.level)}`}>{formatRiskLabel(item.level)}</span></td>
             <td>{item.signal}</td>
             <td>{item.action}</td>
           </tr>
@@ -605,9 +663,9 @@ const RiskScenarioTable = () => (
     <h3>情景压力测试</h3>
     <table className="mini-table">
       <tbody>
-        <tr><th>前序冲刺全失效</th><td>观察 target 行能否承接主要落点</td><td>优先检查 Row 06 / Row 12</td></tr>
+        <tr><th>前序冲刺全失效</th><td>观察稳健段能否承接主要落点</td><td>优先检查第 06 行 / 第 12 行</td></tr>
         <tr><th>热门专业抬升</th><td>观察计算机、电子信息组内尾部风险</td><td>必要时调整专业顺序</td></tr>
-        <tr><th>招生计划缩量</th><td>重新计算位次缓冲与 coverage deficit</td><td>触发二次排序</td></tr>
+        <tr><th>招生计划缩量</th><td>重新计算位次缓冲与覆盖缺口</td><td>触发二次排序</td></tr>
         <tr><th>家庭城市约束收紧</th><td>省外或远距离院校降权</td><td>保底池需补充</td></tr>
       </tbody>
     </table>
@@ -619,7 +677,7 @@ const CareerDirectionTable = () => (
     <h3>专业方向建议</h3>
     <table className="mini-table">
       <tbody>
-        <tr><th>优先解释</th><td>计算机类、电子信息类、自动化类</td><td>RIASEC 可支持</td></tr>
+        <tr><th>优先解释</th><td>计算机类、电子信息类、自动化类</td><td>霍兰德兴趣可支持</td></tr>
         <tr><th>谨慎解释</th><td>宽口径工科试验班、跨校区培养</td><td>需要补充课程结构</td></tr>
         <tr><th>硬性排除</th><td>学生明确黑名单专业</td><td>不可由测评救回</td></tr>
         <tr><th>沟通材料</th><td>MBTI、职业价值观、自我描述</td><td>只用于沟通，不进排序</td></tr>
@@ -1391,7 +1449,7 @@ const ReportStyles = () => (
 
 const PageFooter = ({ page }: { page: string }) => (
   <footer className="page-footer">
-    <span>PathFinder decision-grade report template</span>
+    <span>升学规划定制报告 · 决策版</span>
     <span>{page}</span>
   </footer>
 );
@@ -1403,11 +1461,11 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
       <section className="report-page cover canva-editorial-cover">
         <div className="report-page__inner">
           <div className="brand-row">
-            <strong>PATHFINDER</strong>
-            <span>Admission Planning / Private Sample</span>
+            <strong>升学规划</strong>
+            <span>定制报告样本 · 仅供内部评审</span>
           </div>
           <div className="cover-title">
-            <p className="report-kicker-en">Example 29 · subject combo: Physics / Chemistry / Biology</p>
+            <p className="report-kicker-en">示例29 · 选科物化生 · 2026参考样本</p>
             <h1 className="report-title-cn">升学规划定制报告</h1>
             <p>
               示例29同学，672分，3184位，选科物化生。报告以院校层次、专业实力、城市平台、
@@ -1415,9 +1473,9 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             </p>
           </div>
           <div className="cover-meta">
-            <div><span>Student</span><b>{reportData.studentLabel}</b></div>
-            <div><span>Subject</span><b>物化生</b></div>
-            <div><span>Score / Rank</span><b>{reportData.scoreRankLabel}</b></div>
+            <div><span>学生</span><b>{reportData.studentLabel}</b></div>
+            <div><span>选科</span><b>物化生</b></div>
+            <div><span>分数 / 位次</span><b>{reportData.scoreRankLabel}</b></div>
             <div><span>MBTI</span><b>INTJ</b></div>
           </div>
         </div>
@@ -1429,7 +1487,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <p>01</p>
             <div>
               <h2 className="section-heading__cn">报告目录</h2>
-              <span className="section-heading__en">Decision overview</span>
+              <span className="section-heading__en">阅读顺序与交付结构</span>
             </div>
           </div>
           <div className="toc-grid">
@@ -1437,7 +1495,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <article><span>02</span><h3>院校专业组矩阵</h3><p>用投研式表格展示概率区间、首命中概率、尾部调剂风险和证据说明。</p></article>
             <article><span>03</span><h3>证据账本</h3><p>把官方数据、历史校准、结构化画像和测评信号分层披露。</p></article>
             <article><span>04</span><h3>风险账本</h3><p>明确每个风险的触发信号、严重程度和下一步复核动作。</p></article>
-            <article><span>05</span><h3>职业适配</h3><p>RIASEC 只影响专业解释和软排序；MBTI 不进入推荐算法。</p></article>
+            <article><span>05</span><h3>职业适配</h3><p>霍兰德兴趣只影响专业解释和软排序；MBTI 不进入推荐算法。</p></article>
             <article><span>06</span><h3>最终复核</h3><p>正式填报前按招生计划、章程、体检和单科要求完成人工复核。</p></article>
           </div>
           <DataBoundary text={reportData.dataBoundaryText} />
@@ -1461,7 +1519,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             items={[
               "数据年份、招生计划、位次口径必须在同一页披露。",
               "黑名单专业不得出现在建议填报的 1-6 专业顺序中。",
-              "RIASEC 只解释专业偏好，MBTI 不参与概率和排序。",
+              "霍兰德兴趣只解释专业偏好，MBTI 不参与概率和排序。",
             ]}
           />
           <DeliveryReviewWorksheet />
@@ -1475,7 +1533,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <p>02</p>
             <div>
               <h2 className="section-heading__cn">选择总览</h2>
-              <span className="section-heading__en">Admission plan overview</span>
+              <span className="section-heading__en">院校层次、专业实力与风险总览</span>
             </div>
           </div>
           <div className="metric-grid reference-summary-strip">
@@ -1496,9 +1554,9 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
           <CompactEvidencePanel
             title="矩阵阅读方法"
             items={[
-              "probability_range 看区间，不看单点承诺。",
-              "first_hit_prob 识别真正会改变录取结果的行。",
-              "tail_assignment_risk 决定是否需要人工调整专业顺序。",
+              "分数差距看区间，不看单点承诺。",
+              "关键命中用于识别真正会改变录取结果的行。",
+              "调剂风险决定是否需要人工调整专业顺序。",
             ]}
           />
           <PageFooter page="04" />
@@ -1511,7 +1569,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <p>03</p>
             <div>
               <h2 className="section-heading__cn">关键志愿解释</h2>
-              <span className="section-heading__en">Decision evidence</span>
+              <span className="section-heading__en">为什么这样排序</span>
             </div>
           </div>
           <DecisionEvidenceCard />
@@ -1526,7 +1584,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <p>04</p>
             <div>
               <h2 className="section-heading__cn">风险控制附录</h2>
-              <span className="section-heading__en">Risk control appendix</span>
+              <span className="section-heading__en">正式填报前必须复核</span>
             </div>
           </div>
           <RiskLedger items={reportData.risks} />
@@ -1549,7 +1607,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <p>05</p>
             <div>
               <h2 className="section-heading__cn">专业适配附录</h2>
-              <span className="section-heading__en">Career fit appendix</span>
+              <span className="section-heading__en">兴趣画像与专业解释边界</span>
             </div>
           </div>
           <div className="career-grid">
@@ -1588,8 +1646,8 @@ export function InvestmentResearchReportPreview() {
     <main className="report-preview-shell">
       <ReportStyles />
       <div className="report-toolbar">
-        <p>PathFinder HTML report template · A4 print-ready · investment research style</p>
-        <button type="button" onClick={() => window.print()}>Print / Export PDF</button>
+        <p>升学规划网页报告模板 · A4 可打印 · 投研报告风格</p>
+        <button type="button" onClick={() => window.print()}>打印 / 导出 PDF</button>
       </div>
       <PathFinderReportTemplate payload={payload} />
     </main>
