@@ -57,6 +57,7 @@ for (const token of [
   "comparisonSignals",
   "keyPrefixAudit",
   "shadowedAudit",
+  "ExternalPlanComparator",
 ]) {
   assert(
     source.includes(token),

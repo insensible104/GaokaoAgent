@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { ExternalPlanComparator } from "./ExternalPlanComparator";
 
 export interface MajorOption {
   major_code?: string;
@@ -661,6 +662,8 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
           </div>
         </div>
       </section>
+
+      <ExternalPlanComparator gameMatrix={gameMatrix} />
 
       {optimizationSummary && (
         <section className="min-w-0 overflow-hidden rounded-lg bg-slate-900 p-6 text-slate-50 shadow-md">
