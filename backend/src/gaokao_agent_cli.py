@@ -857,6 +857,7 @@ def cmd_next_iteration_plan(args: argparse.Namespace) -> int:
         for key, value in {
             "coverage_repair_plan": args.coverage_repair_plan,
             "replay_queue_jsonl": args.replay_queue_jsonl,
+            "delivery_bundle_glob": args.delivery_bundle_glob,
         }.items()
         if value
     }
@@ -1117,6 +1118,10 @@ def build_parser() -> argparse.ArgumentParser:
     iteration_plan.add_argument("--coverage-repair-plan", help="JSON produced by benchmark-coverage repair planning.")
     iteration_plan.add_argument("--replay-queue-summary", help="JSON produced by build-replay-queue --summary-json.")
     iteration_plan.add_argument("--replay-queue-jsonl", help="JSONL produced by build-replay-queue --output.")
+    iteration_plan.add_argument(
+        "--delivery-bundle-glob",
+        help="Glob for delivery_bundle.json files when delivery portfolio work is planned.",
+    )
     iteration_plan.add_argument(
         "--claim-readiness-portfolio",
         help="JSON produced by claim-readiness-portfolio --output.",

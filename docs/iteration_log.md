@@ -17,6 +17,41 @@ Each future iteration should record:
 | Validation | Commands/tests/builds actually run. |
 | Remaining Risk | What is still not proven or still manual. |
 
+## 2026-06-15: Delivery-Aware Next Iteration Commands
+
+### Goal
+
+Close the gap between finding delivery-portfolio problems and telling the operator what to run next.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| this commit | Add delivery portfolio commands to next iteration plans |
+
+### What Changed
+
+- Made `next_iteration_plan` detect delivery portfolio blockers from `improvement_audit` findings.
+- Added an automatic `delivery-portfolio-audit` next-run command when delivery portfolio, repeated gate, or client-delivery readiness issues appear.
+- Added CLI support for `--delivery-bundle-glob` so operators can point the generated plan at their actual case archive layout.
+- Updated smoke coverage to assert delivery-aware command generation.
+- Updated the experiment runbook with the new option and delivery metrics.
+
+### Why It Matters
+
+The previous loop could identify that too many cases were not safe for client delivery, but the generated next plan still mostly spoke in backtest and replay commands. This iteration makes operational quality issues executable: after a batch of cases, the next plan can now tell the counselor to rerun delivery portfolio review over the case archive.
+
+### Validation
+
+| Command | Result |
+| --- | --- |
+| `uv run python -m pytest src/test_next_iteration_plan_smoke.py src/test_improvement_audit_smoke.py src/test_delivery_portfolio_smoke.py` | 3 passed |
+
+### Remaining Risk
+
+- The generated command still assumes delivery manifests have already been exported per case.
+- The frontend does not yet show this portfolio dashboard directly.
+
 ## 2026-06-12: Portfolio-Level Client Delivery Readiness
 
 ### Goal

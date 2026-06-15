@@ -418,12 +418,13 @@ Use this after the standard audits when you want one operator-facing plan for
 the next experiment cycle:
 
 ```powershell
-backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py next-iteration-plan --improvement-audit logs\improvement_audit.json --coverage-repair-plan logs\benchmark_coverage_repair_plan.json --replay-queue-summary logs\failure_replay_queue.json --replay-queue-jsonl logs\failure_replay_queue.jsonl --claim-readiness-portfolio logs\claim_readiness_portfolio.json --research-evidence-audit logs\research_evidence_audit.json --output logs\next_iteration_plan.json --report-md logs\next_iteration_plan.md
+backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py next-iteration-plan --improvement-audit logs\improvement_audit.json --coverage-repair-plan logs\benchmark_coverage_repair_plan.json --replay-queue-summary logs\failure_replay_queue.json --replay-queue-jsonl logs\failure_replay_queue.jsonl --delivery-bundle-glob "logs\delivery_*\delivery_bundle.json" --claim-readiness-portfolio logs\claim_readiness_portfolio.json --research-evidence-audit logs\research_evidence_audit.json --output logs\next_iteration_plan.json --report-md logs\next_iteration_plan.md
 ```
 
 The plan merges P0/P1 findings, benchmark coverage repair specs, replay queue
-focus areas, claim-readiness blockers, and research-evidence blockers. Treat
-its commands as the starting point for the next frozen-plan or replay run.
+focus areas, delivery-portfolio blockers, claim-readiness blockers, and
+research-evidence blockers. Treat its commands as the starting point for the
+next frozen-plan, replay, or delivery-portfolio review run.
 - next actions for the next model iteration
 
 ## Plan Quality Audit
@@ -575,9 +576,10 @@ Run with a glob:
 backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py delivery-portfolio-audit --bundle-glob "logs\delivery_*\delivery_bundle.json" --output logs\delivery_portfolio_audit.json --report-md logs\delivery_portfolio_audit.md
 ```
 
-The audit reports ready-to-deliver rate, blocked rate, average intake/plan/report
-scores, top failed gates, repeated next actions, and worst cases. Treat repeated
-failed gates as product work, not one-off customer-service noise.
+The audit reports ready-to-deliver rate, blocked rate, client-delivery allowed
+rate, client-delivery blocked reasons, average intake/plan/report scores, top
+failed gates, repeated next actions, and worst cases. Treat repeated failed
+gates as product work, not one-off customer-service noise.
 
 ## One-Shot Suite
 
