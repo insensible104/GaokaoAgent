@@ -289,7 +289,7 @@ function buildRiskGuard(change: PlanChangeChangeLike): PlanChangeRiskGuard {
   const checks = guard?.checks?.filter(Boolean) ?? [];
   return {
     level: normalizeRiskLevel(guard?.level),
-    checks: checks.length > 0 ? checks : ["do not use as final advice until counselor review"],
+    checks,
   };
 }
 
@@ -313,8 +313,6 @@ function scoreOpportunity(opportunity: {
   }
   if (opportunity.competitorMissed.status === "missed") {
     score += 15;
-  } else if (opportunity.competitorMissed.status === "unknown") {
-    score += 6;
   }
   if (opportunity.recommendationAction !== "review") score += 7;
   if (opportunity.riskGuard.checks.length > 0) score += 8;

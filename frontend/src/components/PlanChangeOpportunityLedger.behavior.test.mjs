@@ -69,6 +69,56 @@ assert.equal(weakLedger.opportunities.length, 0);
 assert.match(weakLedger.blockedClaims.join("\n"), /official 2026 plan diff/);
 assert.match(weakLedger.nextAction, /Attach official 2026/);
 
+const incompleteAuditLedger = ledger.buildPlanChangeOpportunityLedger({
+  gameMatrix: {
+    major_group_rows: [
+      {
+        school_name: "Almost Audited U",
+        school_code: "19999",
+        major_group_code: "301",
+        choice_index: 2,
+        strategy_tag: "rush",
+        plan_change_explanation: {
+          status: "official_diff",
+          ranking_impact: "official_diff_applied",
+          official_changes: [
+            {
+              change_type: "quota_expansion",
+              before: 8,
+              after: 16,
+              evidence: "Official plan row",
+              official_source: "Official 2026 plan",
+              source_tier: "official",
+              applied_to_ranking: true,
+              rank_delta_estimate: {
+                direction: "easier",
+                rank_delta: 900,
+                explanation: "Quota doubles, but external coverage and risk guard are not audited.",
+              },
+              recommendation_action: "promote",
+            },
+          ],
+        },
+      },
+    ],
+    data_vintage: {
+      target_year: 2026,
+      formal_recommendation_ready: true,
+      limitations: [],
+    },
+  },
+  externalPlanAuditSummary: {
+    parsedCount: 1,
+  },
+});
+
+assert.notEqual(incompleteAuditLedger.status, "ready");
+assert.equal(incompleteAuditLedger.score < 85, true);
+assert.equal(incompleteAuditLedger.opportunities[0].competitorMissed.status, "unknown");
+assert.equal(incompleteAuditLedger.opportunities[0].riskGuard.checks.length, 0);
+assert.match(incompleteAuditLedger.blockedClaims.join("\n"), /competitor miss/);
+assert.match(incompleteAuditLedger.blockedClaims.join("\n"), /risk guard/);
+
 const strongLedger = ledger.buildPlanChangeOpportunityLedger({
   gameMatrix: {
     major_group_rows: [
