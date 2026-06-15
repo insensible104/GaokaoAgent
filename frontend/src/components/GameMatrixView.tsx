@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { CounselorDeliveryChecklist } from "./CounselorDeliveryChecklist";
+import { DeliveryReviewRecord } from "./DeliveryReviewRecord";
 import { ExternalPlanComparator } from "./ExternalPlanComparator";
 
 export interface MajorOption {
@@ -665,6 +666,8 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
       </section>
 
       <CounselorDeliveryChecklist gameMatrix={gameMatrix} userProfile={userProfile} />
+
+      <DeliveryReviewRecord gameMatrix={gameMatrix} userProfile={userProfile} />
 
       <ExternalPlanComparator gameMatrix={gameMatrix} />
 

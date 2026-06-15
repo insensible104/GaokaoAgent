@@ -58,6 +58,7 @@ for (const token of [
   "keyPrefixAudit",
   "shadowedAudit",
   "CounselorDeliveryChecklist",
+  "DeliveryReviewRecord",
   "ExternalPlanComparator",
 ]) {
   assert(
