@@ -1,4 +1,9 @@
 import React, { useMemo } from "react";
+import {
+  createDeliveryCaseEventStore,
+  recordDeliveryCaseStatusEvent,
+  replayDeliveryCaseEventStore,
+} from "../lib/deliveryCaseEventStore";
 import { buildDeliveryCaseHistory } from "../lib/deliveryCaseHistory";
 import {
   buildDeliveryCaseStatus,
@@ -92,6 +97,16 @@ export const DeliveryCaseStatusPanel: React.FC<DeliveryCaseStatusPanelProps> = (
     () => buildDeliveryCaseHistory({ current: status, previous: previousStatuses, actor: reviewer }),
     [previousStatuses, reviewer, status],
   );
+  const eventReplay = useMemo(() => {
+    const initialStore = createDeliveryCaseEventStore(status.caseId);
+    const store = recordDeliveryCaseStatusEvent({
+      store: initialStore,
+      status,
+      actor: reviewer,
+      createdAt: status.updatedAt,
+    });
+    return replayDeliveryCaseEventStore(store);
+  }, [reviewer, status]);
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-md" data-protocol={status.protocol}>
@@ -175,6 +190,10 @@ export const DeliveryCaseStatusPanel: React.FC<DeliveryCaseStatusPanelProps> = (
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="mt-4 rounded-md border border-cyan-100 bg-cyan-50 px-4 py-3 text-xs leading-5 text-cyan-950">
+        Event store: {eventReplay.protocol} / events {eventReplay.eventCount} / stage {eventReplay.currentStage}
       </div>
 
       <p className="mt-4 text-xs leading-5 text-gray-500">Claim boundary: {status.claimBoundary}</p>

@@ -42,7 +42,11 @@ const caseStatus = loadTsModule(path.join(libDir, "deliveryCaseStatus.ts"), {
 const caseHistory = loadTsModule(path.join(libDir, "deliveryCaseHistory.ts"), {
   "./deliveryCaseStatus": caseStatus,
 });
+const caseEventStore = loadTsModule(path.join(libDir, "deliveryCaseEventStore.ts"), {
+  "./deliveryCaseStatus": caseStatus,
+});
 const panel = loadTsModule(path.join(here, "DeliveryCaseStatusPanel.tsx"), {
+  "../lib/deliveryCaseEventStore": caseEventStore,
   "../lib/deliveryCaseHistory": caseHistory,
   "../lib/deliveryCaseStatus": caseStatus,
 });
@@ -136,6 +140,7 @@ assert.match(markup, /unmatched 1/);
 assert.match(markup, /duplicates 1/);
 assert.match(markup, /Review record metrics: blocked/);
 assert.match(markup, /delivery_case_history_v1/);
+assert.match(markup, /delivery_case_event_replay_v1/);
 assert.match(markup, /Lock blocked/);
 assert.match(markup, /Claim boundary:/);
 
