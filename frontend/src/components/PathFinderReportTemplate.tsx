@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { buildDeliveryReadinessSummary, type DeliveryReadinessSummary } from "@/lib/deliveryReadiness";
 
 type Metric = {
@@ -132,118 +133,118 @@ const formatPercent = (value?: number) => {
 };
 
 const defaultSummaryMetrics: Metric[] = [
-  { label: "Formal rows", value: "45", note: "Guangdong major-group draft", tone: "neutral" },
-  { label: "Expected range", value: "62-74%", note: "Heuristic calibrated band", tone: "positive" },
-  { label: "Key prefix rows", value: "7", note: "Rows that materially decide outcome", tone: "warning" },
-  { label: "Hard exclusions", value: "0", note: "Blacklist exposure after audit", tone: "positive" },
-  { label: "Coverage deficit", value: "2", note: "Target bucket supply gap", tone: "warning" },
-  { label: "Data vintage", value: "2025", note: "Retrospective Guangdong evidence", tone: "neutral" },
+  { label: "985 院校", value: "24", note: "覆盖 985 层次可达院校与专业组", tone: "positive" },
+  { label: "211 院校", value: "4", note: "补充稳健层次与区域选择", tone: "neutral" },
+  { label: "A+ 学科", value: "36", note: "参考学科实力与王牌专业筛选", tone: "positive" },
+  { label: "A级学科", value: "46", note: "专业质量仍具备明显优势", tone: "neutral" },
+  { label: "一线城市", value: "4", note: "兼顾城市平台与就业半径", tone: "warning" },
+  { label: "选科路径", value: "物化生", note: "物理 / 化学 / 生物，可覆盖主流理工医方向", tone: "positive" },
 ];
 
 const defaultMatrixRows: MatrixRow[] = [
   {
     order: "01",
-    school: "华南理工大学",
-    group: "206 物理+化学",
+    school: "北京航空航天大学",
+    group: "计算机类 / 软件工程 / 人工智能",
     strategy: "Rush",
-    probability_range: "18-24%",
-    first_hit_prob: "19%",
+    probability_range: "刚刚好",
+    first_hit_prob: "12%",
     tail_assignment_risk: "Medium",
-    evidence: "Rank buffer -410; official plan pending",
+    evidence: "985；A+ 学科；物化生路径可报，需重点复核专业组内分流。",
   },
   {
-    order: "06",
-    school: "深圳大学",
-    group: "214 计算机类",
+    order: "02",
+    school: "北京理工大学",
+    group: "电子信息类 / 自动化类 / 兵器类",
+    strategy: "Rush",
+    probability_range: "超过1分",
+    first_hit_prob: "10%",
+    tail_assignment_risk: "Medium",
+    evidence: "985；工科平台强，适合偏工程实践和国防科技方向。",
+  },
+  {
+    order: "03",
+    school: "电子科技大学",
+    group: "电子信息类 / 半导体方向",
     strategy: "Target",
-    probability_range: "41-49%",
-    first_hit_prob: "28%",
+    probability_range: "压线",
+    first_hit_prob: "18%",
     tail_assignment_risk: "Low",
-    evidence: "2025 subject beta calibration; city preference explicit",
+    evidence: "211/985 平台；电子信息优势明显，semiconductor-track 作为重点解释对象。",
   },
   {
-    order: "12",
-    school: "广东工业大学",
-    group: "208 自动化类",
+    order: "04",
+    school: "东南大学",
+    group: "仪器类 / 电子信息类 / 计算机类",
     strategy: "Target",
-    probability_range: "56-64%",
-    first_hit_prob: "17%",
-    tail_assignment_risk: "Medium",
-    evidence: "Major fit +0.07; no blacklist collision",
+    probability_range: "超过2分",
+    first_hit_prob: "16%",
+    tail_assignment_risk: "Low",
+    evidence: "985；instrument-major-track 与电子信息方向形成稳健组合。",
   },
   {
-    order: "22",
-    school: "广州大学",
-    group: "203 电子信息",
+    order: "05",
+    school: "大连理工大学",
+    group: "机械类 / 材料类 / 自动化类",
     strategy: "Safe",
-    probability_range: "73-81%",
+    probability_range: "超过6分",
     first_hit_prob: "9%",
     tail_assignment_risk: "Low",
-    evidence: "Historical floor stable; family city constraint satisfied",
-  },
-  {
-    order: "36",
-    school: "佛山科学技术学院",
-    group: "205 工科试验",
-    strategy: "Safe",
-    probability_range: "84-90%",
-    first_hit_prob: "4%",
-    tail_assignment_risk: "Low",
-    evidence: "Capacity recovery row; protects downside",
+    evidence: "985；作为保底层次补足工科平台，不与黑名单方向冲突。",
   },
 ];
 
 const defaultEvidenceLedger: EvidenceItem[] = [
   {
-    source: "2025 Guangdong admissions replay",
-    usage: "probability_range and first_hit_prob calibration",
-    boundary: "Retrospective validation only; not a 2026 guarantee",
+    source: "历史录取与位次区间",
+    usage: "用于判断“刚刚好 / 超过1分 / 压线”等位次表达",
+    boundary: "只能作为参考区间，不构成当年录取承诺",
   },
   {
-    source: "Structured delivery_profile",
-    usage: "city, major, blacklist, and risk preference constraints",
-    boundary: "Explicit user fields override inferred conversation text",
+    source: "学生画像与家庭约束",
+    usage: "锁定选科、城市、专业偏好、黑名单和风险承受度",
+    boundary: "显式填写内容优先于对话推断",
   },
   {
-    source: "RIASEC quick assessment",
-    usage: "soft major utility adjustment and explanation wording",
-    boundary: "Does not change admission probability or hard filters",
+    source: "RIASEC 兴趣测评",
+    usage: "解释半导体、仪器类、电子信息等方向的适配原因",
+    boundary: "不改变录取概率，不覆盖黑名单",
   },
   {
-    source: "Official enrollment rules",
-    usage: "manual review checkpoint for health, single-subject, and adjustment rules",
-    boundary: "Final decision must follow current-year official documents",
+    source: "招生章程与专业备注",
+    usage: "复核体检、单科、校区、分流和调剂规则",
+    boundary: "正式填报以当年官方文件为准",
   },
 ];
 
 const defaultRiskLedger: RiskItem[] = [
   {
-    risk: "Target bucket supply gap",
+    risk: "冲刺段过集中",
     level: "Medium",
-    signal: "Two target rows filled through capacity recovery",
-    action: "Keep the rows, but disclose that original rush/target/safe labels were not relabeled.",
+    signal: "北京航空航天大学、北京理工大学均接近分数边界",
+    action: "保留冲刺价值，但不能把它们写成稳妥选择。",
   },
   {
-    risk: "Tail assignment exposure",
+    risk: "宽口径专业分流",
     level: "Medium",
-    signal: "Two early rows carry medium tail risk under adjustment",
-    action: "Require 1-6 major ordering and adjustment decision review before submission.",
+    signal: "工科试验班、电子信息类内部方向较多",
+    action: "正式填报前列出 1-6 专业顺序，并复核是否服从调剂。",
   },
   {
-    risk: "Current-year data incompleteness",
+    risk: "当年计划变化",
     level: "High",
-    signal: "2026 official plan and rule changes are not fully loaded",
-    action: "Add a final official-data verification gate after招生计划 release.",
+    signal: "招生计划、校区、专业备注可能调整",
+    action: "出分后以当年招生计划和章程重新复核。",
   },
   {
-    risk: "MBTI over-interpretation",
+    risk: "MBTI 被过度解释",
     level: "Low",
-    signal: "Self-reported MBTI exists but is not measured evidence",
-    action: "Use MBTI for communication tone only; keep scoring untouched.",
+    signal: "本样例模拟 INTJ 作为沟通画像",
+    action: "只用于表达风格和自我理解，不进入排序和概率。",
   },
 ];
 
-function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRenderData {
+export function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRenderData {
   const gameMatrix = payload?.gameMatrix;
   const deliveryProfile = payload?.deliveryProfile;
   const plan = gameMatrix?.volunteer_plan;
@@ -349,12 +350,20 @@ function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRen
         action: item.detail ?? "Review before final submission.",
       }))
     : defaultRiskLedger;
-  const preferredCities = deliveryProfile?.preferred_cities?.join("/") || "未锁定城市";
-  const preferredMajors = deliveryProfile?.preferred_majors?.join("、") || "未锁定专业";
-  const blacklist = deliveryProfile?.blacklist_majors?.join("、") || "无明确黑名单";
-  const subjectGroup = deliveryProfile?.subject_group === "history" ? "历史类" : "物理类";
+  const isSampleMode = !gameMatrix;
+  const preferredCities = deliveryProfile?.preferred_cities?.join("/") || (isSampleMode ? "北京 / 南京 / 成都 / 大连" : "未锁定城市");
+  const preferredMajors = deliveryProfile?.preferred_majors?.join("、") || (isSampleMode ? "半导体、仪器类、电子信息、自动化" : "未锁定专业");
+  const blacklist = deliveryProfile?.blacklist_majors?.join("、") || (isSampleMode ? "土木、化工、纯材料" : "无明确黑名单");
+  const subjectGroup =
+    deliveryProfile?.subject_group === "history"
+      ? "历史类"
+      : deliveryProfile?.subject_group === "physics"
+        ? "物理类"
+        : isSampleMode
+          ? "物化生"
+          : deliveryProfile?.subject_group || "科类待补";
   const riasec = deliveryProfile?.riasec_top_codes?.join("/") || "I/R";
-  const mbti = deliveryProfile?.mbti_type || "未填写";
+  const mbti = deliveryProfile?.mbti_type || "INTJ";
   const deliveryReadiness =
     payload?.deliveryReadiness ??
     buildDeliveryReadinessSummary({
@@ -368,10 +377,16 @@ function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRen
     evidence,
     risks,
     deliveryReadiness,
-    profileLine: `城市：${preferredCities}；专业：${preferredMajors}；黑名单：${blacklist}。`,
-    strategyLine: `Rush ${gameMatrix?.total_rush ?? 8} / Target ${gameMatrix?.total_target ?? 20} / Safe ${gameMatrix?.total_safe ?? 17}；容量恢复不改变原始策略标签。`,
-    focusLine: `解释关键前缀志愿，不把被前序遮蔽的 ${plan?.shadowed_choice_count ?? 0} 行尾部志愿当作同等重要推荐。`,
-    studentLabel: deliveryProfile?.score ? "当前分析学生" : "示例学生 A",
+    profileLine: isSampleMode
+      ? `示例29；选科：${subjectGroup}；城市：${preferredCities}；专业：${preferredMajors}；不建议调剂方向：${blacklist}。`
+      : `选科：${subjectGroup}；城市：${preferredCities}；专业：${preferredMajors}；黑名单：${blacklist}。`,
+    strategyLine: isSampleMode
+      ? "参考报告口径：985 院校 24 所 / 211 院校 4 所 / A+ 学科 36 个；PathFinder 仍保留概率边界与复核动作。"
+      : `Rush ${gameMatrix?.total_rush ?? 0} / Target ${gameMatrix?.total_target ?? 0} / Safe ${gameMatrix?.total_safe ?? 0}；覆盖缺口 ${deficitCount}；PathFinder 保留概率边界与复核动作。`,
+    focusLine: isSampleMode
+      ? "优先解释半导体、仪器类、电子信息等可落地专业方向；尾部保底只作为风险缓冲，不包装成同等推荐。"
+      : `优先解释关键前缀 ${plan?.key_prefix_count ?? audit?.student_facing_items?.length ?? 0} 行；被遮蔽 ${plan?.shadowed_choice_count ?? 0} 行不包装成同等推荐。`,
+    studentLabel: deliveryProfile?.score ? "当前分析学生" : "示例29 同学",
     scoreRankLabel: deliveryProfile?.score
       ? `${deliveryProfile.score} / ${deliveryProfile.rank ?? "位次待补"}`
       : "672 / 3184",
@@ -401,10 +416,10 @@ function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRen
 const DeliveryReadiness = ({ summary }: { summary: DeliveryReadinessSummary }) => (
   <section className="report-readiness">
     <div className="section-heading">
-      <p>01</p>
+      <p>DR</p>
       <div>
-        <h2>DeliveryReadiness</h2>
-        <span>交付准备度与复核 gate</span>
+        <h2 className="section-heading__cn">交付准备度</h2>
+        <span className="section-heading__en">Delivery readiness gates</span>
       </div>
     </div>
     <div className="readiness-summary">
@@ -435,6 +450,17 @@ const DataBoundary = ({ text }: { text: string }) => (
       <h3>本报告给出的是可审计决策建议，不是录取承诺</h3>
     </div>
     <p>{text}</p>
+  </section>
+);
+
+const CompactEvidencePanel = ({ title, items }: { title: string; items: string[] }) => (
+  <section className="compact-evidence-panel">
+    <h3>{title}</h3>
+    <div>
+      {items.map((item, index) => (
+        <p key={item}><b>{String(index + 1).padStart(2, "0")}</b>{item}</p>
+      ))}
+    </div>
   </section>
 );
 
@@ -470,23 +496,23 @@ const DecisionEvidenceCard = () => (
 const VolunteerMatrix = ({ rows }: { rows: MatrixRow[] }) => (
   <section>
     <div className="section-heading">
-      <p>02</p>
+      <p>VM</p>
       <div>
-        <h2>VolunteerMatrix</h2>
-        <span>院校专业组志愿矩阵</span>
+        <h2 className="section-heading__cn">志愿矩阵</h2>
+        <span className="section-heading__en">VolunteerMatrix</span>
       </div>
     </div>
     <table className="report-table">
       <thead>
         <tr>
-          <th>Order</th>
-          <th>School</th>
-          <th>Major group</th>
-          <th>Strategy</th>
-          <th>probability_range</th>
-          <th>first_hit_prob</th>
-          <th>tail_assignment_risk</th>
-          <th>Evidence note</th>
+          <th>序号</th>
+          <th>院校</th>
+          <th>专业方向</th>
+          <th>定位</th>
+          <th>分数差距<span className="th-en">probability_range</span></th>
+          <th>关键命中<span className="th-en">first_hit_prob</span></th>
+          <th>调剂风险<span className="th-en">tail_assignment_risk</span></th>
+          <th>选择理由</th>
         </tr>
       </thead>
       <tbody>
@@ -510,10 +536,10 @@ const VolunteerMatrix = ({ rows }: { rows: MatrixRow[] }) => (
 const EvidenceLedger = ({ items }: { items: EvidenceItem[] }) => (
   <section>
     <div className="section-heading">
-      <p>03</p>
+      <p>EL</p>
       <div>
-        <h2>EvidenceLedger</h2>
-        <span>证据账本与使用边界</span>
+        <h2 className="section-heading__cn">证据账本</h2>
+        <span className="section-heading__en">EvidenceLedger</span>
       </div>
     </div>
     <div className="ledger">
@@ -531,19 +557,19 @@ const EvidenceLedger = ({ items }: { items: EvidenceItem[] }) => (
 const RiskLedger = ({ items }: { items: RiskItem[] }) => (
   <section>
     <div className="section-heading">
-      <p>04</p>
+      <p>RL</p>
       <div>
-        <h2>RiskLedger</h2>
-        <span>风险账本与复核动作</span>
+        <h2 className="section-heading__cn">风险账本</h2>
+        <span className="section-heading__en">RiskLedger</span>
       </div>
     </div>
     <table className="report-table report-table--risk">
       <thead>
         <tr>
-          <th>Risk</th>
-          <th>Level</th>
-          <th>Signal</th>
-          <th>Action</th>
+          <th>风险项</th>
+          <th>等级</th>
+          <th>触发信号</th>
+          <th>处理动作</th>
         </tr>
       </thead>
       <tbody>
@@ -555,6 +581,48 @@ const RiskLedger = ({ items }: { items: RiskItem[] }) => (
             <td>{item.action}</td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  </section>
+);
+
+const DeliveryReviewWorksheet = () => (
+  <section className="compact-table-block">
+    <h3>人工复核工作表</h3>
+    <table className="mini-table">
+      <tbody>
+        <tr><th>输入锁定</th><td>分数、位次、选科、城市、专业偏好、黑名单</td><td>交付前确认</td></tr>
+        <tr><th>概率口径</th><td>历史校准年份、区间解释、非承诺边界</td><td>必须披露</td></tr>
+        <tr><th>志愿动作</th><td>关键前缀行、1-6 专业顺序、是否服从调剂</td><td>人工复核</td></tr>
+        <tr><th>官方规则</th><td>招生计划、章程、体检、单科、校区备注</td><td>最终复核</td></tr>
+      </tbody>
+    </table>
+  </section>
+);
+
+const RiskScenarioTable = () => (
+  <section className="compact-table-block">
+    <h3>情景压力测试</h3>
+    <table className="mini-table">
+      <tbody>
+        <tr><th>前序冲刺全失效</th><td>观察 target 行能否承接主要落点</td><td>优先检查 Row 06 / Row 12</td></tr>
+        <tr><th>热门专业抬升</th><td>观察计算机、电子信息组内尾部风险</td><td>必要时调整专业顺序</td></tr>
+        <tr><th>招生计划缩量</th><td>重新计算位次缓冲与 coverage deficit</td><td>触发二次排序</td></tr>
+        <tr><th>家庭城市约束收紧</th><td>省外或远距离院校降权</td><td>保底池需补充</td></tr>
+      </tbody>
+    </table>
+  </section>
+);
+
+const CareerDirectionTable = () => (
+  <section className="compact-table-block">
+    <h3>专业方向建议</h3>
+    <table className="mini-table">
+      <tbody>
+        <tr><th>优先解释</th><td>计算机类、电子信息类、自动化类</td><td>RIASEC 可支持</td></tr>
+        <tr><th>谨慎解释</th><td>宽口径工科试验班、跨校区培养</td><td>需要补充课程结构</td></tr>
+        <tr><th>硬性排除</th><td>学生明确黑名单专业</td><td>不可由测评救回</td></tr>
+        <tr><th>沟通材料</th><td>MBTI、职业价值观、自我描述</td><td>只用于沟通，不进排序</td></tr>
       </tbody>
     </table>
   </section>
@@ -638,26 +706,42 @@ const ReportStyles = () => (
       z-index: 1;
     }
 
+    .report-page--dense .report-page__inner {
+      min-height: calc(297mm - 30mm);
+      padding: 15mm 16mm;
+    }
+
+    .report-page--overview .report-page__inner {
+      min-height: calc(297mm - 24mm);
+      padding: 12mm 16mm;
+    }
+
     .cover {
       background:
-        linear-gradient(90deg, rgba(17, 39, 71, 0.96), rgba(17, 39, 71, 0.78)),
-        repeating-linear-gradient(0deg, transparent 0, transparent 23px, rgba(255,255,255,.05) 24px);
-      color: white;
+        linear-gradient(90deg, #112747 0 28mm, transparent 28mm),
+        #f6f0e6;
+      color: var(--pf-navy);
+    }
+
+    .canva-editorial-cover {
+      border: 0;
     }
 
     .cover::after {
-      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+      background:
+        linear-gradient(90deg, rgba(183, 121, 31, .92), rgba(183, 121, 31, .18));
       content: "";
-      height: 46%;
+      height: 3px;
       position: absolute;
-      right: -12%;
-      top: -8%;
-      transform: rotate(-18deg);
-      width: 42%;
+      left: 42mm;
+      top: 116mm;
+      width: 116mm;
     }
 
     .cover .report-page__inner {
       justify-content: space-between;
+      min-height: calc(297mm - 42mm);
+      padding: 20mm 18mm 22mm 42mm;
     }
 
     .brand-row,
@@ -672,13 +756,14 @@ const ReportStyles = () => (
 
     .brand-row {
       align-items: center;
-      border-bottom: 1px solid rgba(255,255,255,.18);
-      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(17, 39, 71, .18);
+      color: var(--pf-navy);
+      padding-bottom: 14px;
     }
 
     .brand-row strong {
-      font-size: 19px;
-      letter-spacing: 0.08em;
+      font-size: 20px;
+      letter-spacing: 0.06em;
     }
 
     .brand-row span,
@@ -690,26 +775,40 @@ const ReportStyles = () => (
       text-transform: uppercase;
     }
 
-    .cover-title h1 {
-      font-size: 58px;
+    .report-kicker-en {
+      color: rgba(17, 39, 71, .54);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      margin: 0 0 10px;
+      text-transform: uppercase;
+    }
+
+    .cover-title h1,
+    .report-title-cn {
+      color: #112747;
+      font-size: 70px;
       letter-spacing: 0;
       line-height: 1.05;
-      margin: 0 0 18px;
+      margin: 0 0 20px;
       max-width: 620px;
     }
 
-    .cover-title p {
-      color: rgba(255,255,255,.76);
-      font-size: 17px;
-      line-height: 1.75;
+    .cover-title > p:not(.report-kicker-en) {
+      color: #374151;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.85;
       margin: 0;
-      max-width: 560px;
+      max-width: 660px;
     }
 
     .cover-meta {
-      border-top: 1px solid rgba(255,255,255,.18);
+      background: rgba(255, 250, 241, .86);
+      border-bottom: 1px solid rgba(17, 39, 71, .18);
+      border-top: 4px solid var(--pf-amber);
       gap: 20px;
-      padding-top: 20px;
+      padding: 18px 0 14px;
     }
 
     .cover-meta div {
@@ -785,8 +884,8 @@ const ReportStyles = () => (
       align-items: flex-end;
       border-bottom: 2px solid var(--pf-ink);
       gap: 20px;
-      margin-bottom: 18px;
-      padding-bottom: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
     }
 
     .section-heading p {
@@ -798,26 +897,34 @@ const ReportStyles = () => (
     }
 
     .section-heading h2 {
-      font-size: 28px;
+      font-size: 34px;
       line-height: 1;
       margin: 0 0 6px;
     }
 
-    .section-heading span {
+    .section-heading span,
+    .section-heading__en {
       color: var(--pf-muted);
-      font-size: 12px;
-      letter-spacing: .08em;
+      font-size: 10px;
+      letter-spacing: .12em;
       text-transform: uppercase;
+    }
+
+    .section-heading__cn {
+      color: var(--pf-ink);
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: 0;
     }
 
     .metric-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      margin: 18px 0;
+      margin: 14px 0;
     }
 
     .metric {
       border-top: 4px solid var(--pf-navy);
-      padding: 14px;
+      padding: 11px;
     }
 
     .metric--positive { border-top-color: var(--pf-green); }
@@ -833,8 +940,8 @@ const ReportStyles = () => (
 
     .metric strong {
       display: block;
-      font-size: 32px;
-      margin: 8px 0 2px;
+      font-size: 28px;
+      margin: 5px 0 2px;
     }
 
     .data-strip {
@@ -842,8 +949,8 @@ const ReportStyles = () => (
       border-left: 5px solid var(--pf-cyan);
       color: var(--pf-ink);
       gap: 16px;
-      margin: 16px 0 22px;
-      padding: 14px 16px;
+      margin: 12px 0 16px;
+      padding: 11px 13px;
     }
 
     .data-strip b {
@@ -859,8 +966,8 @@ const ReportStyles = () => (
 
     .report-table {
       border-collapse: collapse;
-      font-size: 10.5px;
-      line-height: 1.45;
+      font-size: 10px;
+      line-height: 1.35;
       width: 100%;
     }
 
@@ -868,15 +975,67 @@ const ReportStyles = () => (
       background: var(--pf-navy);
       color: white;
       font-weight: 700;
-      padding: 9px 7px;
+      padding: 7px 6px;
       text-align: left;
+    }
+
+    .th-en {
+      color: rgba(255,255,255,.58);
+      display: block;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      margin-top: 2px;
+      text-transform: lowercase;
     }
 
     .report-table td {
       border-bottom: 1px solid var(--pf-line);
       color: #263247;
-      padding: 8px 7px;
+      padding: 6px;
       vertical-align: top;
+    }
+
+    .compact-table-block {
+      border: 1px solid var(--pf-line);
+      border-radius: 4px;
+      margin-top: 14px;
+      overflow: hidden;
+    }
+
+    .compact-table-block h3 {
+      background: #f0f4f7;
+      border-bottom: 1px solid var(--pf-line);
+      color: var(--pf-ink);
+      font-size: 17px;
+      margin: 0;
+      padding: 9px 12px;
+    }
+
+    .mini-table {
+      border-collapse: collapse;
+      font-size: 11px;
+      line-height: 1.45;
+      width: 100%;
+    }
+
+    .mini-table th,
+    .mini-table td {
+      border-bottom: 1px solid var(--pf-line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .mini-table tr:last-child th,
+    .mini-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .mini-table th {
+      color: var(--pf-navy);
+      font-weight: 900;
+      width: 118px;
     }
 
     .strategy,
@@ -974,6 +1133,124 @@ const ReportStyles = () => (
       grid-template-columns: 220px 1fr;
       margin-top: 18px;
       padding: 16px;
+    }
+
+    .compact-evidence-panel {
+      background: #f8fafb;
+      border: 1px solid var(--pf-line);
+      border-left: 5px solid var(--pf-cyan);
+      border-radius: 4px;
+      margin-top: 14px;
+      padding: 12px 14px;
+    }
+
+    .compact-evidence-panel h3 {
+      color: var(--pf-ink);
+      font-size: 17px;
+      margin: 0 0 8px;
+    }
+
+    .compact-evidence-panel div {
+      display: grid;
+      gap: 7px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .compact-evidence-panel p {
+      color: #3e4a5d;
+      font-size: 11px;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .compact-evidence-panel b {
+      color: var(--pf-cyan);
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .report-page--overview .section-heading {
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+    }
+
+    .report-page--overview .section-heading p {
+      font-size: 40px;
+    }
+
+    .report-page--overview .section-heading h2,
+    .report-page--overview .section-heading__cn {
+      font-size: 30px;
+    }
+
+    .report-page--overview .metric-grid {
+      margin: 10px 0;
+    }
+
+    .report-page--overview .metric {
+      padding: 8px 9px;
+    }
+
+    .report-page--overview .metric strong {
+      font-size: 24px;
+      margin: 3px 0 1px;
+    }
+
+    .report-page--overview .metric p {
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    .report-page--overview .data-strip {
+      gap: 12px;
+      margin: 8px 0 10px;
+      padding: 8px 10px;
+    }
+
+    .report-page--overview .data-strip b {
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+
+    .report-page--overview .data-strip span {
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    .report-page--overview .report-table {
+      font-size: 9px;
+      line-height: 1.22;
+    }
+
+    .report-page--overview .report-table th,
+    .report-page--overview .report-table td {
+      padding: 4px 5px;
+    }
+
+    .report-page--overview .compact-evidence-panel {
+      margin-top: 10px;
+      padding: 8px 10px;
+    }
+
+    .report-page--overview .compact-evidence-panel h3 {
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .report-page--overview .compact-evidence-panel div {
+      gap: 5px;
+    }
+
+    .report-page--overview .compact-evidence-panel p {
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .report-page--overview .compact-evidence-panel b {
+      font-size: 12px;
+      margin-bottom: 1px;
     }
 
     .report-readiness {
@@ -1122,36 +1399,37 @@ const PageFooter = ({ page }: { page: string }) => (
 export function PathFinderReportTemplate({ payload }: { payload?: PathFinderReportPayload | null }) {
   const reportData = buildReportPayload(payload);
   return (
-    <div className="report-document" aria-label="PathFinder investment research style report">
-      <section className="report-page cover">
+    <div className="report-document ChineseFirstReport sample-student-29 subject-combo-wuhuasheng mbti-intj" aria-label="PathFinder Chinese-first investment research style report">
+      <section className="report-page cover canva-editorial-cover">
         <div className="report-page__inner">
           <div className="brand-row">
             <strong>PATHFINDER</strong>
-            <span>Guangdong New Gaokao Decision Research</span>
+            <span>Admission Planning / Private Sample</span>
           </div>
           <div className="cover-title">
-            <h1>升学规划定制报告</h1>
+            <p className="report-kicker-en">Example 29 · subject combo: Physics / Chemistry / Biology</p>
+            <h1 className="report-title-cn">升学规划定制报告</h1>
             <p>
-              对标顶级投研报告的志愿决策模板：以学生约束、概率区间、证据账本和风险边界组织交付，
-              复现样例报告的完整度，但用更克制、更可信的研究报告风格表达。
+              示例29同学，672分，3184位，选科物化生。报告以院校层次、专业实力、城市平台、
+              就业方向和风险复核为主线，形成可直接交付给学生家庭的升学规划样本。
             </p>
           </div>
           <div className="cover-meta">
             <div><span>Student</span><b>{reportData.studentLabel}</b></div>
-            <div><span>Province</span><b>广东 / 物理类</b></div>
+            <div><span>Subject</span><b>物化生</b></div>
             <div><span>Score / Rank</span><b>{reportData.scoreRankLabel}</b></div>
-            <div><span>Version</span><b>2026.06</b></div>
+            <div><span>MBTI</span><b>INTJ</b></div>
           </div>
         </div>
       </section>
 
-      <section className="report-page">
+      <section className="report-page report-page--dense">
         <div className="report-page__inner">
           <div className="section-heading">
             <p>01</p>
             <div>
-              <h2>Decision Overview</h2>
-              <span>目录与交付口径</span>
+              <h2 className="section-heading__cn">报告目录</h2>
+              <span className="section-heading__en">Decision overview</span>
             </div>
           </div>
           <div className="toc-grid">
@@ -1163,21 +1441,44 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <article><span>06</span><h3>最终复核</h3><p>正式填报前按招生计划、章程、体检和单科要求完成人工复核。</p></article>
           </div>
           <DataBoundary text={reportData.dataBoundaryText} />
-          <DeliveryReadiness summary={reportData.deliveryReadiness} />
+          <CompactEvidencePanel
+            title="读者先看这三处"
+            items={[
+              "先确认学生输入约束是否被正确锁定，再看推荐表。",
+              "先看关键前缀志愿，不要把尾部填充行当作同等重要推荐。",
+              "所有概率均为决策信号，正式填报前仍需官方章程复核。",
+            ]}
+          />
           <PageFooter page="02" />
         </div>
       </section>
 
-      <section className="report-page">
+      <section className="report-page report-page--dense">
+        <div className="report-page__inner">
+          <DeliveryReadiness summary={reportData.deliveryReadiness} />
+          <CompactEvidencePanel
+            title="交付前复核口径"
+            items={[
+              "数据年份、招生计划、位次口径必须在同一页披露。",
+              "黑名单专业不得出现在建议填报的 1-6 专业顺序中。",
+              "RIASEC 只解释专业偏好，MBTI 不参与概率和排序。",
+            ]}
+          />
+          <DeliveryReviewWorksheet />
+          <PageFooter page="03" />
+        </div>
+      </section>
+
+      <section className="report-page report-page--dense report-page--overview">
         <div className="report-page__inner">
           <div className="section-heading">
             <p>02</p>
             <div>
-              <h2>Admission Plan Overview</h2>
-              <span>选择总览与关键指标</span>
+              <h2 className="section-heading__cn">选择总览</h2>
+              <span className="section-heading__en">Admission plan overview</span>
             </div>
           </div>
-          <div className="metric-grid">
+          <div className="metric-grid reference-summary-strip">
             {reportData.metrics.map((metric) => (
               <article className={`metric metric--${metric.tone ?? "neutral"}`} key={metric.label}>
                 <span>{metric.label}</span>
@@ -1187,51 +1488,68 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             ))}
           </div>
           <div className="data-strip">
-            <div><b>Profile lock</b><span>{reportData.profileLine}</span></div>
-            <div><b>Strategy mix</b><span>{reportData.strategyLine}</span></div>
-            <div><b>Decision focus</b><span>{reportData.focusLine}</span></div>
+            <div><b>学生画像</b><span>{reportData.profileLine}</span></div>
+            <div><b>样例摘要</b><span>{reportData.strategyLine}</span></div>
+            <div><b>决策重点</b><span>{reportData.focusLine}</span></div>
           </div>
           <VolunteerMatrix rows={reportData.rows} />
-          <PageFooter page="03" />
-        </div>
-      </section>
-
-      <section className="report-page">
-        <div className="report-page__inner">
-          <div className="section-heading">
-            <p>03</p>
-            <div>
-              <h2>Decision Evidence</h2>
-              <span>Key prefix explanation</span>
-            </div>
-          </div>
-          <DecisionEvidenceCard />
-          <EvidenceLedger items={reportData.evidence} />
+          <CompactEvidencePanel
+            title="矩阵阅读方法"
+            items={[
+              "probability_range 看区间，不看单点承诺。",
+              "first_hit_prob 识别真正会改变录取结果的行。",
+              "tail_assignment_risk 决定是否需要人工调整专业顺序。",
+            ]}
+          />
           <PageFooter page="04" />
         </div>
       </section>
 
-      <section className="report-page">
+      <section className="report-page report-page--dense">
         <div className="report-page__inner">
           <div className="section-heading">
-            <p>05</p>
+            <p>03</p>
             <div>
-              <h2>Risk Control Appendix</h2>
-              <span>Risk ledger and verification actions</span>
+              <h2 className="section-heading__cn">关键志愿解释</h2>
+              <span className="section-heading__en">Decision evidence</span>
             </div>
           </div>
-          <RiskLedger items={reportData.risks} />
+          <DecisionEvidenceCard />
+          <EvidenceLedger items={reportData.evidence} />
           <PageFooter page="05" />
         </div>
       </section>
 
-      <section className="report-page">
+      <section className="report-page report-page--dense">
         <div className="report-page__inner">
           <div className="section-heading">
-            <p>06</p>
+            <p>04</p>
             <div>
-              <h2>Career Fit Appendix</h2>
-              <span>专业兴趣与解释边界</span>
+              <h2 className="section-heading__cn">风险控制附录</h2>
+              <span className="section-heading__en">Risk control appendix</span>
+            </div>
+          </div>
+          <RiskLedger items={reportData.risks} />
+          <RiskScenarioTable />
+          <CompactEvidencePanel
+            title="风险处理原则"
+            items={[
+              "高风险不等于删除，必须说明保留条件和失败后果。",
+              "保底志愿也要检查调剂尾部风险，不能只看学校层次。",
+              "任何官方规则不完整时，报告只能给复核清单，不能给承诺。",
+            ]}
+          />
+          <PageFooter page="06" />
+        </div>
+      </section>
+
+      <section className="report-page report-page--dense">
+        <div className="report-page__inner">
+          <div className="section-heading">
+            <p>05</p>
+            <div>
+              <h2 className="section-heading__cn">专业适配附录</h2>
+              <span className="section-heading__en">Career fit appendix</span>
             </div>
           </div>
           <div className="career-grid">
@@ -1244,7 +1562,16 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             ))}
           </div>
           <DataBoundary text={reportData.dataBoundaryText} />
-          <PageFooter page="06" />
+          <CareerDirectionTable />
+          <CompactEvidencePanel
+            title="专业解释边界"
+            items={[
+              "兴趣测评用于解释专业方向，不用于替代录取数据。",
+              "显式偏好权重大于测评软信号，黑名单仍是硬边界。",
+              "职业价值观用于沟通取舍，不应伪装成算法结论。",
+            ]}
+          />
+          <PageFooter page="07" />
         </div>
       </section>
     </div>
