@@ -4,6 +4,7 @@ import { CounselorDeliveryChecklist } from "./CounselorDeliveryChecklist";
 import { DeliveryCaseStatusPanel } from "./DeliveryCaseStatusPanel";
 import { DeliveryReviewRecord } from "./DeliveryReviewRecord";
 import { ExternalPlanComparator } from "./ExternalPlanComparator";
+import { PaidValuePanel } from "./PaidValuePanel";
 import type { ExternalPlanAuditSummary } from "../lib/externalPlanAudit";
 
 export interface MajorOption {
@@ -691,6 +692,12 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
       <ExternalPlanComparator gameMatrix={gameMatrix} onAuditChange={setExternalPlanAuditSummary} />
 
       <CompetitiveDifferentiationPanel
+        gameMatrix={gameMatrix}
+        userProfile={userProfile}
+        externalPlanAuditSummary={externalPlanAuditSummary}
+      />
+
+      <PaidValuePanel
         gameMatrix={gameMatrix}
         userProfile={userProfile}
         externalPlanAuditSummary={externalPlanAuditSummary}
