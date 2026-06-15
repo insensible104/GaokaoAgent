@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { CounselorDeliveryChecklist } from "./CounselorDeliveryChecklist";
+import { DeliveryCaseStatusPanel } from "./DeliveryCaseStatusPanel";
 import { DeliveryReviewRecord } from "./DeliveryReviewRecord";
 import { ExternalPlanComparator } from "./ExternalPlanComparator";
 import type { ExternalPlanAuditSummary } from "../lib/externalPlanAudit";
@@ -670,6 +671,13 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
       <CounselorDeliveryChecklist
         gameMatrix={gameMatrix}
         userProfile={userProfile}
+        externalPlanAuditSummary={externalPlanAuditSummary}
+      />
+
+      <DeliveryCaseStatusPanel
+        gameMatrix={gameMatrix}
+        userProfile={userProfile}
+        externalPlanCompared={Boolean(externalPlanAuditSummary)}
         externalPlanAuditSummary={externalPlanAuditSummary}
       />
 
