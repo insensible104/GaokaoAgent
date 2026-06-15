@@ -91,6 +91,14 @@ export interface CounselorDeliveryChecklistInput {
   userProfile?: CounselorProfileLike | null;
   reportReady?: boolean;
   externalPlanCompared?: boolean;
+  externalPlanAuditSummary?: {
+    parsedCount?: number;
+    matchedCount?: number;
+    overlapRate?: number;
+    unmatchedEntries?: unknown[];
+    duplicateEntries?: unknown[];
+    findings?: unknown[];
+  } | null;
 }
 
 export const COUNSELOR_DELIVERY_CLAIM_BOUNDARY =
@@ -136,6 +144,12 @@ export function buildCounselorDeliveryChecklist(
     countRowEvidence(gameMatrix?.major_group_rows) +
     countChoiceEvidence(plan?.choices) +
     (audit?.student_facing_items?.length ?? 0);
+  const externalAudit = input.externalPlanAuditSummary;
+  const externalParsedCount = externalAudit?.parsedCount ?? 0;
+  const externalUnmatchedCount = externalAudit?.unmatchedEntries?.length ?? 0;
+  const externalDuplicateCount = externalAudit?.duplicateEntries?.length ?? 0;
+  const externalCompared = input.externalPlanCompared === true || externalParsedCount > 0;
+  const externalNeedsReview = externalUnmatchedCount > 0 || externalDuplicateCount > 0;
 
   const items: CounselorDeliveryChecklistItem[] = [
     {
@@ -197,11 +211,15 @@ export function buildCounselorDeliveryChecklist(
     {
       id: "external_comparison",
       label: "外部方案对照",
-      status: input.externalPlanCompared ? "ready" : "needs_review",
+      status: externalCompared ? (externalNeedsReview ? "needs_review" : "ready") : "needs_review",
       owner: "counselor",
-      evidence: input.externalPlanCompared ? "已完成外部方案结构审计" : "尚未记录千问/老师方案对照",
-      action: input.externalPlanCompared
-        ? "把未匹配条目写入人工复核记录"
+      evidence: externalCompared
+        ? `已审计外部方案 ${externalParsedCount} 行，未匹配 ${externalUnmatchedCount} 行，重复 ${externalDuplicateCount} 行`
+        : "尚未记录千问/老师方案对照",
+      action: externalCompared
+        ? externalNeedsReview
+          ? "把外部方案未匹配条目、重复条目和低重合信号写入人工复核记录"
+          : "保留外部方案审计快照并进入人工复核"
         : "若家长带来千问/老师方案，粘贴到外部方案审计器做结构对照",
     },
     {

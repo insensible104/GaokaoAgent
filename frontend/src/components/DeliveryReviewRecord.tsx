@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { buildDeliveryReviewRecord } from "../lib/deliveryReviewRecord";
+import type { ExternalPlanAuditSummary } from "../lib/externalPlanAudit";
 import type { GameMatrix, RecommendationProfileSummary } from "./GameMatrixView";
 
 interface DeliveryReviewRecordProps {
@@ -7,6 +8,7 @@ interface DeliveryReviewRecordProps {
   userProfile?: RecommendationProfileSummary | null;
   reportReady?: boolean;
   externalPlanCompared?: boolean;
+  externalPlanAuditSummary?: ExternalPlanAuditSummary | null;
 }
 
 const statusLabels = {
@@ -20,6 +22,7 @@ export const DeliveryReviewRecord: React.FC<DeliveryReviewRecordProps> = ({
   userProfile,
   reportReady = false,
   externalPlanCompared = false,
+  externalPlanAuditSummary = null,
 }) => {
   const [copied, setCopied] = useState(false);
   const record = useMemo(
@@ -29,8 +32,9 @@ export const DeliveryReviewRecord: React.FC<DeliveryReviewRecordProps> = ({
         userProfile,
         reportReady,
         externalPlanCompared,
+        externalPlanAuditSummary,
       }),
-    [externalPlanCompared, gameMatrix, reportReady, userProfile],
+    [externalPlanAuditSummary, externalPlanCompared, gameMatrix, reportReady, userProfile],
   );
 
   const copyRecord = async () => {

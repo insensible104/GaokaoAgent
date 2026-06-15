@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import { CounselorDeliveryChecklist } from "./CounselorDeliveryChecklist";
 import { DeliveryReviewRecord } from "./DeliveryReviewRecord";
 import { ExternalPlanComparator } from "./ExternalPlanComparator";
+import type { ExternalPlanAuditSummary } from "../lib/externalPlanAudit";
 
 export interface MajorOption {
   major_code?: string;
@@ -299,6 +300,7 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
   const [sortBy, setSortBy] = useState<"choice" | "prob" | "rank" | "firstHit" | "quant">("choice");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [externalPlanAuditSummary, setExternalPlanAuditSummary] = useState<ExternalPlanAuditSummary | null>(null);
 
   const dataSource = useMemo(
     () => (gameMatrix.major_group_rows && gameMatrix.major_group_rows.length > 0 ? gameMatrix.major_group_rows : []),
@@ -665,11 +667,19 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
         </div>
       </section>
 
-      <CounselorDeliveryChecklist gameMatrix={gameMatrix} userProfile={userProfile} />
+      <CounselorDeliveryChecklist
+        gameMatrix={gameMatrix}
+        userProfile={userProfile}
+        externalPlanAuditSummary={externalPlanAuditSummary}
+      />
 
-      <DeliveryReviewRecord gameMatrix={gameMatrix} userProfile={userProfile} />
+      <DeliveryReviewRecord
+        gameMatrix={gameMatrix}
+        userProfile={userProfile}
+        externalPlanAuditSummary={externalPlanAuditSummary}
+      />
 
-      <ExternalPlanComparator gameMatrix={gameMatrix} />
+      <ExternalPlanComparator gameMatrix={gameMatrix} onAuditChange={setExternalPlanAuditSummary} />
 
       {optimizationSummary && (
         <section className="min-w-0 overflow-hidden rounded-lg bg-slate-900 p-6 text-slate-50 shadow-md">

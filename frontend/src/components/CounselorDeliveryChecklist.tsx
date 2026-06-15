@@ -4,6 +4,7 @@ import {
   type CounselorChecklistOwner,
   type CounselorChecklistStatus,
 } from "../lib/counselorDeliveryChecklist";
+import type { ExternalPlanAuditSummary } from "../lib/externalPlanAudit";
 import type { GameMatrix, RecommendationProfileSummary } from "./GameMatrixView";
 
 interface CounselorDeliveryChecklistProps {
@@ -11,6 +12,7 @@ interface CounselorDeliveryChecklistProps {
   userProfile?: RecommendationProfileSummary | null;
   reportReady?: boolean;
   externalPlanCompared?: boolean;
+  externalPlanAuditSummary?: ExternalPlanAuditSummary | null;
 }
 
 const statusLabels: Record<CounselorChecklistStatus, string> = {
@@ -36,6 +38,7 @@ export const CounselorDeliveryChecklist: React.FC<CounselorDeliveryChecklistProp
   userProfile,
   reportReady = false,
   externalPlanCompared = false,
+  externalPlanAuditSummary = null,
 }) => {
   const checklist = useMemo(
     () =>
@@ -44,8 +47,9 @@ export const CounselorDeliveryChecklist: React.FC<CounselorDeliveryChecklistProp
         userProfile,
         reportReady,
         externalPlanCompared,
+        externalPlanAuditSummary,
       }),
-    [externalPlanCompared, gameMatrix, reportReady, userProfile],
+    [externalPlanAuditSummary, externalPlanCompared, gameMatrix, reportReady, userProfile],
   );
 
   return (

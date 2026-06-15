@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { auditExternalPlan } from "../lib/externalPlanAudit";
-import type { ExternalPlanFinding, ExternalPlanStrategy } from "../lib/externalPlanAudit";
+import type { ExternalPlanAuditSummary, ExternalPlanFinding, ExternalPlanStrategy } from "../lib/externalPlanAudit";
 import type { GameMatrix } from "./GameMatrixView";
 
 interface ExternalPlanComparatorProps {
   gameMatrix: GameMatrix;
+  onAuditChange?: (summary: ExternalPlanAuditSummary | null) => void;
 }
 
 const examplePlan = [
@@ -28,7 +29,7 @@ const severityStyles: Record<ExternalPlanFinding["severity"], string> = {
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(0)}%`;
 
-export const ExternalPlanComparator: React.FC<ExternalPlanComparatorProps> = ({ gameMatrix }) => {
+export const ExternalPlanComparator: React.FC<ExternalPlanComparatorProps> = ({ gameMatrix, onAuditChange }) => {
   const [externalPlanText, setExternalPlanText] = useState("");
   const summary = useMemo(
     () => auditExternalPlan({ text: externalPlanText, gameMatrix }),
@@ -36,6 +37,10 @@ export const ExternalPlanComparator: React.FC<ExternalPlanComparatorProps> = ({ 
   );
   const hasInput = externalPlanText.trim().length > 0;
   const unmatchedPreview = summary.unmatchedEntries.slice(0, 6);
+
+  useEffect(() => {
+    onAuditChange?.(hasInput ? summary : null);
+  }, [hasInput, onAuditChange, summary]);
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-md">
