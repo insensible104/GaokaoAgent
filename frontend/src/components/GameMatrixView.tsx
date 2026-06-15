@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { CompetitiveDifferentiationPanel } from "./CompetitiveDifferentiationPanel";
 import { CounselorDeliveryChecklist } from "./CounselorDeliveryChecklist";
 import { DeliveryCaseStatusPanel } from "./DeliveryCaseStatusPanel";
 import { DeliveryReviewRecord } from "./DeliveryReviewRecord";
@@ -688,6 +689,12 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
       />
 
       <ExternalPlanComparator gameMatrix={gameMatrix} onAuditChange={setExternalPlanAuditSummary} />
+
+      <CompetitiveDifferentiationPanel
+        gameMatrix={gameMatrix}
+        userProfile={userProfile}
+        externalPlanAuditSummary={externalPlanAuditSummary}
+      />
 
       {optimizationSummary && (
         <section className="min-w-0 overflow-hidden rounded-lg bg-slate-900 p-6 text-slate-50 shadow-md">
