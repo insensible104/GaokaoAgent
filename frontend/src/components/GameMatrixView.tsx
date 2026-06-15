@@ -5,6 +5,7 @@ import { DeliveryCaseStatusPanel } from "./DeliveryCaseStatusPanel";
 import { DeliveryReviewRecord } from "./DeliveryReviewRecord";
 import { ExternalPlanComparator } from "./ExternalPlanComparator";
 import { PaidValuePanel } from "./PaidValuePanel";
+import { PlanChangeOpportunityLedgerPanel } from "./PlanChangeOpportunityLedgerPanel";
 import type { ExternalPlanAuditSummary } from "../lib/externalPlanAudit";
 
 export interface MajorOption {
@@ -38,8 +39,24 @@ interface PlanChangeItem {
   before?: unknown;
   after?: unknown;
   evidence?: string;
+  official_source?: string;
   source_tier?: string;
   applied_to_ranking?: boolean;
+  rank_delta_estimate?: {
+    direction?: "easier" | "harder" | "uncertain" | string;
+    rank_delta?: number;
+    explanation?: string;
+  };
+  external_plan_coverage?: {
+    competitor_missed?: boolean;
+    checked_sources?: string[];
+    evidence?: string;
+  };
+  recommendation_action?: "promote" | "guard" | "avoid" | "review" | string;
+  risk_guard?: {
+    level?: "low" | "medium" | "high" | string;
+    checks?: string[];
+  };
 }
 
 interface PlanChangeExplanation {
@@ -694,6 +711,11 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
       <CompetitiveDifferentiationPanel
         gameMatrix={gameMatrix}
         userProfile={userProfile}
+        externalPlanAuditSummary={externalPlanAuditSummary}
+      />
+
+      <PlanChangeOpportunityLedgerPanel
+        gameMatrix={gameMatrix}
         externalPlanAuditSummary={externalPlanAuditSummary}
       />
 
