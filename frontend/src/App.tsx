@@ -10,6 +10,7 @@ const GameMatrixView = lazy(() => import("@/components/GameMatrixView").then(mod
 const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryReview").then(module => ({ default: module.InternalDeliveryReview })));
 const InvestmentResearchReportPreview = lazy(() => import("@/components/PathFinderReportTemplate").then(module => ({ default: module.InvestmentResearchReportPreview })));
 const DeliveryReadinessConsole = lazy(() => import("@/components/DeliveryReadinessConsole").then(module => ({ default: module.DeliveryReadinessConsole })));
+const AdmissionsOpportunityDemoCasePanel = lazy(() => import("@/components/AdmissionsOpportunityDemoCasePanel").then(module => ({ default: module.AdmissionsOpportunityDemoCasePanel })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
@@ -194,6 +195,12 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [progressSteps, setProgressSteps] = useState<AgentStep[]>([]);
   const [deliveryProfile, setDeliveryProfile] = useState<DeliveryProfile | null>(null);
+  const admissionsOpportunityDemoRequested =
+    window.location.pathname.includes("admissions-opportunity-demo") ||
+    new URLSearchParams(window.location.search).get("demo") === "admissions-opportunity";
+  const showAdmissionsOpportunityDemo =
+    import.meta.env.DEV || import.meta.env.VITE_SHOW_ADMISSIONS_DEMO === "true";
+  const showDedicatedAdmissionsOpportunityDemo = showAdmissionsOpportunityDemo && admissionsOpportunityDemoRequested;
 
   // 修复：添加AbortController ref，用于取消请求
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -466,6 +473,18 @@ function AppContent() {
     );
   }
 
+  if (showDedicatedAdmissionsOpportunityDemo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
+        <main className="container mx-auto max-w-6xl px-4 py-8">
+          <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
+            <AdmissionsOpportunityDemoCasePanel />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -482,7 +501,20 @@ function AppContent() {
         {/* Main Content */}
         <main>
           {!result && !isAnalyzing && !error && (
-            <GaokaoAgentForm onSubmit={handleSubmit} />
+            <div className="space-y-6">
+              <GaokaoAgentForm onSubmit={handleSubmit} />
+              {showAdmissionsOpportunityDemo && (
+                <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
+                  <section className="rounded-2xl border border-sky-200 bg-white/85 p-4 shadow-sm">
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold uppercase text-sky-700">Internal evidence demo</p>
+                      <h2 className="text-xl font-bold text-slate-950">Admissions opportunity demo case</h2>
+                    </div>
+                    <AdmissionsOpportunityDemoCasePanel />
+                  </section>
+                </Suspense>
+              )}
+            </div>
           )}
 
           {isAnalyzing && (

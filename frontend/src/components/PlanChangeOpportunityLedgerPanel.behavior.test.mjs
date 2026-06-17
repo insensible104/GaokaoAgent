@@ -96,6 +96,21 @@ const markup = renderToStaticMarkup(
       duplicateEntries: [],
       findings: [],
     },
+    hiddenOpportunityAudit: {
+      protocol: "hidden_opportunity_audit_v1",
+      status: "candidate_for_counselor_review",
+      labelPermission: "under_attention_candidate_only",
+      score: 100,
+      reviewGate: {
+        canEnterLedger: true,
+        canUseHiddenOpportunityLabel: true,
+        mustStayHypothesisOnly: true,
+        counselorSignoffRequired: true,
+        reasons: ["Public-opinion signals remain hypothesis-only even when the row enters the opportunity ledger."],
+      },
+      forbiddenClaims: ["Do not claim admission guarantee.", "Do not claim final recommendation."],
+      claimBoundary: "Hidden opportunity audit is a counselor-review gate only.",
+    },
   }),
 );
 
@@ -108,6 +123,11 @@ assert.match(markup, /rank delta/i);
 assert.match(markup, /competitor missed/i);
 assert.match(markup, /recommendation action/i);
 assert.match(markup, /risk guard/i);
+assert.match(markup, /hidden opportunity gate/i);
+assert.match(markup, /hidden_opportunity_audit_v1/);
+assert.match(markup, /under_attention_candidate_only/);
+assert.match(markup, /can enter ledger: yes/);
+assert.match(markup, /must stay hypothesis-only: yes/);
 assert.match(markup, /South China Tech/);
 assert.match(markup, /quota_expansion/);
 

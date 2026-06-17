@@ -27,6 +27,35 @@ function loadTsModule(filePath, mocks = {}) {
 
 const ledger = loadTsModule(path.join(libDir, "planChangeOpportunityLedger.ts"));
 
+const readyHiddenOpportunityAudit = {
+  protocol: "hidden_opportunity_audit_v1",
+  status: "candidate_for_counselor_review",
+  labelPermission: "under_attention_candidate_only",
+  score: 100,
+  reviewGate: {
+    canEnterLedger: true,
+    canUseHiddenOpportunityLabel: true,
+    mustStayHypothesisOnly: true,
+    counselorSignoffRequired: true,
+    reasons: ["Public-opinion signals remain hypothesis-only even when the row enters the opportunity ledger."],
+  },
+  forbiddenClaims: ["Do not claim admission guarantee.", "Do not claim final recommendation."],
+  claimBoundary: "Hidden opportunity audit is a counselor-review gate only.",
+};
+
+const blockedHiddenOpportunityAudit = {
+  ...readyHiddenOpportunityAudit,
+  status: "blocked",
+  labelPermission: "do_not_use_hidden_opportunity",
+  score: 42,
+  reviewGate: {
+    ...readyHiddenOpportunityAudit.reviewGate,
+    canEnterLedger: false,
+    canUseHiddenOpportunityLabel: false,
+    reasons: ["counter_evidence search has rejected or unreturned rows."],
+  },
+};
+
 const weakLedger = ledger.buildPlanChangeOpportunityLedger({
   gameMatrix: {
     major_group_rows: [
@@ -177,6 +206,7 @@ const strongLedger = ledger.buildPlanChangeOpportunityLedger({
     duplicateEntries: [],
     findings: [],
   },
+  hiddenOpportunityAudit: readyHiddenOpportunityAudit,
 });
 
 assert.equal(strongLedger.status, "ready");
@@ -200,7 +230,81 @@ assert.equal(opportunity.rankDeltaEstimate.rankDelta, 1800);
 assert.equal(opportunity.competitorMissed.status, "missed");
 assert.equal(opportunity.recommendationAction, "promote");
 assert.equal(opportunity.riskGuard.level, "medium");
+assert.equal(opportunity.hiddenOpportunityAudit.status, "candidate_for_counselor_review");
+assert.equal(opportunity.hiddenOpportunityAudit.labelPermission, "under_attention_candidate_only");
+assert.equal(opportunity.hiddenOpportunityAudit.mustStayHypothesisOnly, true);
 assert.match(opportunity.auditTrail.join("\n"), /official_source -> diff_type -> affected_rows -> rank_delta_estimate -> competitor_missed -> recommendation_action -> risk_guard/);
+assert.match(opportunity.auditTrail.join("\n"), /hidden_opportunity_audit=can_enter_ledger/);
+assert.equal(strongLedger.hiddenOpportunityGate.status, "candidate_cleared");
+assert.equal(strongLedger.hiddenOpportunityGate.canEnterLedger, true);
+assert.equal(strongLedger.hiddenOpportunityGate.labelPermission, "under_attention_candidate_only");
 assert.deepEqual(strongLedger.blockedClaims, []);
 
+const blockedByHiddenAuditLedger = ledger.buildPlanChangeOpportunityLedger({
+  gameMatrix: strongLedgerInputGameMatrix(),
+  externalPlanAuditSummary: {
+    parsedCount: 2,
+  },
+  hiddenOpportunityAudit: blockedHiddenOpportunityAudit,
+});
+
+assert.equal(blockedByHiddenAuditLedger.status, "blocked");
+assert.equal(blockedByHiddenAuditLedger.opportunities.length, 0);
+assert.equal(blockedByHiddenAuditLedger.hiddenOpportunityGate.status, "blocked");
+assert.equal(blockedByHiddenAuditLedger.hiddenOpportunityGate.canEnterLedger, false);
+assert.match(blockedByHiddenAuditLedger.blockedClaims.join("\n"), /Hidden opportunity audit blocked ledger entry/i);
+assert.match(blockedByHiddenAuditLedger.summary, /blocked by hidden opportunity audit/i);
+
 console.log("Plan change opportunity ledger behavior test passed");
+
+function strongLedgerInputGameMatrix() {
+  return {
+    major_group_rows: [
+      {
+        school_name: "South China Tech",
+        school_code: "10561",
+        major_group_code: "202",
+        choice_index: 3,
+        strategy_tag: "target",
+        admission_prob: 0.68,
+        min_rank_pred: 42000,
+        major_list: ["Computer Science", "Software Engineering"],
+        plan_change_explanation: {
+          status: "official_diff",
+          ranking_impact: "official_diff_applied",
+          official_changes: [
+            {
+              change_type: "quota_expansion",
+              before: 20,
+              after: 36,
+              evidence: "Guangdong 2026 official plan row 10561-202",
+              official_source: "Guangdong Education Exam Authority 2026 enrollment plan",
+              source_tier: "official",
+              applied_to_ranking: true,
+              rank_delta_estimate: {
+                direction: "easier",
+                rank_delta: 1800,
+                explanation: "Quota expands 80%, so comparable cutoff can loosen after demand guard.",
+              },
+              external_plan_coverage: {
+                competitor_missed: true,
+                checked_sources: ["qianwen", "teacher"],
+                evidence: "External plan kept last year's rank anchor and did not mention quota expansion.",
+              },
+              recommendation_action: "promote",
+              risk_guard: {
+                level: "medium",
+                checks: ["do not use as safety anchor", "verify group code before final signoff"],
+              },
+            },
+          ],
+        },
+      },
+    ],
+    data_vintage: {
+      target_year: 2026,
+      formal_recommendation_ready: true,
+      limitations: [],
+    },
+  };
+}

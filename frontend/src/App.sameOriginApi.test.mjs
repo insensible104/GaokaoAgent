@@ -27,4 +27,16 @@ assert.doesNotMatch(
   "student-facing production errors should not prescribe a development-only host"
 );
 
+assert.match(
+  appSource,
+  /const showDedicatedAdmissionsOpportunityDemo\s*=\s*showAdmissionsOpportunityDemo && admissionsOpportunityDemoRequested;/,
+  "production demo route must stay behind the explicit admissions demo gate"
+);
+
+assert.match(
+  appSource,
+  /if \(showDedicatedAdmissionsOpportunityDemo\)/,
+  "dedicated admissions demo rendering should use the gated route flag"
+);
+
 console.log("same-origin API smoke test passed");

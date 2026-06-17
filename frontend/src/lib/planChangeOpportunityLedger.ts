@@ -1,3 +1,5 @@
+import type { HiddenOpportunityAudit } from "./hiddenOpportunityAudit";
+
 export type PlanChangeLedgerStatus = "ready" | "partial" | "blocked";
 export type PlanChangeDiffType =
   | "quota_expansion"
@@ -46,10 +48,30 @@ export interface PlanChangeOpportunity {
   competitorMissed: PlanChangeCompetitorMissed;
   recommendationAction: "promote" | "guard" | "avoid" | "review";
   riskGuard: PlanChangeRiskGuard;
+  hiddenOpportunityAudit?: PlanChangeHiddenOpportunityAuditSnapshot;
   auditScore: number;
   status: PlanChangeLedgerStatus;
   evidence: string;
   auditTrail: string[];
+}
+
+export interface PlanChangeHiddenOpportunityAuditSnapshot {
+  protocol: HiddenOpportunityAudit["protocol"];
+  status: HiddenOpportunityAudit["status"];
+  labelPermission: HiddenOpportunityAudit["labelPermission"];
+  score: number;
+  canEnterLedger: boolean;
+  mustStayHypothesisOnly: boolean;
+  claimBoundary: string;
+}
+
+export interface PlanChangeHiddenOpportunityGate {
+  status: "not_supplied" | "candidate_cleared" | "hypothesis_only" | "blocked";
+  canEnterLedger: boolean;
+  labelPermission: HiddenOpportunityAudit["labelPermission"] | "not_supplied";
+  score: number | null;
+  reasons: string[];
+  claimBoundary: string;
 }
 
 export interface PlanChangeOpportunityLedger {
@@ -58,6 +80,7 @@ export interface PlanChangeOpportunityLedger {
   score: number;
   status: PlanChangeLedgerStatus;
   opportunities: PlanChangeOpportunity[];
+  hiddenOpportunityGate: PlanChangeHiddenOpportunityGate;
   blockedClaims: string[];
   summary: string;
   nextAction: string;
@@ -128,6 +151,7 @@ interface ExternalAuditLike {
 export interface PlanChangeOpportunityLedgerInput {
   gameMatrix?: GameMatrixLike | null;
   externalPlanAuditSummary?: ExternalAuditLike | null;
+  hiddenOpportunityAudit?: HiddenOpportunityAudit | null;
 }
 
 export const PLAN_CHANGE_LEDGER_CLAIM_BOUNDARY =
@@ -137,16 +161,33 @@ export function buildPlanChangeOpportunityLedger(
   input: PlanChangeOpportunityLedgerInput,
 ): PlanChangeOpportunityLedger {
   const rows = input.gameMatrix?.major_group_rows ?? [];
-  const opportunities = rows.flatMap((row, rowIndex) =>
+  const hiddenOpportunityGate = buildHiddenOpportunityGate(input.hiddenOpportunityAudit);
+  const rawOpportunities = rows.flatMap((row, rowIndex) =>
     (row.plan_change_explanation?.official_changes ?? [])
       .filter((change) => isOfficialChange(change))
-      .map((change, changeIndex) => buildOpportunity(row, rowIndex, change, changeIndex, input.externalPlanAuditSummary)),
+      .map((change, changeIndex) => buildOpportunity(
+        row,
+        rowIndex,
+        change,
+        changeIndex,
+        input.externalPlanAuditSummary,
+        input.hiddenOpportunityAudit,
+      )),
   );
+  const opportunities = hiddenOpportunityGate.canEnterLedger ? rawOpportunities : [];
   const score = opportunities.length > 0 ? Math.max(...opportunities.map((opportunity) => opportunity.auditScore)) : 0;
   const boundary = input.gameMatrix?.plan_audit_summary?.data_boundary ?? input.gameMatrix?.data_vintage;
   const formalReady = boundary?.formal_recommendation_ready === true;
-  const status = score >= 85 && formalReady ? "ready" : score >= 55 ? "partial" : "blocked";
-  const blockedClaims = buildBlockedClaims({ opportunities, score, formalReady });
+  const status = hiddenOpportunityGate.canEnterLedger
+    ? score >= 85 && formalReady ? "ready" : score >= 55 ? "partial" : "blocked"
+    : "blocked";
+  const blockedClaims = buildBlockedClaims({
+    opportunities,
+    rawOpportunityCount: rawOpportunities.length,
+    score,
+    formalReady,
+    hiddenOpportunityGate,
+  });
 
   return {
     protocol: "plan_change_opportunity_ledger_v1",
@@ -154,8 +195,12 @@ export function buildPlanChangeOpportunityLedger(
     score,
     status,
     opportunities,
+    hiddenOpportunityGate,
     blockedClaims,
     summary:
+      !hiddenOpportunityGate.canEnterLedger && rawOpportunities.length > 0
+        ? `${rawOpportunities.length} official plan-change opportunity object(s) blocked by hidden opportunity audit.`
+        :
       opportunities.length > 0
         ? `${opportunities.length} official plan-change opportunity object(s), top audit score ${score}.`
         : "No official plan-change opportunity object is audit-ready.",
@@ -172,6 +217,7 @@ function buildOpportunity(
   change: PlanChangeChangeLike,
   changeIndex: number,
   externalAudit?: ExternalAuditLike | null,
+  hiddenOpportunityAudit?: HiddenOpportunityAudit | null,
 ): PlanChangeOpportunity {
   const diffType = normalizeDiffType(change.change_type);
   const officialSource = String(change.official_source || change.source || change.evidence || "official enrollment plan row");
@@ -189,6 +235,9 @@ function buildOpportunity(
     recommendationAction,
     riskGuard,
   });
+  const hiddenOpportunityAuditSnapshot = hiddenOpportunityAudit
+    ? buildHiddenOpportunityAuditSnapshot(hiddenOpportunityAudit)
+    : undefined;
 
   return {
     id: `${row.school_code ?? row.school_name ?? "school"}-${row.major_group_code ?? rowIndex}-${diffType}-${changeIndex}`,
@@ -201,6 +250,7 @@ function buildOpportunity(
     competitorMissed,
     recommendationAction,
     riskGuard,
+    hiddenOpportunityAudit: hiddenOpportunityAuditSnapshot,
     auditScore,
     status: auditScore >= 85 ? "ready" : auditScore >= 55 ? "partial" : "blocked",
     evidence: String(change.evidence || officialSource),
@@ -212,6 +262,9 @@ function buildOpportunity(
       `competitor_missed=${competitorMissed.status}`,
       `recommendation_action=${recommendationAction}`,
       `risk_guard=${riskGuard.level}`,
+      hiddenOpportunityAuditSnapshot
+        ? `hidden_opportunity_audit=${hiddenOpportunityAuditSnapshot.canEnterLedger ? "can_enter_ledger" : "blocked"}:${hiddenOpportunityAuditSnapshot.status}`
+        : "hidden_opportunity_audit=not_supplied",
     ],
   };
 }
@@ -321,14 +374,25 @@ function scoreOpportunity(opportunity: {
 
 function buildBlockedClaims({
   opportunities,
+  rawOpportunityCount,
   score,
   formalReady,
+  hiddenOpportunityGate,
 }: {
   opportunities: PlanChangeOpportunity[];
+  rawOpportunityCount: number;
   score: number;
   formalReady: boolean;
+  hiddenOpportunityGate: PlanChangeHiddenOpportunityGate;
 }): string[] {
   const blocked: string[] = [];
+  if (!hiddenOpportunityGate.canEnterLedger && rawOpportunityCount > 0) {
+    blocked.push(
+      `Hidden opportunity audit blocked ledger entry: ${hiddenOpportunityGate.reasons.join(" ") || "audit gate did not clear."}`,
+    );
+    blocked.push("Do not claim hidden opportunity or under-attention candidate until the hidden opportunity audit clears.");
+    return blocked;
+  }
   if (opportunities.length === 0) {
     blocked.push("Attach official 2026 plan diff before claiming any paid plan-change opportunity.");
     blocked.push("Do not claim official 2026 plan diff opportunity until an official 2026 plan diff is attached.");
@@ -341,6 +405,47 @@ function buildBlockedClaims({
     blocked.push("Do not final-sign plan-change opportunity while the official data boundary is not ready.");
   }
   return blocked;
+}
+
+function buildHiddenOpportunityGate(
+  audit?: HiddenOpportunityAudit | null,
+): PlanChangeHiddenOpportunityGate {
+  if (!audit) {
+    return {
+      status: "not_supplied",
+      canEnterLedger: true,
+      labelPermission: "not_supplied",
+      score: null,
+      reasons: [],
+      claimBoundary: "No hidden opportunity audit was supplied; ledger status reflects official plan-change audit only.",
+    };
+  }
+  const canEnterLedger = audit.reviewGate.canEnterLedger === true;
+  const status = canEnterLedger
+    ? "candidate_cleared"
+    : audit.status === "blocked" ? "blocked" : "hypothesis_only";
+  return {
+    status,
+    canEnterLedger,
+    labelPermission: audit.labelPermission,
+    score: audit.score,
+    reasons: audit.reviewGate.reasons,
+    claimBoundary: audit.claimBoundary,
+  };
+}
+
+function buildHiddenOpportunityAuditSnapshot(
+  audit: HiddenOpportunityAudit,
+): PlanChangeHiddenOpportunityAuditSnapshot {
+  return {
+    protocol: audit.protocol,
+    status: audit.status,
+    labelPermission: audit.labelPermission,
+    score: audit.score,
+    canEnterLedger: audit.reviewGate.canEnterLedger,
+    mustStayHypothesisOnly: audit.reviewGate.mustStayHypothesisOnly,
+    claimBoundary: audit.claimBoundary,
+  };
 }
 
 function normalizeDiffType(value?: string): PlanChangeDiffType {

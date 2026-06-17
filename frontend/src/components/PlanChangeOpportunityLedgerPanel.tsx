@@ -1,11 +1,13 @@
 import React, { useMemo } from "react";
 import { buildPlanChangeOpportunityLedger } from "../lib/planChangeOpportunityLedger";
 import type { ExternalPlanAuditSummary } from "../lib/externalPlanAudit";
+import type { HiddenOpportunityAudit } from "../lib/hiddenOpportunityAudit";
 import type { GameMatrix } from "./GameMatrixView";
 
 interface PlanChangeOpportunityLedgerPanelProps {
   gameMatrix: GameMatrix;
   externalPlanAuditSummary?: ExternalPlanAuditSummary | null;
+  hiddenOpportunityAudit?: HiddenOpportunityAudit | null;
 }
 
 const statusStyles = {
@@ -17,10 +19,11 @@ const statusStyles = {
 export const PlanChangeOpportunityLedgerPanel: React.FC<PlanChangeOpportunityLedgerPanelProps> = ({
   gameMatrix,
   externalPlanAuditSummary,
+  hiddenOpportunityAudit,
 }) => {
   const ledger = useMemo(
-    () => buildPlanChangeOpportunityLedger({ gameMatrix, externalPlanAuditSummary }),
-    [externalPlanAuditSummary, gameMatrix],
+    () => buildPlanChangeOpportunityLedger({ gameMatrix, externalPlanAuditSummary, hiddenOpportunityAudit }),
+    [externalPlanAuditSummary, gameMatrix, hiddenOpportunityAudit],
   );
 
   return (
@@ -99,11 +102,48 @@ export const PlanChangeOpportunityLedgerPanel: React.FC<PlanChangeOpportunityLed
                   label="risk guard"
                   value={`${opportunity.riskGuard.level}: ${opportunity.riskGuard.checks.join("; ")}`}
                 />
+                {opportunity.hiddenOpportunityAudit ? (
+                  <LedgerField
+                    label="hidden opportunity audit"
+                    value={`${opportunity.hiddenOpportunityAudit.status}; ${opportunity.hiddenOpportunityAudit.labelPermission}; must stay hypothesis-only: ${
+                      opportunity.hiddenOpportunityAudit.mustStayHypothesisOnly ? "yes" : "no"
+                    }`}
+                  />
+                ) : null}
               </dl>
             </article>
           ))
         )}
       </div>
+
+      {ledger.hiddenOpportunityGate.status !== "not_supplied" && (
+        <div className="mt-4 rounded-md border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-950">
+          <div className="font-semibold">Hidden opportunity gate</div>
+          <div className="mt-2 grid grid-cols-1 gap-2 text-xs leading-5 md:grid-cols-2">
+            <LedgerField label="protocol" value={hiddenOpportunityAudit?.protocol ?? "hidden_opportunity_audit_v1"} />
+            <LedgerField label="status" value={ledger.hiddenOpportunityGate.status} />
+            <LedgerField label="label permission" value={ledger.hiddenOpportunityGate.labelPermission} />
+            <LedgerField
+              label="can enter ledger"
+              value={`can enter ledger: ${ledger.hiddenOpportunityGate.canEnterLedger ? "yes" : "no"}`}
+            />
+            <LedgerField
+              label="hypothesis boundary"
+              value={`must stay hypothesis-only: ${
+                hiddenOpportunityAudit?.reviewGate.mustStayHypothesisOnly ? "yes" : "no"
+              }`}
+            />
+            <LedgerField label="score" value={ledger.hiddenOpportunityGate.score ?? "not supplied"} />
+          </div>
+          {ledger.hiddenOpportunityGate.reasons.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5">
+              {ledger.hiddenOpportunityGate.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {ledger.blockedClaims.length > 0 && (
         <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3">
