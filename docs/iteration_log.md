@@ -17,6 +17,45 @@ Each future iteration should record:
 | Validation | Commands/tests/builds actually run. |
 | Remaining Risk | What is still not proven or still manual. |
 
+## 2026-06-17: Persisted Delivery Archive Review
+
+### Goal
+
+Let the internal web tool review persisted delivery bundles without requiring manual copy-paste.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| this commit | Load persisted delivery manifests in web review |
+
+### What Changed
+
+- Added `GET /api/delivery/manifests/recent` to load recent local `delivery_bundle.json` manifests from `backend/logs/delivery_bundles`.
+- Limited archive loading to a bounded recent set and sorted manifests by modification time.
+- Added backend smoke coverage for the archive loader and runtime status endpoint list.
+- Added a frontend "载入本机归档" action in `DeliveryPortfolioReview`.
+- Merged session-generated, archive-loaded, and pasted manifests into one deduplicated batch review set.
+- Updated the experiment runbook to document the archive-based review path.
+
+### Why It Matters
+
+The previous web batch review still depended on the current browser session or manual paste. In a real internal workflow, single-case previews are already persisted by the backend, so the operator should be able to load recent delivery bundles directly and run the same portfolio review without copying JSON by hand.
+
+### Validation
+
+| Command | Result |
+| --- | --- |
+| `uv run python -m pytest src/test_backend_api_status_smoke.py src/test_delivery_portfolio_smoke.py` | 8 passed |
+| `npm run build` in `frontend/` | passed |
+| `npm run lint` in `frontend/` | 0 errors, 2 existing Fast Refresh warnings |
+| Browser check at `http://127.0.0.1:5173/app/` | page loaded and rendered the main GaokaoAgent form |
+
+### Remaining Risk
+
+- Archive loading is still local-filesystem based; it is not a multi-user case database.
+- The endpoint is intended for internal use and should stay behind the internal tool boundary.
+
 ## 2026-06-17: Web Delivery Portfolio Review
 
 ### Goal
@@ -53,7 +92,7 @@ The previous iterations made delivery portfolio quality measurable and executabl
 
 ### Remaining Risk
 
-- The batch panel is session and paste based; it still does not read a persisted case archive automatically.
+- The batch panel reads local archives, but not a multi-user case database.
 - It is an internal review surface, not a client-facing dashboard.
 
 ## 2026-06-15: Delivery-Aware Next Iteration Commands

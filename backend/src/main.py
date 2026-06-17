@@ -1,6 +1,7 @@
 """GaokaoAgent FastAPI server."""
 
 import asyncio
+import json
 import logging
 import os
 import pathlib
@@ -14,7 +15,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import HumanMessage
@@ -229,6 +230,15 @@ class DeliveryPortfolioAuditResponse(BaseModel):
     markdown: str
 
 
+class DeliveryManifestArchiveResponse(BaseModel):
+    """Recent delivery manifests persisted by internal preflight runs."""
+
+    success: bool
+    message: str
+    manifest_count: int
+    manifests: list[dict[str, Any]]
+
+
 def _to_plain_data(value: Any) -> Any:
     """Convert Pydantic objects and nested containers to JSON-safe values."""
     if value is None:
@@ -257,6 +267,30 @@ def _safe_case_id(raw_case_id: str | None) -> str:
             return cleaned[:80]
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return f"case-{timestamp}-{uuid4().hex[:8]}"
+
+
+def _load_recent_delivery_manifests(logs_root: Path, limit: int = 50) -> list[dict[str, Any]]:
+    """Load recent persisted delivery manifests for internal batch review."""
+    archive_root = logs_root / "delivery_bundles"
+    if not archive_root.exists():
+        return []
+    candidates = sorted(
+        archive_root.glob("*/delivery_bundle.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )[:limit]
+    manifests: list[dict[str, Any]] = []
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Skipping unreadable delivery manifest %s: %s", path, exc)
+            continue
+        if isinstance(payload, dict):
+            payload.setdefault("case_id", path.parent.name)
+            payload.setdefault("_archive_path", str(path.relative_to(logs_root)))
+            manifests.append(payload)
+    return manifests
 
 
 def _build_delivery_profile(input_profile: DeliveryProfileInput):
@@ -364,6 +398,7 @@ def get_runtime_status() -> dict[str, Any]:
                 "/api/analyze",
                 "/api/delivery/preview",
                 "/api/delivery/portfolio",
+                "/api/delivery/manifests/recent",
                 "/api/stats",
             ],
             "cli_commands": [
@@ -592,6 +627,26 @@ async def preview_delivery_bundle(request: DeliveryPreviewRequest):
         logger.error("Delivery preview failed", exc_info=True)
         if IS_PRODUCTION:
             raise HTTPException(status_code=500, detail="Unable to build delivery preview") from exc
+        raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
+
+
+@app.get("/api/delivery/manifests/recent", response_model=DeliveryManifestArchiveResponse)
+async def recent_delivery_manifests(
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Return recent persisted delivery manifests from the local backend archive."""
+    try:
+        manifests = _load_recent_delivery_manifests(BACKEND_ROOT / "logs", limit=limit)
+        return DeliveryManifestArchiveResponse(
+            success=True,
+            message=f"已载入 {len(manifests)} 个本机交付归档",
+            manifest_count=len(manifests),
+            manifests=manifests,
+        )
+    except Exception as exc:
+        logger.error("Recent delivery manifest load failed", exc_info=True)
+        if IS_PRODUCTION:
+            raise HTTPException(status_code=500, detail="Unable to load delivery manifests") from exc
         raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
 
 

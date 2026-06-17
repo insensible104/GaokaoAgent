@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { BarChart3, FileSearch, RefreshCw, ShieldAlert } from "lucide-react";
+import { BarChart3, FileSearch, FolderOpen, RefreshCw, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +40,13 @@ interface DeliveryPortfolioResponse {
   markdown: string;
 }
 
+interface DeliveryManifestArchiveResponse {
+  success: boolean;
+  message: string;
+  manifest_count: number;
+  manifests: DeliveryManifestLike[];
+}
+
 const statusLabel: Record<string, string> = {
   on_track: "可规模化",
   needs_targeted_iteration: "需定向迭代",
@@ -77,9 +84,11 @@ function compactManifestKey(manifest: DeliveryManifestLike, index: number) {
 
 export function DeliveryPortfolioReview({ sessionManifests }: DeliveryPortfolioReviewProps) {
   const [rawInput, setRawInput] = useState("");
+  const [archiveManifests, setArchiveManifests] = useState<DeliveryManifestLike[]>([]);
   const [auditResult, setAuditResult] = useState<DeliveryPortfolioResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingArchive, setIsLoadingArchive] = useState(false);
 
   const parsedManifests = useMemo(() => {
     try {
@@ -90,7 +99,7 @@ export function DeliveryPortfolioReview({ sessionManifests }: DeliveryPortfolioR
   }, [rawInput]);
 
   const manifests = useMemo(() => {
-    const merged = [...sessionManifests, ...parsedManifests];
+    const merged = [...sessionManifests, ...archiveManifests, ...parsedManifests];
     const seen = new Set<string>();
     return merged.filter((manifest, index) => {
       const key = compactManifestKey(manifest, index);
@@ -98,7 +107,28 @@ export function DeliveryPortfolioReview({ sessionManifests }: DeliveryPortfolioR
       seen.add(key);
       return true;
     });
-  }, [parsedManifests, sessionManifests]);
+  }, [archiveManifests, parsedManifests, sessionManifests]);
+
+  async function loadArchiveManifests() {
+    setIsLoadingArchive(true);
+    setError(null);
+    try {
+      const apiUrl = import.meta.env.DEV
+        ? "http://localhost:8000"
+        : import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiUrl}/api/delivery/manifests/recent?limit=50`);
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(body || `载入本机交付归档失败 (${response.status})`);
+      }
+      const data: DeliveryManifestArchiveResponse = await response.json();
+      setArchiveManifests(data.manifests || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "载入本机交付归档失败");
+    } finally {
+      setIsLoadingArchive(false);
+    }
+  }
 
   async function runPortfolioAudit() {
     if (manifests.length === 0) return;
@@ -140,19 +170,33 @@ export function DeliveryPortfolioReview({ sessionManifests }: DeliveryPortfolioR
               当前会话 {sessionManifests.length} 例
             </Badge>
             <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-700">
+              本机归档 {archiveManifests.length} 例
+            </Badge>
+            <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-700">
               待审计 {manifests.length} 例
             </Badge>
           </div>
         </div>
-        <Button
-          type="button"
-          onClick={runPortfolioAudit}
-          disabled={manifests.length === 0 || isLoading}
-          className="bg-cyan-700 text-white hover:bg-cyan-800"
-        >
-          <RefreshCw className="size-4" aria-hidden="true" />
-          {isLoading ? "复盘中..." : "运行批量复盘"}
-        </Button>
+        <div className="flex flex-col gap-2 md:flex-row">
+          <Button
+            type="button"
+            onClick={loadArchiveManifests}
+            disabled={isLoadingArchive}
+            className="bg-slate-800 text-white hover:bg-slate-900"
+          >
+            <FolderOpen className="size-4" aria-hidden="true" />
+            {isLoadingArchive ? "载入中..." : "载入本机归档"}
+          </Button>
+          <Button
+            type="button"
+            onClick={runPortfolioAudit}
+            disabled={manifests.length === 0 || isLoading}
+            className="bg-cyan-700 text-white hover:bg-cyan-800"
+          >
+            <RefreshCw className="size-4" aria-hidden="true" />
+            {isLoading ? "复盘中..." : "运行批量复盘"}
+          </Button>
+        </div>
       </div>
 
       <div className="mt-4">

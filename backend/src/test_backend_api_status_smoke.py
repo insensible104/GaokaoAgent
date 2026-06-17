@@ -1,6 +1,8 @@
 """Smoke checks for backend API normalization and runtime status helpers."""
 
 import asyncio
+import json
+import os
 
 from main import QueryRequest, build_user_message, get_runtime_status, get_stats
 
@@ -56,6 +58,7 @@ def test_runtime_status_exposes_backend_and_agent_capabilities():
     assert status["capabilities"]["critic_audit"] is True
     assert "/api/delivery/preview" in status["entrypoints"]["api"]
     assert "/api/delivery/portfolio" in status["entrypoints"]["api"]
+    assert "/api/delivery/manifests/recent" in status["entrypoints"]["api"]
     assert "smoke" in status["entrypoints"]["cli_commands"]
 
 
@@ -233,6 +236,33 @@ def test_delivery_portfolio_endpoint_aggregates_client_delivery_gates():
     assert response.audit["client_delivery_allowed_rate"] == 0.5
     assert response.audit["client_delivery_status_counts"]["blocked"] == 1
     assert "Client Delivery Gate" in response.markdown
+
+
+def test_recent_delivery_manifest_archive_loader_orders_and_limits(tmp_path):
+    from main import _load_recent_delivery_manifests
+
+    archive_root = tmp_path / "delivery_bundles"
+    first_case = archive_root / "case-old"
+    second_case = archive_root / "case-new"
+    first_case.mkdir(parents=True)
+    second_case.mkdir(parents=True)
+    (first_case / "delivery_bundle.json").write_text(
+        json.dumps({"status": "needs_revision"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (second_case / "delivery_bundle.json").write_text(
+        json.dumps({"case_id": "explicit-new", "status": "ready_to_deliver"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    os.utime(first_case / "delivery_bundle.json", (1_700_000_000, 1_700_000_000))
+    os.utime(second_case / "delivery_bundle.json", (1_700_000_010, 1_700_000_010))
+
+    manifests = _load_recent_delivery_manifests(tmp_path, limit=1)
+
+    assert len(manifests) == 1
+    assert manifests[0]["case_id"] == "explicit-new"
+    assert manifests[0]["status"] == "ready_to_deliver"
+    assert manifests[0]["_archive_path"].endswith("delivery_bundle.json")
 
 
 def test_stats_endpoint_uses_prediction_history_data():
