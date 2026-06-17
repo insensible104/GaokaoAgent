@@ -6,6 +6,7 @@ import type { GameMatrix } from "./GameMatrixView";
 interface ExternalPlanComparatorProps {
   gameMatrix: GameMatrix;
   onAuditChange?: (summary: ExternalPlanAuditSummary | null) => void;
+  initialText?: string;
 }
 
 const examplePlan = [
@@ -29,8 +30,8 @@ const severityStyles: Record<ExternalPlanFinding["severity"], string> = {
 
 const formatPercent = (value: number) => `${(value * 100).toFixed(0)}%`;
 
-export const ExternalPlanComparator: React.FC<ExternalPlanComparatorProps> = ({ gameMatrix, onAuditChange }) => {
-  const [externalPlanText, setExternalPlanText] = useState("");
+export const ExternalPlanComparator: React.FC<ExternalPlanComparatorProps> = ({ gameMatrix, onAuditChange, initialText = "" }) => {
+  const [externalPlanText, setExternalPlanText] = useState(initialText);
   const summary = useMemo(
     () => auditExternalPlan({ text: externalPlanText, gameMatrix }),
     [externalPlanText, gameMatrix],

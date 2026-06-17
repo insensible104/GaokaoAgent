@@ -80,7 +80,7 @@ def get_llm(temperature: float = 0.7):
     Returns:
         LLM 实例（SimpleOllamaClient 或 ChatOpenAI）
     """
-    provider = os.environ.get("LLM_PROVIDER", "cloud").strip().lower()
+    provider = os.environ.get("LLM_PROVIDER", "deepseek").strip().lower()
 
     print(f"[INFO] LLM Provider: {provider}")
 
@@ -120,7 +120,7 @@ def get_llm(temperature: float = 0.7):
             temperature=temperature,
             timeout=120,
         ))
-    else:
+    elif provider in {"cloud", "qwen"}:
         api_key = os.environ.get("QWEN_API_KEY")
         base_url = os.environ.get("OPENAI_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
         model = os.environ.get("QWEN_MODEL", "qwen-plus")
@@ -138,5 +138,9 @@ def get_llm(temperature: float = 0.7):
             base_url=base_url,
             model=model,
             temperature=temperature,
-            timeout=120  # 添加120秒超时，防止卡住
+            timeout=120
         )
+
+    raise ValueError(
+        f"Unsupported LLM_PROVIDER '{provider}'. Use 'deepseek', 'cloud'/'qwen', or 'local'."
+    )

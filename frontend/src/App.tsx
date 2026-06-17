@@ -11,6 +11,7 @@ const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryR
 const InvestmentResearchReportPreview = lazy(() => import("@/components/PathFinderReportTemplate").then(module => ({ default: module.InvestmentResearchReportPreview })));
 const DeliveryReadinessConsole = lazy(() => import("@/components/DeliveryReadinessConsole").then(module => ({ default: module.DeliveryReadinessConsole })));
 const AdmissionsOpportunityDemoCasePanel = lazy(() => import("@/components/AdmissionsOpportunityDemoCasePanel").then(module => ({ default: module.AdmissionsOpportunityDemoCasePanel })));
+const ExternalPlanAuditDemoPanel = lazy(() => import("@/components/ExternalPlanAuditDemoPanel").then(module => ({ default: module.ExternalPlanAuditDemoPanel })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
@@ -198,9 +199,11 @@ function AppContent() {
   const admissionsOpportunityDemoRequested =
     window.location.pathname.includes("admissions-opportunity-demo") ||
     new URLSearchParams(window.location.search).get("demo") === "admissions-opportunity";
+  const externalPlanAuditDemoRequested =
+    window.location.pathname.includes("external-plan-audit-demo") ||
+    new URLSearchParams(window.location.search).get("demo") === "external-plan-audit";
   const showAdmissionsOpportunityDemo =
     import.meta.env.DEV || import.meta.env.VITE_SHOW_ADMISSIONS_DEMO === "true";
-  const showDedicatedAdmissionsOpportunityDemo = showAdmissionsOpportunityDemo && admissionsOpportunityDemoRequested;
 
   // 修复：添加AbortController ref，用于取消请求
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -473,7 +476,19 @@ function AppContent() {
     );
   }
 
-  if (showDedicatedAdmissionsOpportunityDemo) {
+  if (externalPlanAuditDemoRequested) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
+        <main className="container mx-auto max-w-6xl px-4 py-8">
+          <Suspense fallback={<div className="text-center py-4">Loading external plan audit demo...</div>}>
+            <ExternalPlanAuditDemoPanel />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
+  if (admissionsOpportunityDemoRequested) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
         <main className="container mx-auto max-w-6xl px-4 py-8">
@@ -502,6 +517,28 @@ function AppContent() {
         <main>
           {!result && !isAnalyzing && !error && (
             <div className="space-y-6">
+              <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <a
+                  href="/app/external-plan-audit-demo"
+                  className="rounded-lg border border-indigo-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase text-indigo-700">Public demo</p>
+                  <h2 className="mt-2 text-xl font-bold text-slate-950">Audit an external plan</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Compare a Qwen, family, teacher, or peer plan against PathFinder's structured slate.
+                  </p>
+                </a>
+                <a
+                  href="/app/admissions-opportunity-demo"
+                  className="rounded-lg border border-emerald-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase text-emerald-700">Public demo</p>
+                  <h2 className="mt-2 text-xl font-bold text-slate-950">Review an evidence workflow</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    See how plan changes, public attention, web evidence, and counselor review stay separated.
+                  </p>
+                </a>
+              </section>
               <GaokaoAgentForm onSubmit={handleSubmit} />
               {showAdmissionsOpportunityDemo && (
                 <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>

@@ -29,14 +29,14 @@ assert.doesNotMatch(
 
 assert.match(
   appSource,
-  /const showDedicatedAdmissionsOpportunityDemo\s*=\s*showAdmissionsOpportunityDemo && admissionsOpportunityDemoRequested;/,
-  "production demo route must stay behind the explicit admissions demo gate"
+  /if \(admissionsOpportunityDemoRequested\)/,
+  "dedicated admissions demo route should be public for the launch demo"
 );
 
 assert.match(
   appSource,
-  /if \(showDedicatedAdmissionsOpportunityDemo\)/,
-  "dedicated admissions demo rendering should use the gated route flag"
+  /if \(externalPlanAuditDemoRequested\)/,
+  "dedicated external plan audit demo route should be public for the launch demo"
 );
 
 console.log("same-origin API smoke test passed");
