@@ -8,10 +8,12 @@ const LoadingView = lazy(() => import("@/components/LoadingView").then(module =>
 const ProgressTracker = lazy(() => import("@/components/ProgressTracker").then(module => ({ default: module.ProgressTracker })));
 const GameMatrixView = lazy(() => import("@/components/GameMatrixView").then(module => ({ default: module.GameMatrixView })));
 const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryReview").then(module => ({ default: module.InternalDeliveryReview })));
+const DeliveryPortfolioReview = lazy(() => import("@/components/DeliveryPortfolioReview").then(module => ({ default: module.DeliveryPortfolioReview })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
 import type { AgentStep } from "@/components/ProgressTracker";
+import type { DeliveryManifest } from "@/components/InternalDeliveryReview";
 
 interface AnalysisResult {
   success: boolean;
@@ -151,6 +153,7 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [progressSteps, setProgressSteps] = useState<AgentStep[]>([]);
   const [deliveryProfile, setDeliveryProfile] = useState<DeliveryProfile | null>(null);
+  const [deliveryManifests, setDeliveryManifests] = useState<DeliveryManifest[]>([]);
 
   // 修复：添加AbortController ref，用于取消请求
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -162,6 +165,15 @@ function AppContent() {
         abortControllerRef.current.abort();
       }
     };
+  }, []);
+
+  const handleDeliveryManifestGenerated = useCallback((manifest: DeliveryManifest) => {
+    setDeliveryManifests((current) => {
+      const caseId = manifest.case_id;
+      if (!caseId) return [...current, manifest];
+      const others = current.filter((item) => item.case_id !== caseId);
+      return [...others, manifest];
+    });
   }, []);
 
   // 修复P2-4: 使用useCallback避免子组件不必要的重渲染
@@ -395,6 +407,7 @@ function AppContent() {
     setError(null);
     setProgressSteps([]);
     setDeliveryProfile(null);
+    setDeliveryManifests([]);
   };
 
   return (
@@ -475,7 +488,10 @@ function AppContent() {
                   profile={deliveryProfile}
                   report={result.report}
                   gameMatrix={result.game_matrix}
+                  onManifestGenerated={handleDeliveryManifestGenerated}
                 />
+
+                <DeliveryPortfolioReview sessionManifests={deliveryManifests} />
 
                 {/* Report View */}
                 <ReportView

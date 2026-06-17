@@ -214,6 +214,21 @@ class DeliveryPreviewResponse(BaseModel):
     artifacts: dict[str, str]
 
 
+class DeliveryPortfolioAuditRequest(BaseModel):
+    """Request payload for batch delivery-quality review."""
+
+    manifests: list[dict[str, Any]] = Field(..., min_length=1, max_length=200)
+
+
+class DeliveryPortfolioAuditResponse(BaseModel):
+    """Batch delivery-quality audit response for the frontend workspace."""
+
+    success: bool
+    message: str
+    audit: dict[str, Any]
+    markdown: str
+
+
 def _to_plain_data(value: Any) -> Any:
     """Convert Pydantic objects and nested containers to JSON-safe values."""
     if value is None:
@@ -348,6 +363,7 @@ def get_runtime_status() -> dict[str, Any]:
                 "/api/status",
                 "/api/analyze",
                 "/api/delivery/preview",
+                "/api/delivery/portfolio",
                 "/api/stats",
             ],
             "cli_commands": [
@@ -576,6 +592,30 @@ async def preview_delivery_bundle(request: DeliveryPreviewRequest):
         logger.error("Delivery preview failed", exc_info=True)
         if IS_PRODUCTION:
             raise HTTPException(status_code=500, detail="Unable to build delivery preview") from exc
+        raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
+
+
+@app.post("/api/delivery/portfolio", response_model=DeliveryPortfolioAuditResponse)
+async def audit_delivery_portfolio_api(request: DeliveryPortfolioAuditRequest):
+    """Aggregate many delivery manifests into an internal service-quality audit."""
+    try:
+        from evaluation.delivery_portfolio import (
+            audit_delivery_portfolio,
+            build_markdown_delivery_portfolio_audit,
+        )
+
+        result = audit_delivery_portfolio(request.manifests)
+        status = str(result.get("status", "unknown"))
+        return DeliveryPortfolioAuditResponse(
+            success=status not in {"no_cases"},
+            message=f"批量交付复盘完成：{status}",
+            audit=result,
+            markdown=build_markdown_delivery_portfolio_audit(result),
+        )
+    except Exception as exc:
+        logger.error("Delivery portfolio audit failed", exc_info=True)
+        if IS_PRODUCTION:
+            raise HTTPException(status_code=500, detail="Unable to audit delivery portfolio") from exc
         raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
 
 

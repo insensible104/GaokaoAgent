@@ -564,6 +564,10 @@ Delivery portfolio audit aggregates many `delivery_bundle.json` manifests into
 service-quality metrics. Use it after a batch of paid or trial cases to see
 which gate repeatedly blocks delivery.
 
+The web app also includes an internal batch review panel. Single-case delivery
+previews generated in the current browser session are added automatically, and
+older `delivery_bundle.json` manifests can be pasted as a JSON array or JSONL.
+
 Run with explicit bundle manifests:
 
 ```powershell

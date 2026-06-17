@@ -55,6 +55,7 @@ def test_runtime_status_exposes_backend_and_agent_capabilities():
     assert status["capabilities"]["multi_agent_deliberation"] is True
     assert status["capabilities"]["critic_audit"] is True
     assert "/api/delivery/preview" in status["entrypoints"]["api"]
+    assert "/api/delivery/portfolio" in status["entrypoints"]["api"]
     assert "smoke" in status["entrypoints"]["cli_commands"]
 
 
@@ -181,6 +182,57 @@ def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
     assert "服务交付包" in response.artifacts["delivery_bundle"]
     assert "expectation_packet" in response.artifacts
     assert "report_quality_audit" in response.artifacts
+
+
+def test_delivery_portfolio_endpoint_aggregates_client_delivery_gates():
+    from main import DeliveryPortfolioAuditRequest, audit_delivery_portfolio_api
+
+    request = DeliveryPortfolioAuditRequest(
+        manifests=[
+            {
+                "case_id": "portfolio-ready",
+                "status": "ready_to_deliver",
+                "intake_readiness_score": 0.90,
+                "plan_quality_score": 0.86,
+                "report_quality_score": 0.84,
+                "client_delivery": {
+                    "allowed": True,
+                    "status": "allowed",
+                    "blocked_reason": "",
+                },
+                "delivery_gates": [
+                    {"gate": "intake_audit", "status": "ready_for_recommendation"},
+                    {"gate": "plan_quality", "status": "pass"},
+                    {"gate": "report_quality", "status": "pass"},
+                ],
+            },
+            {
+                "case_id": "portfolio-blocked",
+                "status": "needs_revision",
+                "intake_readiness_score": 0.72,
+                "plan_quality_score": 0.55,
+                "report_quality_score": 0.63,
+                "client_delivery": {
+                    "allowed": False,
+                    "status": "blocked",
+                    "blocked_reason": "客户确认包仅在内部质检通过后开放。",
+                },
+                "delivery_gates": [
+                    {"gate": "intake_audit", "status": "ready_for_recommendation"},
+                    {"gate": "plan_quality", "status": "needs_revision"},
+                    {"gate": "report_quality", "status": "needs_revision"},
+                ],
+            },
+        ]
+    )
+
+    response = asyncio.run(audit_delivery_portfolio_api(request))
+
+    assert response.success is True
+    assert response.audit["case_count"] == 2
+    assert response.audit["client_delivery_allowed_rate"] == 0.5
+    assert response.audit["client_delivery_status_counts"]["blocked"] == 1
+    assert "Client Delivery Gate" in response.markdown
 
 
 def test_stats_endpoint_uses_prediction_history_data():

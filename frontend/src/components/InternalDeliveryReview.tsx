@@ -27,7 +27,8 @@ interface DeliveryProfile {
   subject_scores?: Record<string, number>;
 }
 
-interface DeliveryManifest {
+export interface DeliveryManifest {
+  case_id?: string;
   status: string;
   intake_status?: string;
   intake_readiness_score?: number;
@@ -70,6 +71,7 @@ interface InternalDeliveryReviewProps {
   profile: DeliveryProfile | null;
   report: string | null;
   gameMatrix?: GameMatrix | null;
+  onManifestGenerated?: (manifest: DeliveryManifest) => void;
 }
 
 interface VolunteerMajorPayload {
@@ -281,7 +283,12 @@ function buildPlanFromGameMatrix(
   };
 }
 
-export function InternalDeliveryReview({ profile, report, gameMatrix }: InternalDeliveryReviewProps) {
+export function InternalDeliveryReview({
+  profile,
+  report,
+  gameMatrix,
+  onManifestGenerated,
+}: InternalDeliveryReviewProps) {
   const [preview, setPreview] = useState<DeliveryPreview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -384,7 +391,9 @@ export function InternalDeliveryReview({ profile, report, gameMatrix }: Internal
         throw new Error(body || `交付预检失败 (${response.status})`);
       }
 
-      setPreview(await response.json());
+      const nextPreview: DeliveryPreview = await response.json();
+      setPreview(nextPreview);
+      onManifestGenerated?.(nextPreview.manifest);
     } catch (err) {
       setError(err instanceof Error ? err.message : "交付预检失败");
     } finally {

@@ -17,6 +17,45 @@ Each future iteration should record:
 | Validation | Commands/tests/builds actually run. |
 | Remaining Risk | What is still not proven or still manual. |
 
+## 2026-06-17: Web Delivery Portfolio Review
+
+### Goal
+
+Make batch delivery quality visible inside the internal web tool, not only through CLI artifacts.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| this commit | Add web delivery portfolio review |
+
+### What Changed
+
+- Added `POST /api/delivery/portfolio` for batch delivery manifest audits.
+- Exposed the new endpoint in runtime status.
+- Added API smoke coverage for client-delivery allowed rate and blocked gate aggregation.
+- Added a frontend `DeliveryPortfolioReview` panel.
+- Made single-case delivery previews feed their manifest into the batch review panel for the current session.
+- Added paste support for historical `delivery_bundle.json` manifests as JSON arrays or JSONL.
+- Updated the experiment runbook with the web review workflow.
+
+### Why It Matters
+
+The previous iterations made delivery portfolio quality measurable and executable from CLI plans, but the internal web tool still only showed one case at a time. This iteration gives a counselor a direct operational dashboard for a batch of cases: client package allowed rate, blocked reasons, repeated failed gates, and priority cases to replay.
+
+### Validation
+
+| Command | Result |
+| --- | --- |
+| `uv run python -m pytest src/test_backend_api_status_smoke.py src/test_delivery_portfolio_smoke.py` | 7 passed |
+| `npm run build` in `frontend/` | passed |
+| `npm run lint` in `frontend/` | 0 errors, 2 existing Fast Refresh warnings |
+
+### Remaining Risk
+
+- The batch panel is session and paste based; it still does not read a persisted case archive automatically.
+- It is an internal review surface, not a client-facing dashboard.
+
 ## 2026-06-15: Delivery-Aware Next Iteration Commands
 
 ### Goal
