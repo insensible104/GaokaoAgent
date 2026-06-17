@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage
 from models.report import ReportDraft
 from models.state import SupervisorState
 from prompts.report import report_generation_prompt
+from recommendation.major_choice_planner import format_plan_probability_range
 from utils import get_llm
 from utils.agent_bus import get_messages_for_stage, publish_agent_message, remember
 
@@ -86,6 +87,30 @@ def _compact_quant_note(row) -> str:
     if evidence:
         parts.append(evidence[0])
     return "；".join(parts)
+
+
+def _data_vintage_warning(matrix) -> str:
+    """Return a family-facing warning when current-year official data is incomplete."""
+    vintage = getattr(matrix, "data_vintage", None) or {}
+    if vintage.get("formal_recommendation_ready", False):
+        return ""
+    target_year = vintage.get("target_year", "当前年份")
+    plan_year = vintage.get("enrollment_plan_year") or "未知"
+    rank_year = vintage.get("rank_table_year") or "未知"
+    historical_year = vintage.get("latest_historical_admission_year") or "未知"
+    return (
+        f"数据适用边界：本方案面向 {target_year} 年，但当前招生计划最新为 {plan_year} 年、"
+        f"一分一段表最新为 {rank_year} 年、录取结果最新为 {historical_year} 年。"
+        "当前结果只能用于方案预研，不可直接作为正式填报依据。"
+    )
+
+
+def _append_data_vintage_warning(draft: ReportDraft, matrix) -> ReportDraft:
+    warning = _data_vintage_warning(matrix)
+    if warning and warning not in draft.risk_warnings:
+        draft.risk_warnings.insert(0, warning)
+        draft.generate_markdown()
+    return draft
 
 
 def _row_tradeoff_payload(row) -> dict:
@@ -196,6 +221,14 @@ def _format_recommendation(row) -> str:
     survival_before_prob = getattr(row, "survival_before_prob", 1.0)
     cumulative_hit_prob = getattr(row, "cumulative_hit_prob", 0.0)
     prefix_role = getattr(row, "prefix_role", "unclassified")
+    probability_is_calibrated = bool(getattr(row, "probability_is_calibrated", False))
+    probability_label = (
+        "历史校准单组命中率" if probability_is_calibrated else "未校准单组模拟概率"
+    )
+    raw_probability_note = ""
+    raw_probability = getattr(row, "raw_group_admission_prob", None)
+    if probability_is_calibrated and raw_probability is not None:
+        raw_probability_note = f", 原始历史模拟 {raw_probability:.1%}"
     tradeoff_note = _compact_tradeoff_note(row)
     if tradeoff_note:
         major_info = f"{major_info} [{tradeoff_note}]"
@@ -204,7 +237,8 @@ def _format_recommendation(row) -> str:
     prefix = f"第{choice_index}志愿 " if choice_index else ""
     base = (
         f"{prefix}{row.school_name} {major_info} "
-        f"(单点投档概率 {admission_prob:.1%}, 首命中概率 {first_hit_prob:.1%}, "
+        f"({probability_label} {admission_prob:.1%}{raw_probability_note}, "
+        f"首命中概率 {first_hit_prob:.1%}, "
         f"前序失败概率 {survival_before_prob:.1%}, 累计命中 {cumulative_hit_prob:.1%}, "
         f"角色 {prefix_role}, 策略 {strategy_tag}, "
         f"专业1-6：{'、'.join(suggested_names[:6])}, "
@@ -236,6 +270,9 @@ def _build_fallback_report(profile, matrix, data_source) -> ReportDraft:
         f"{'当前组合较为均衡。' if matrix.is_balanced else '当前组合仍有进一步平衡冲稳保结构的空间。'}"
     )
     risk_warnings = []
+    vintage_warning = _data_vintage_warning(matrix)
+    if vintage_warning:
+        risk_warnings.append(vintage_warning)
     blacklist_rows = [row for row in data_source if row.is_blacklist_risk]
     if blacklist_rows:
         risk_warnings.append(f"{len(blacklist_rows)} 条推荐存在潜在调剂到非偏好专业的风险。")
@@ -256,11 +293,17 @@ def _build_fallback_report(profile, matrix, data_source) -> ReportDraft:
             risk_warnings.append(
                 f"{len(key_high_tail)} 个关键前缀志愿存在高尾部调剂风险，需要优先复核。"
             )
+        probability_range_label = (
+            "历史校准命中区间"
+            if volunteer_plan.probability_is_calibrated
+            else "未校准启发式命中区间"
+        )
         risk_warnings.append(
-            f"本方案预计至少一次投档命中概率 {volunteer_plan.expected_admission_prob:.1%}，"
+            f"本方案{probability_range_label} {format_plan_probability_range(volunteer_plan)}，"
             f"关键前缀 {volunteer_plan.key_prefix_count} 行，"
             f"被前序选择遮蔽 {volunteer_plan.shadowed_choice_count} 行。"
         )
+        risk_warnings.append(volunteer_plan.probability_warning)
     if len(safe_rows) < 3:
         risk_warnings.append("保底志愿数量偏少，建议补充更稳妥的院校专业组。")
     if not risk_warnings:
@@ -400,6 +443,21 @@ def report_agent_node(state: SupervisorState) -> dict:
             "expected_admission_prob": (
                 matrix.volunteer_plan.expected_admission_prob if matrix.volunteer_plan else None
             ),
+            "admission_probability_lower_bound": (
+                matrix.volunteer_plan.admission_probability_lower_bound if matrix.volunteer_plan else None
+            ),
+            "admission_probability_upper_bound": (
+                matrix.volunteer_plan.admission_probability_upper_bound if matrix.volunteer_plan else None
+            ),
+            "probability_method": (
+                matrix.volunteer_plan.probability_method if matrix.volunteer_plan else None
+            ),
+            "probability_is_calibrated": (
+                matrix.volunteer_plan.probability_is_calibrated if matrix.volunteer_plan else None
+            ),
+            "probability_warning": (
+                matrix.volunteer_plan.probability_warning if matrix.volunteer_plan else None
+            ),
             "expected_first_hit_utility": (
                 matrix.volunteer_plan.expected_first_hit_utility if matrix.volunteer_plan else None
             ),
@@ -467,6 +525,7 @@ def report_agent_node(state: SupervisorState) -> dict:
             for row in data_source
         ],
         "volunteer_plan": matrix.volunteer_plan.model_dump() if matrix.volunteer_plan else None,
+        "data_vintage": matrix.data_vintage,
     }
 
     llm = get_llm()
@@ -482,6 +541,7 @@ def report_agent_node(state: SupervisorState) -> dict:
             raise ValueError("LLM returned empty school_recommendations")
         draft.generate_markdown()
         draft = _append_key_decision_evidence(draft, matrix)
+        draft = _append_data_vintage_warning(draft, matrix)
         warning_count = len(draft.risk_warnings)
         recommendation_count = len(draft.school_recommendations)
         return {
@@ -520,6 +580,7 @@ def report_agent_node(state: SupervisorState) -> dict:
     except Exception as exc:
         fallback_draft = _build_fallback_report(profile, matrix, data_source)
         fallback_draft = _append_key_decision_evidence(fallback_draft, matrix)
+        fallback_draft = _append_data_vintage_warning(fallback_draft, matrix)
         recommendation_count = len(fallback_draft.school_recommendations)
         warning_count = len(fallback_draft.risk_warnings)
         return {

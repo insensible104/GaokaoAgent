@@ -1,20 +1,36 @@
 services:
-  gaokaoagent:
+  pathfinder:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: gaokaoagent
+    container_name: pathfinder-lite
     ports:
       - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
     environment:
       ENVIRONMENT: production
-      # Set one of the following modes (and keys) in your environment or in a `.env` file:
-      # - LLM_PROVIDER=local  (requires Ollama reachable from the container)
-      # - LLM_PROVIDER=cloud  (requires QWEN_API_KEY / OPENAI_API_BASE / QWEN_MODEL)
-      LLM_PROVIDER: ${LLM_PROVIDER:-local}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      # Public launch default: DeepSeek. Qwen/local remain optional fallbacks.
+      LLM_PROVIDER: ${LLM_PROVIDER:-deepseek}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
       QWEN_API_KEY: ${QWEN_API_KEY:-}
       OPENAI_API_BASE: ${OPENAI_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1}
       QWEN_MODEL: ${QWEN_MODEL:-qwen-plus}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
       TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      ENABLE_LLM_ADVISORS: ${ENABLE_LLM_ADVISORS:-0}
+      ENABLE_LLM_CRITIC: ${ENABLE_LLM_CRITIC:-0}
+    volumes:
+      - ./backend/logs:/app/backend/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/status', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s

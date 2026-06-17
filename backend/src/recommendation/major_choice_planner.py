@@ -13,6 +13,14 @@ ACTIVE_BACKUP_SURVIVAL_THRESHOLD = 0.10
 HIGH_TAIL_RISK_THRESHOLD = 0.55
 
 
+def format_plan_probability_range(plan: VolunteerPlan) -> str:
+    """Format the conservative family-facing plan probability interval."""
+    return (
+        f"{plan.admission_probability_lower_bound:.1%}-"
+        f"{plan.admission_probability_upper_bound:.1%}"
+    )
+
+
 def build_major_options_from_records(records: list[dict], fallback_majors: list[str] | None = None) -> list[MajorOption]:
     """Convert enrollment-plan records to MajorOption models."""
     options: list[MajorOption] = []
@@ -84,6 +92,12 @@ def build_volunteer_choice(row, choice_index: int) -> VolunteerChoice:
         obey_adjustment=row.obey_adjustment,
         adjustment_advice=row.adjustment_advice,
         group_admission_prob=row.admission_prob,
+        raw_group_admission_prob=getattr(row, "raw_admission_prob", None),
+        probability_is_calibrated=getattr(row, "probability_is_calibrated", False),
+        probability_method=getattr(row, "probability_method", "historical_rank_monte_carlo_uncalibrated"),
+        probability_calibration_year=getattr(row, "probability_calibration_year", None),
+        probability_hazard_scale=getattr(row, "probability_hazard_scale", 1.0),
+        probability_calibration_source=getattr(row, "probability_calibration_source", ""),
         expected_major_utility=expected_utility,
         worst_case_major=row.worst_case_major,
         tail_assignment_risk=row.tail_assignment_risk,
@@ -148,9 +162,20 @@ def _sync_first_hit_metrics(plan: VolunteerPlan, rows: list) -> None:
             if flag not in choice.audit_flags:
                 choice.audit_flags.append(flag)
 
+        probability_label = (
+            "历史校准单组命中率"
+            if choice.probability_is_calibrated
+            else "未校准单组模拟概率"
+        )
+        raw_probability_note = (
+            f"，原始历史模拟约{choice.raw_group_admission_prob:.1%}"
+            if choice.probability_is_calibrated
+            and choice.raw_group_admission_prob is not None
+            else ""
+        )
         choice.explanation = (
             f"{choice.school_name}{choice.major_group_code}专业组："
-            f"单点投档概率约{choice.group_admission_prob:.1%}，"
+            f"{probability_label}约{choice.group_admission_prob:.1%}{raw_probability_note}，"
             f"前序志愿全部未命中的概率约{choice.survival_before_prob:.1%}，"
             f"成为首个录取结果的概率约{choice.first_hit_prob:.1%}，"
             f"累计命中概率约{choice.cumulative_hit_prob:.1%}，"
@@ -204,12 +229,39 @@ def build_volunteer_plan(
         build_volunteer_choice(row, index + 1)
         for index, row in enumerate(selected_rows)
     ]
+    calibrated = bool(choices) and all(choice.probability_is_calibrated for choice in choices)
+    calibration_year = choices[0].probability_calibration_year if calibrated else None
+    hazard_scale = choices[0].probability_hazard_scale if calibrated else 1.0
+    calibration_methods = {
+        choice.probability_method
+        for choice in choices
+        if choice.probability_method
+    }
+    calibration_method = (
+        next(iter(calibration_methods))
+        if len(calibration_methods) == 1
+        else "historical_mixed_calibration"
+    )
     plan = VolunteerPlan(
-        year=2025,
+        year=2026,
         subject_group=profile.subject_group,
         user_score=profile.score,
         user_rank=profile.rank,
         choices=choices,
+        probability_is_calibrated=calibrated,
+        probability_method=(
+            f"{calibration_method}_correlated_hazard"
+            if calibrated
+            else "correlated_outcomes_heuristic"
+        ),
+        probability_calibration_year=calibration_year,
+        subsequent_choice_hazard_scale=hazard_scale,
+        probability_warning=(
+            f"单组概率经{calibration_year}年真实录取结果交叉验证校准；后续志愿按同位次、同年度相关性折减，"
+            "仍不是2026年录取保证，正式填报前须用当年计划和位次表复核。"
+            if calibrated
+            else VolunteerPlan.model_fields["probability_warning"].default
+        ),
         plan_summary=f"生成{len(choices)}行广东院校专业组志愿草案。",
         human_review_items=[
             "复核招生章程中的单科、体检、语种和校区限制。",
@@ -218,9 +270,12 @@ def build_volunteer_plan(
     )
     plan.calculate_statistics()
     _sync_first_hit_metrics(plan, selected_rows)
+    probability_range_label = (
+        "历史校准命中区间" if calibrated else "未校准启发式命中区间"
+    )
     plan.plan_summary = (
         f"生成{len(choices)}行广东院校专业组志愿草案；"
-        f"预计至少一次投档命中概率{plan.expected_admission_prob:.1%}，"
+        f"{probability_range_label}{format_plan_probability_range(plan)}，"
         f"关键前缀{plan.key_prefix_count}行，"
         f"被前序选择遮蔽{plan.shadowed_choice_count}行。"
     )

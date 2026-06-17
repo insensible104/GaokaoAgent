@@ -1,4 +1,47 @@
-﻿# GaokaoAgent
+﻿# PathFinder Lite
+
+PathFinder Lite is a public demo of an evidence-first Gaokao volunteer-planning system. It is not another chat wrapper: the core workflow is structured recommendation, quantitative risk control, deep research, external-plan audit, and counselor-review boundaries.
+
+The fastest way to try it is Docker Compose:
+
+```powershell
+copy .env.example .env
+notepad .env
+docker compose up --build
+```
+
+Then open:
+
+- App: http://localhost:8000/app
+- Status: http://localhost:8000/api/status
+- External plan audit demo: http://localhost:8000/app/external-plan-audit-demo
+- Admissions opportunity evidence demo: http://localhost:8000/app/admissions-opportunity-demo
+
+On Windows you can also run:
+
+```powershell
+.\scripts\deploy.ps1
+```
+
+On Linux/macOS:
+
+```bash
+sh scripts/deploy.sh
+```
+
+Default API provider:
+
+- `LLM_PROVIDER=deepseek`
+- set `DEEPSEEK_API_KEY` in `.env` for live generation
+- the two public demos work without an API key because they use bundled static cases
+
+Public claim boundary:
+
+- Use the demo to inspect workflow, evidence structure, and audit behavior.
+- Do not use demo rows as final application advice.
+- Formal delivery requires current official data, source verification, and counselor signoff.
+
+## Research Prototype Background
 
 GaokaoAgent is a research prototype for Gaokao preference planning. It treats college-application planning as a high-risk, long-horizon, constraint-heavy decision problem rather than a single-turn chatbot task.
 

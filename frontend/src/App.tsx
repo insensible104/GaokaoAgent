@@ -8,11 +8,17 @@ const LoadingView = lazy(() => import("@/components/LoadingView").then(module =>
 const ProgressTracker = lazy(() => import("@/components/ProgressTracker").then(module => ({ default: module.ProgressTracker })));
 const GameMatrixView = lazy(() => import("@/components/GameMatrixView").then(module => ({ default: module.GameMatrixView })));
 const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryReview").then(module => ({ default: module.InternalDeliveryReview })));
+const InvestmentResearchReportPreview = lazy(() => import("@/components/PathFinderReportTemplate").then(module => ({ default: module.InvestmentResearchReportPreview })));
+const DeliveryReadinessConsole = lazy(() => import("@/components/DeliveryReadinessConsole").then(module => ({ default: module.DeliveryReadinessConsole })));
+const AdmissionsOpportunityDemoCasePanel = lazy(() => import("@/components/AdmissionsOpportunityDemoCasePanel").then(module => ({ default: module.AdmissionsOpportunityDemoCasePanel })));
+const ExternalPlanAuditDemoPanel = lazy(() => import("@/components/ExternalPlanAuditDemoPanel").then(module => ({ default: module.ExternalPlanAuditDemoPanel })));
 const DeliveryPortfolioReview = lazy(() => import("@/components/DeliveryPortfolioReview").then(module => ({ default: module.DeliveryPortfolioReview })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
 import type { AgentStep } from "@/components/ProgressTracker";
+import type { PathFinderReportPayload } from "@/components/PathFinderReportTemplate";
+import { buildDeliveryReadinessSummary } from "@/lib/deliveryReadiness";
 import type { DeliveryManifest } from "@/components/InternalDeliveryReview";
 
 interface AnalysisResult {
@@ -46,6 +52,20 @@ interface DeliveryProfile {
   regret_sensitivity?: number;
   medical_restrictions?: Record<string, boolean>;
   subject_scores?: Record<string, number>;
+  field_provenance?: Record<string, string>;
+  career_assessment?: {
+    mode: "skip" | "quick" | "complete";
+    answers: Record<string, number>;
+    mbti_type?: string;
+    career_values: string[];
+  };
+  holland_code?: Record<string, number>;
+  riasec_top_codes?: string[];
+  career_assessment_mode?: string;
+  career_assessment_status?: string;
+  mbti_type?: string;
+  mbti_source?: string;
+  career_values?: string[];
 }
 
 interface AnalysisRequest {
@@ -105,6 +125,14 @@ const asNumberRecord = (value: unknown): Record<string, number> | undefined => {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
+const asStringRecord = (value: unknown): Record<string, string> | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string"
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
 const normalizeDeliveryProfile = (
   rawProfile: Record<string, unknown> | null | undefined,
   fallback: DeliveryProfile | null
@@ -144,6 +172,23 @@ const normalizeDeliveryProfile = (
     regret_sensitivity: typeof raw.regret_sensitivity === "number" ? raw.regret_sensitivity : 0.5,
     medical_restrictions: asBooleanRecord(raw.medical_restrictions),
     subject_scores: asNumberRecord(raw.subject_scores) ?? fallback?.subject_scores,
+    field_provenance: asStringRecord(raw.field_provenance) ?? fallback?.field_provenance,
+    career_assessment: fallback?.career_assessment,
+    holland_code: asNumberRecord(raw.holland_code) ?? fallback?.holland_code,
+    riasec_top_codes: asStringArray(raw.riasec_top_codes),
+    career_assessment_mode:
+      typeof raw.career_assessment_mode === "string"
+        ? raw.career_assessment_mode
+        : fallback?.career_assessment_mode,
+    career_assessment_status:
+      typeof raw.career_assessment_status === "string"
+        ? raw.career_assessment_status
+        : fallback?.career_assessment_status,
+    mbti_type: typeof raw.mbti_type === "string" ? raw.mbti_type : fallback?.mbti_type,
+    mbti_source: typeof raw.mbti_source === "string" ? raw.mbti_source : fallback?.mbti_source,
+    career_values: asStringArray(raw.career_values).length
+      ? asStringArray(raw.career_values)
+      : fallback?.career_values ?? fallback?.career_assessment?.career_values ?? [],
   };
 };
 
@@ -154,6 +199,14 @@ function AppContent() {
   const [progressSteps, setProgressSteps] = useState<AgentStep[]>([]);
   const [deliveryProfile, setDeliveryProfile] = useState<DeliveryProfile | null>(null);
   const [deliveryManifests, setDeliveryManifests] = useState<DeliveryManifest[]>([]);
+  const admissionsOpportunityDemoRequested =
+    window.location.pathname.includes("admissions-opportunity-demo") ||
+    new URLSearchParams(window.location.search).get("demo") === "admissions-opportunity";
+  const externalPlanAuditDemoRequested =
+    window.location.pathname.includes("external-plan-audit-demo") ||
+    new URLSearchParams(window.location.search).get("demo") === "external-plan-audit";
+  const showAdmissionsOpportunityDemo =
+    import.meta.env.DEV || import.meta.env.VITE_SHOW_ADMISSIONS_DEMO === "true";
 
   // 修复：添加AbortController ref，用于取消请求
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -201,7 +254,7 @@ function AppContent() {
     try {
       const apiUrl = import.meta.env.DEV
         ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "http://localhost:8000";
+        : import.meta.env.VITE_API_URL || "";
 
       if (isDev) console.log("[DEBUG] Sending request to:", `${apiUrl}/api/analyze`);
 
@@ -219,6 +272,7 @@ function AppContent() {
             rank: data.rank,
             subject_group: data.subject_group,
             scores: data.scores,
+            delivery_profile: data.delivery_profile,
           }),
           signal: abortControllerRef.current.signal,
         },
@@ -277,7 +331,7 @@ function AppContent() {
         } else if (err.message.includes("timeout") || err.name === "TimeoutError") {
           errorMessage = "请求超时，请检查网络连接或稍后重试";
         } else if (err.message.includes("NetworkError") || err.message.includes("Failed to fetch")) {
-          errorMessage = "网络错误，请检查后端服务是否运行 (http://localhost:8000)";
+          errorMessage = "网络连接失败，请稍后重试";
         } else {
           errorMessage = err.message;
         }
@@ -410,6 +464,55 @@ function AppContent() {
     setDeliveryManifests([]);
   };
 
+  const openReportTemplatePreview = useCallback(() => {
+    if (!result?.game_matrix) return;
+    const payload: PathFinderReportPayload = {
+      gameMatrix: result.game_matrix,
+      deliveryProfile,
+      report: result.report,
+      deliveryReadiness: buildDeliveryReadinessSummary({
+        gameMatrix: result.game_matrix,
+        deliveryProfile,
+        report: result.report,
+      }),
+      generatedAt: new Date().toISOString(),
+    };
+    window.sessionStorage.setItem("pathfinder-report-preview", JSON.stringify(payload));
+    window.open("/app/report-template-preview", "_blank", "noopener,noreferrer");
+  }, [deliveryProfile, result]);
+
+  if (window.location.pathname.includes("report-template-preview")) {
+    return (
+      <Suspense fallback={<div className="p-8 text-center text-slate-600">Loading report template...</div>}>
+        <InvestmentResearchReportPreview />
+      </Suspense>
+    );
+  }
+
+  if (externalPlanAuditDemoRequested) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
+        <main className="container mx-auto max-w-6xl px-4 py-8">
+          <Suspense fallback={<div className="text-center py-4">Loading external plan audit demo...</div>}>
+            <ExternalPlanAuditDemoPanel />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
+  if (admissionsOpportunityDemoRequested) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
+        <main className="container mx-auto max-w-6xl px-4 py-8">
+          <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
+            <AdmissionsOpportunityDemoCasePanel />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -426,7 +529,42 @@ function AppContent() {
         {/* Main Content */}
         <main>
           {!result && !isAnalyzing && !error && (
-            <GaokaoAgentForm onSubmit={handleSubmit} />
+            <div className="space-y-6">
+              <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <a
+                  href="/app/external-plan-audit-demo"
+                  className="rounded-lg border border-indigo-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase text-indigo-700">Public demo</p>
+                  <h2 className="mt-2 text-xl font-bold text-slate-950">Audit an external plan</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Compare a Qwen, family, teacher, or peer plan against PathFinder's structured slate.
+                  </p>
+                </a>
+                <a
+                  href="/app/admissions-opportunity-demo"
+                  className="rounded-lg border border-emerald-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase text-emerald-700">Public demo</p>
+                  <h2 className="mt-2 text-xl font-bold text-slate-950">Review an evidence workflow</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    See how plan changes, public attention, web evidence, and counselor review stay separated.
+                  </p>
+                </a>
+              </section>
+              <GaokaoAgentForm onSubmit={handleSubmit} />
+              {showAdmissionsOpportunityDemo && (
+                <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
+                  <section className="rounded-2xl border border-sky-200 bg-white/85 p-4 shadow-sm">
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold uppercase text-sky-700">Internal evidence demo</p>
+                      <h2 className="text-xl font-bold text-slate-950">Admissions opportunity demo case</h2>
+                    </div>
+                    <AdmissionsOpportunityDemoCasePanel />
+                  </section>
+                </Suspense>
+              )}
+            </div>
           )}
 
           {isAnalyzing && (
@@ -481,7 +619,15 @@ function AppContent() {
                   (result.game_matrix.major_group_rows && result.game_matrix.major_group_rows.length > 0) ||
                   (result.game_matrix.rows && result.game_matrix.rows.length > 0)
                 ) && (
-                  <GameMatrixView gameMatrix={result.game_matrix} />
+                  <>
+                    <DeliveryReadinessConsole
+                      gameMatrix={result.game_matrix}
+                      deliveryProfile={deliveryProfile}
+                      report={result.report}
+                      onOpenReportPreview={openReportTemplatePreview}
+                    />
+                    <GameMatrixView gameMatrix={result.game_matrix} userProfile={deliveryProfile} />
+                  </>
                 )}
 
                 <InternalDeliveryReview

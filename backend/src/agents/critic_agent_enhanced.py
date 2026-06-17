@@ -48,13 +48,20 @@ def critic_agent_node(state: SupervisorState) -> dict:
     # 检查是否有严重负奖励
     negative_steps = [r for r in step_rewards if r.reward_value < -0.5]
 
+    enforce_step_rewards = os.getenv("GAOKAO_STEP_REWARD_ENFORCE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
     if negative_steps:
         print(f"[WARN] 检测到 {len(negative_steps)} 个低质量步骤")
         for step in negative_steps:
             print(f"  - Step {step.step_id} ({step.agent_name}): {step.reasoning}")
 
-        # 如果重试次数 < 2，触发回退
-        if retry_count < 2:
+        # 简化的事后奖励默认只做观测；显式开启后才允许控制生产路由。
+        if enforce_step_rewards and retry_count < 2:
             # 生成反思建议
             reflection = generate_reflection(negative_steps)
 
@@ -463,24 +470,44 @@ def audit_fast_loop(report, matrix, profile, retry_count) -> AuditResult:
             )
             audit.reroute_to = "report_agent"
 
-    # 审计1：保底校概率（降低到90%，更实际）
+    # 审计1：保底结构。校准概率与旧模拟概率不共享同一个单组阈值。
     safe_rows = [r for r in matrix.major_group_rows if r.strategy_tag.value == "safe"]
     if safe_rows:
+        calibrated_plan = bool(
+            volunteer_plan and volunteer_plan.probability_is_calibrated
+        )
+        calibrated_upper = (
+            volunteer_plan.admission_probability_upper_bound
+            if calibrated_plan
+            else None
+        )
         min_safe_prob = min(r.admission_prob for r in safe_rows)
-        if min_safe_prob < 0.90:
+        safety_is_insufficient = (
+            calibrated_upper < 0.90
+            if calibrated_upper is not None
+            else min_safe_prob < 0.90
+        )
+        if safety_is_insufficient:
             # 只有在重试次数 < 5 时才回退
             if retry_count < 5:
                 audit.status = AuditStatus.REJECT_LOGIC
-                audit.add_issue(
-                    f"保底校录取概率过低（{min_safe_prob:.1%} < 90%），存在滑档风险",
-                    f"建议扩大搜索范围，寻找更稳妥的保底院校（已重试 {retry_count} 次）"
-                )
+                if calibrated_upper is not None:
+                    audit.add_issue(
+                        f"整套历史校准命中上界偏低（{calibrated_upper:.1%} < 90%），保底结构不足",
+                        f"建议补充更多低位次、低尾部风险的保底专业组（已重试 {retry_count} 次）",
+                    )
+                else:
+                    audit.add_issue(
+                        f"保底校录取概率过低（{min_safe_prob:.1%} < 90%），存在滑档风险",
+                        f"建议扩大搜索范围，寻找更稳妥的保底院校（已重试 {retry_count} 次）"
+                    )
                 audit.reroute_to = "game_agent"
             else:
                 # 重试5次后，放宽标准但给出警告
-                print(f"[WARN] 已重试{retry_count}次，保底概率为{min_safe_prob:.1%}，建议用户谨慎选择")
+                observed_safety = calibrated_upper if calibrated_upper is not None else min_safe_prob
+                print(f"[WARN] 已重试{retry_count}次，方案安全指标为{observed_safety:.1%}，建议用户谨慎选择")
                 audit.add_issue(
-                    f"保底校录取概率为{min_safe_prob:.1%}，略低于理想标准",
+                    f"方案安全指标为{observed_safety:.1%}，略低于理想标准",
                     "建议填报时额外关注本省补录政策"
                 )
     else:

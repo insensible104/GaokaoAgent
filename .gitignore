@@ -9,6 +9,8 @@ frontend/coverage/
 # Logs
 logs
 *.log
+.codex_tmp*
+tmp/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

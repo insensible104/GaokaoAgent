@@ -1,6 +1,7 @@
 """Agent 2: 博弈推荐智能体（专业组级别）"""
 import os
 import pandas as pd
+from datetime import date
 from pathlib import Path
 from typing import Any, Sequence
 from langchain_core.messages import AIMessage
@@ -22,17 +23,32 @@ from recommendation.major_choice_planner import (
     build_major_options_from_records,
     build_volunteer_plan,
     choose_six_majors,
+    format_plan_probability_range,
 )
 from recommendation.major_utility import score_major_options
 from recommendation.school_signal import score_school_major_signal
 from recommendation.tradeoff_policy import score_tradeoff
 from recommendation.arbitrage_adapter import score_major_group_arbitrage
 from recommendation.quant_scorecard import build_quant_scorecard
+from recommendation.data_vintage import inspect_recommendation_data_vintage
+from recommendation.decision_trace import build_decision_trace
+from recommendation.plan_change_explanation import build_plan_change_explanation
+from recommendation.plan_change_signals import attach_plan_change_signals, load_online_plan_change_events
+from recommendation.probability_calibration import (
+    calibrate_probability,
+    load_probability_calibration,
+)
+from recommendation.strategy_coverage import (
+    build_coverage_report,
+    count_strategy_rows,
+    fill_plan_capacity,
+    retain_strategy_candidates,
+)
+from evaluation.plan_audit import build_plan_audit_summary
 from utils.agent_bus import publish_agent_message, remember
 from utils.city_mapping import get_school_city, calculate_city_preference_score
 from rl.rank_gradient_strategy import RankGradientStrategy
 from rl.runtime_policy import RLRuntimePolicy
-from engines.pareto_optimizer import compute_pareto_frontier, Objective
 
 
 def _clamp01(value: float) -> float:
@@ -41,6 +57,86 @@ def _clamp01(value: float) -> float:
 
 def _normalize_percent_score(value: float) -> float:
     return _clamp01(value / 100.0)
+
+
+def _prepare_strategy_candidate_pool(
+    rows: Sequence[MajorGroupRow],
+    *,
+    desired: dict[str, int],
+    reserve: int = 3,
+) -> list[MajorGroupRow]:
+    """Pareto-rank within each strategy while preserving mix capacity."""
+    return retain_strategy_candidates(rows, desired=desired, reserve=reserve)
+
+
+def _resolve_plan_change_diff_path() -> Path | None:
+    configured = os.getenv("GAOKAO_PLAN_CHANGE_DIFF")
+    candidates = [
+        Path(configured) if configured else None,
+        Path(__file__).resolve().parents[3] / "logs" / "enrollment_diff_2025.json",
+    ]
+    return next((path for path in candidates if path and path.exists()), None)
+
+
+def _resolve_probability_calibration_path() -> Path | None:
+    configured = os.getenv("GAOKAO_PROBABILITY_CALIBRATION")
+    candidates = [
+        Path(configured) if configured else None,
+        Path(__file__).resolve().parents[2] / "data" / "probability_calibration_2025.json",
+    ]
+    return next((path for path in candidates if path and path.exists()), None)
+
+
+def _calibrate_online_probability(
+    raw_probability: float,
+    calibration_path: str | Path | None,
+    *,
+    subject_group: str | None = None,
+) -> tuple[float, dict[str, Any]]:
+    raw = _clamp01(raw_probability)
+    artifact = load_probability_calibration(str(Path(calibration_path).resolve())) if calibration_path else None
+    if artifact is None:
+        return raw, {
+            "raw_admission_prob": raw,
+            "probability_is_calibrated": False,
+            "probability_method": "historical_rank_monte_carlo_uncalibrated",
+            "probability_calibration_year": None,
+            "probability_hazard_scale": 1.0,
+            "probability_calibration_source": "",
+        }
+    probability_method = (
+        "historical_beta_subject"
+        if artifact.method == "beta_subject"
+        else "historical_isotonic"
+    )
+    return calibrate_probability(raw, artifact, subject_group=subject_group), {
+        "raw_admission_prob": raw,
+        "probability_is_calibrated": True,
+        "probability_method": probability_method,
+        "probability_calibration_year": artifact.calibration_year,
+        "probability_hazard_scale": artifact.subsequent_choice_hazard_scale,
+        "probability_calibration_source": artifact.source,
+    }
+
+
+def _attach_online_plan_changes(
+    rows: Sequence[MajorGroupRow],
+    *,
+    subject_group: str,
+    diff_path: str | Path | None,
+) -> int:
+    if diff_path:
+        attach_plan_change_signals(
+            rows,
+            load_online_plan_change_events(diff_path),
+            subject_group=subject_group,
+        )
+    attached = 0
+    for row in rows:
+        row.plan_change_explanation = build_plan_change_explanation(row)
+        if row.plan_change_details:
+            attached += 1
+    return attached
 
 
 def _extract_research_evidence_cards(state: dict) -> list[dict[str, Any]]:
@@ -112,8 +208,8 @@ def refresh_game_matrix_research_evidence(state: dict) -> dict:
     """Refresh an existing game matrix after slow-loop research produces evidence.
 
     This is intentionally not a candidate-regeneration step. It preserves the
-    current row order and only updates market-evidence, arbitrage, and volunteer
-    plan evidence fields so late research can affect reportable risk signals.
+    selected candidate set and reapplies the deterministic prefix optimizer after
+    updating market evidence so a late refresh cannot destroy volunteer ordering.
     """
     matrix = state.get("game_matrix")
     profile = state.get("user_profile")
@@ -140,12 +236,19 @@ def refresh_game_matrix_research_evidence(state: dict) -> dict:
         row.audit_flags = _dedupe_strings(row.audit_flags)
         row.market_behavior_notes = _dedupe_strings(row.market_behavior_notes)
         row.market_evidence_cards = _dedupe_evidence_cards(row.market_evidence_cards)
+        row.plan_change_explanation = build_plan_change_explanation(row)
+        row.decision_trace = build_decision_trace(row)
         if float(getattr(row, "plan_change_score", 0.0) or 0.0) > before_score:
             refreshed += 1
 
     existing_plan = getattr(matrix, "volunteer_plan", None)
     max_choices = len(existing_plan.choices) if existing_plan else len(rows)
-    matrix.volunteer_plan = build_volunteer_plan(rows, profile, max_choices=max_choices, optimize_prefix=False)
+    matrix.volunteer_plan = build_volunteer_plan(
+        rows,
+        profile,
+        max_choices=max_choices,
+        optimize_prefix=True,
+    )
     matrix.calculate_statistics()
     return {
         "game_matrix": matrix,
@@ -320,6 +423,11 @@ def game_agent_node(state: SupervisorState) -> dict:
 
         engine = GaokaoQuantEngine(data_dir=data_dir)
         enrollment_loader = EnrollmentPlanLoader(data_dir=data_dir)
+        target_year = int(os.getenv("GAOKAO_TARGET_YEAR", str(date.today().year)))
+        data_vintage = inspect_recommendation_data_vintage(
+            data_dir,
+            target_year=target_year,
+        )
     except Exception as e:
         return {
             "current_agent": "game_agent",
@@ -370,6 +478,7 @@ def game_agent_node(state: SupervisorState) -> dict:
 
     # 为每个专业组计算录取概率和策略标签
     major_group_rows = []
+    probability_calibration_path = _resolve_probability_calibration_path()
     for _, group in major_groups.iterrows():
         school = group['school']
         school_code = group.get('school_code', school)
@@ -497,8 +606,10 @@ def game_agent_node(state: SupervisorState) -> dict:
                 print(f"[ERROR] Fallback失败，跳过 {school}-{major_group_code}: {fallback_error}")
                 continue
 
-        # 过滤掉概率过低的（冲刺概率 < 20%）
-        if admission_prob < 0.20:
+        raw_admission_prob = admission_prob
+
+        # 过滤仍基于原始历史模拟，避免经验校准映射改变候选搜索边界。
+        if raw_admission_prob < 0.20:
             continue  # 录取概率太低，放弃
 
         # 计算rank_diff（用于后续分析）
@@ -516,9 +627,17 @@ def game_agent_node(state: SupervisorState) -> dict:
             print(f"[WARN] {school}-{major_group_code}: z_score_from_calc is None! Using fallback Z = {z_score:.3f} (rank_diff={rank_diff}, volatility_std={volatility_std})")
 
         # 分类策略标签（基于Z-score的AI智能分类）
-        strategy = classify_strategy_tag(admission_prob, z_score=z_score)
+        strategy = classify_strategy_tag(raw_admission_prob, z_score=z_score)
         strategy_value = strategy.value if hasattr(strategy, "value") else str(strategy)
-        print(f"[DEBUG] {school}-{major_group_code}: Z-score = {z_score:.3f}, Probability = {admission_prob:.1%}, Strategy = {strategy}")
+        admission_prob, probability_metadata = _calibrate_online_probability(
+            raw_admission_prob,
+            probability_calibration_path,
+            subject_group=profile.subject_group,
+        )
+        print(
+            f"[DEBUG] {school}-{major_group_code}: Z-score={z_score:.3f}, "
+            f"Raw={raw_admission_prob:.1%}, Calibrated={admission_prob:.1%}, Strategy={strategy}"
+        )
 
         scoring_major_names = suggested_major_names or major_list[:6]
         school_signal = score_school_major_signal(
@@ -617,6 +736,7 @@ def game_agent_node(state: SupervisorState) -> dict:
             major_options=major_options,
             suggested_major_choices=suggested_major_choices,
             admission_prob=admission_prob,
+            **probability_metadata,
             min_rank_pred=min_rank_pred,
             rank_diff=rank_diff,  # 修复新问题1：存储rank_diff
             rank_ci_lower=rank_ci_lower,
@@ -688,65 +808,38 @@ def game_agent_node(state: SupervisorState) -> dict:
             if row.recommendation_role
             else tradeoff_result.score_band
         )
+        row.decision_trace = build_decision_trace(row)
 
         major_group_rows.append(row)
 
-    # === 帕累托最优筛选（降低搜索空间）===
-    print(f"[进度] 帕累托前沿筛选（从{len(major_group_rows)}个候选中找出非支配解）...")
-
-    # 修复：先分离保底院校（Z-score≥2.0），保底院校不参与Pareto筛选，直接保留
-    safe_schools_preserved = [r for r in major_group_rows if r.strategy_tag == StrategyTag.SAFE]
-    non_safe_schools = [r for r in major_group_rows if r.strategy_tag != StrategyTag.SAFE]
-
-    print(f"[INFO] 保底院校：{len(safe_schools_preserved)}个（不参与Pareto筛选，全部保留）")
-    print(f"[INFO] 非保底院校：{len(non_safe_schools)}个（将进行Pareto筛选）")
-
-    # 定义多目标优化目标
-    objectives = [
-        Objective(name='录取概率', key='admission_prob', maximize=True, weight=1.0),
-        Objective(name='综合评分', key='comprehensive_score', maximize=True, weight=2.0),
-        Objective(name='调剂风险', key='adjustment_risk', maximize=False, weight=0.5)
-    ]
-
-    # 转换为字典格式（pareto_optimizer需要）- 只对非保底院校进行优化
-    candidates_dict = []
-    for i, row in enumerate(non_safe_schools):
-        candidates_dict.append({
-            'volunteer_index': i,
-            'school_name': row.school_name,
-            'major_name': ','.join(row.major_list[:3]),  # 前3个专业
-            'admission_prob': row.admission_prob,
-            'comprehensive_score': row.comprehensive_score,
-            'adjustment_risk': row.adjustment_risk,
-            'original_row': row  # 保留原始对象
-        })
-
-    # 计算帕累托前沿（只对非保底院校）
-    pareto_result = compute_pareto_frontier(
-        candidates=candidates_dict,
-        objectives=objectives,
-        max_rank=5  # 修复：从2增加到5，保留更多层次的候选
+    plan_change_count = _attach_online_plan_changes(
+        major_group_rows,
+        subject_group=profile.subject_group,
+        diff_path=_resolve_plan_change_diff_path(),
     )
-
-    print(f"[OK] 帕累托前沿: {pareto_result.frontier_size}个非支配解")
-    print(f"     被支配解: {pareto_result.dominated_size}个（已过滤）")
-
-    # 从帕累托前沿中提取原始row对象
-    pareto_indices = [sol.volunteer_index for sol in pareto_result.pareto_frontier]
-    if pareto_result.dominated_solutions:
-        # 修复：保留前5层的所有解，而不是只保留第2层的一半
-        pareto_indices.extend([
-            sol.volunteer_index
-            for sol in pareto_result.dominated_solutions
-            if sol.pareto_rank <= 5
-        ])
-
-    pareto_non_safe_rows = [non_safe_schools[i] for i in pareto_indices]
-    candidate_pool = pareto_non_safe_rows + safe_schools_preserved
-
-    print("[进度] 正在应用运行时RL策略与志愿组合优化...")
+    if plan_change_count:
+        print(f"[INFO] 已为 {plan_change_count} 个候选附加高置信招生计划变化证据")
 
     runtime_rl = RLRuntimePolicy()
+    desired_mix = runtime_rl.get_recommendation_mix(total_recommend, profile)
+    classified_counts = count_strategy_rows(major_group_rows)
+    print(
+        "[进度] 按冲稳保分桶执行帕累托保留："
+        f"原始冲{classified_counts['rush']}/稳{classified_counts['target']}/保{classified_counts['safe']}，"
+        f"目标冲{desired_mix['rush']}/稳{desired_mix['target']}/保{desired_mix['safe']}..."
+    )
+    candidate_pool = _prepare_strategy_candidate_pool(
+        major_group_rows,
+        desired=desired_mix,
+        reserve=3,
+    )
+    retained_counts = count_strategy_rows(candidate_pool)
+    print(
+        "[OK] 分桶保留后："
+        f"冲{retained_counts['rush']}/稳{retained_counts['target']}/保{retained_counts['safe']}"
+    )
+
+    print("[进度] 正在应用运行时RL策略与志愿组合优化...")
     final_groups, optimization_summary = runtime_rl.select_candidates(
         rows=candidate_pool,
         profile=profile,
@@ -769,6 +862,23 @@ def game_agent_node(state: SupervisorState) -> dict:
             "portfolio": {"generated": False, "reason": "fallback"},
             "fallback": "comprehensive_score",
         }
+
+    final_groups, capacity_fill = fill_plan_capacity(
+        selected_rows=final_groups,
+        all_rows=major_group_rows,
+        total_count=total_recommend,
+    )
+    optimization_summary["capacity_fill"] = capacity_fill
+    optimization_summary["selected_count"] = len(final_groups)
+    if capacity_fill["filled_count"]:
+        optimization_summary["portfolio"] = runtime_rl.optimize_portfolio(final_groups, profile)
+
+    optimization_summary["coverage_report"] = build_coverage_report(
+        desired=desired_mix,
+        classified_rows=major_group_rows,
+        post_pareto_rows=candidate_pool,
+        selected_rows=final_groups,
+    )
 
     portfolio_summary = optimization_summary.get("portfolio", {})
     if portfolio_summary.get("generated"):
@@ -813,9 +923,14 @@ def game_agent_node(state: SupervisorState) -> dict:
             f"冲{rush_needed}/稳{target_needed}/保{safe_needed}。"
         )
     if portfolio_summary.get("generated"):
+        portfolio_probability_label = (
+            "最高单组历史校准命中率"
+            if final_groups and all(row.probability_is_calibrated for row in final_groups)
+            else "最高单组模拟概率"
+        )
         reasoning_insights.append(
             f"[Portfolio] 组合优化选择了“{portfolio_summary.get('style_name', '默认风格')}”，"
-            f"保底成功率约为{portfolio_summary.get('admission_guarantee', 0.0):.1%}。"
+            f"{portfolio_probability_label}约为{portfolio_summary.get('admission_guarantee', 0.0):.1%}。"
         )
 
     # 评估1：检查保底数量是否充足（基于Z-score智能判断）
@@ -885,19 +1000,37 @@ def game_agent_node(state: SupervisorState) -> dict:
     volunteer_plan = build_volunteer_plan(final_groups, profile, optimize_prefix=True)
 
     # 创建博弈矩阵
+    plan_audit_summary = (
+        build_plan_audit_summary(
+            volunteer_plan,
+            profile,
+            coverage_report=optimization_summary.get("coverage_report"),
+            data_vintage=data_vintage.model_dump(),
+        )
+        if volunteer_plan
+        else None
+    )
+
     game_matrix = GameMatrix(
         major_group_rows=final_groups,
         agentic_rl_used=optimization_summary.get("checkpoint_loaded", False),
         selection_method="pareto+runtime_rl+portfolio_optimization+prefix_optimizer",
         optimization_summary=optimization_summary,
+        data_vintage=data_vintage.model_dump(),
         volunteer_plan=volunteer_plan,
+        plan_audit_summary=plan_audit_summary,
     )
     game_matrix.calculate_statistics()
 
     debug_msg = f"[OK] Game Agent: 推荐 {len(final_groups)} 个专业组（冲{game_matrix.total_rush} + 稳{game_matrix.total_target} + 保{game_matrix.total_safe}）"
     if volunteer_plan:
+        probability_range_label = (
+            "历史校准命中区间"
+            if volunteer_plan.probability_is_calibrated
+            else "未校准启发式命中区间"
+        )
         debug_msg += (
-            f"，首命中累计概率{volunteer_plan.expected_admission_prob:.1%}，"
+            f"，{probability_range_label}{format_plan_probability_range(volunteer_plan)}，"
             f"关键前缀{volunteer_plan.key_prefix_count}行"
         )
 

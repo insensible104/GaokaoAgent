@@ -22,6 +22,14 @@ def test_user_profile_accepts_null_collection_defaults() -> None:
     assert profile.medical_restrictions == {}
 
 
+def test_user_profile_does_not_fabricate_untaken_holland_scores() -> None:
+    profile = UserProfile(score=620, rank=12000, subject_group="物理")
+
+    assert profile.holland_code is None
+    assert profile.riasec_top_codes == []
+    assert profile.career_assessment_status == "not_taken"
+
+
 if __name__ == "__main__":
     test_user_profile_accepts_null_collection_defaults()
     print("user profile null defaults smoke tests passed")

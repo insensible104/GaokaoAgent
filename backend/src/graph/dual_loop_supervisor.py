@@ -167,7 +167,8 @@ def create_dual_loop_supervisor() -> StateGraph:
         route_after_profiling,
         {
             "game_agent": "game_agent",
-            "deep_research": "deep_research"
+            "deep_research": "deep_research",
+            END: END,
         }
     )
 

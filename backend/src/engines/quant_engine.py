@@ -7,6 +7,66 @@ import glob
 from functools import lru_cache  # 修复P2：添加LRU缓存优化性能
 
 
+def _stratified_candidate_selection(
+    candidates: pd.DataFrame,
+    *,
+    user_rank: int,
+    target_count: int,
+) -> pd.DataFrame:
+    """Truncate candidates without discarding the safer side of the rank window."""
+    if candidates.empty or target_count <= 0:
+        return candidates.head(0)
+
+    dedupe_columns = [
+        column
+        for column in ("school", "major_group")
+        if column in candidates.columns
+    ]
+    working = candidates.drop_duplicates(subset=dedupe_columns or None).copy()
+    if len(working) <= target_count:
+        return working.sort_values("min_rank").reset_index(drop=True)
+
+    working["_rank_diff"] = working["min_rank"].astype(float) - float(user_rank)
+    near_window = max(3000, int(user_rank * 0.25))
+    buckets = [
+        working[working["_rank_diff"] < -near_window].sort_values("_rank_diff", ascending=False),
+        working[
+            (working["_rank_diff"] >= -near_window)
+            & (working["_rank_diff"] <= near_window * 2)
+        ].assign(_distance=lambda frame: frame["_rank_diff"].abs()).sort_values(
+            ["_distance", "min_rank"]
+        ),
+        working[working["_rank_diff"] > near_window * 2].sort_values("_rank_diff"),
+    ]
+
+    harder_count = int(target_count * 0.30)
+    near_count = int(target_count * 0.40)
+    safer_count = target_count - harder_count - near_count
+    quotas = [harder_count, near_count, safer_count]
+    selected = pd.concat(
+        [bucket.head(quota) for bucket, quota in zip(buckets, quotas)],
+        ignore_index=False,
+    )
+    selected_indexes = set(selected.index.tolist())
+
+    if len(selected) < target_count:
+        remainder = working[~working.index.isin(selected_indexes)].assign(
+            _distance=lambda frame: frame["_rank_diff"].abs()
+        ).sort_values(["_distance", "min_rank"])
+        selected = pd.concat(
+            [selected, remainder.head(target_count - len(selected))],
+            ignore_index=False,
+        )
+
+    return (
+        selected
+        .drop(columns=["_rank_diff", "_distance"], errors="ignore")
+        .sort_values("min_rank")
+        .head(target_count)
+        .reset_index(drop=True)
+    )
+
+
 class GaokaoQuantEngine:
     """高考量化引擎（全内存计算）"""
 
@@ -431,9 +491,13 @@ class GaokaoQuantEngine:
         # 按位次排序
         df_result = df_result.sort_values('min_rank')
 
-        # 如果结果过多，取前 target_count 个
+        # 如果结果过多，按位次侧分层截断，避免只保留更难的院校专业组。
         if len(df_result) > target_count:
-            df_result = df_result.head(target_count)
+            df_result = _stratified_candidate_selection(
+                df_result,
+                user_rank=user_rank,
+                target_count=target_count,
+            )
 
         print(f"[INFO] 搜索范围: {min_rank_search}-{max_rank_search}位次，找到{len(df_result)}个专业组")
 

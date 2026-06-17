@@ -395,6 +395,22 @@ class HeuristicSupervisorPolicy:
     def decide_after_profiling(self, state: SupervisorState) -> SupervisorDecision:
         intent: IntentClassification | None = state.get("intent_classification")
         loop_history = state.get("loop_history", [])
+        profile = state.get("user_profile")
+
+        if profile and not getattr(profile, "recommendation_ready", True):
+            missing_fields = list(getattr(profile, "missing_critical_fields", []) or [])
+            return self._decision(
+                state=state,
+                stage="after_profiling",
+                action=SupervisorAction.END,
+                candidates=[
+                    SupervisorAction.GAME.value,
+                    SupervisorAction.DEEP_RESEARCH.value,
+                    SupervisorAction.END.value,
+                ],
+                rationale="Critical student inputs are missing; do not generate a formal recommendation.",
+                metadata={"missing_critical_fields": missing_fields},
+            )
 
         if (
             intent
@@ -475,7 +491,7 @@ class HeuristicSupervisorPolicy:
             if (
                 key_market_stats["bait_group_count"] > 0
                 or key_market_stats["high_crowding_count"] > 0
-            ) and not state.get("research_report"):
+            ) and intent and intent.requires_search and not state.get("research_report"):
                 return self._decision(
                     state=state,
                     stage="after_game",

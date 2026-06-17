@@ -10,6 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { StudentCareerProfile } from "@/components/StudentCareerProfile";
+import {
+  isCareerAssessmentComplete,
+  type CareerAssessmentPayload,
+} from "@/lib/careerAssessment";
 
 interface GaokaoAgentFormProps {
   onSubmit: (data: {
@@ -38,6 +43,7 @@ interface GaokaoAgentFormProps {
       risk_tolerance: string;
       school_major_preference: string;
       subject_scores?: Record<string, number>;
+      career_assessment?: CareerAssessmentPayload;
     };
   }) => void;
 }
@@ -70,9 +76,21 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
   const [preferredMajors, setPreferredMajors] = useState("");
   const [blacklistMajors, setBlacklistMajors] = useState("");
   const [riskTolerance, setRiskTolerance] = useState("balanced");
+  const [careerAssessment, setCareerAssessment] = useState<CareerAssessmentPayload>({
+    mode: "skip",
+    answers: {},
+    career_values: [],
+  });
+  const [showCareerValidation, setShowCareerValidation] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isCareerAssessmentComplete(careerAssessment)) {
+      setShowCareerValidation(true);
+      return;
+    }
+    setShowCareerValidation(false);
 
     // 构建消息
     let message = "我的高考信息如下：\n";
@@ -120,6 +138,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
             risk_tolerance: riskTolerance,
             school_major_preference: "unknown",
             subject_scores: subjectScores,
+            career_assessment: careerAssessment,
           }
         : undefined,
     });
@@ -418,6 +437,15 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
           </div>
         </Card>
 
+        <StudentCareerProfile
+          value={careerAssessment}
+          onChange={(nextValue) => {
+            setCareerAssessment(nextValue);
+            if (isCareerAssessmentComplete(nextValue)) setShowCareerValidation(false);
+          }}
+          showValidation={showCareerValidation}
+        />
+
         {/* 提交按钮 */}
         <Button
           type="submit"
@@ -433,9 +461,9 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
         <div className="p-4 bg-gradient-to-br from-sky-100 to-sky-50 rounded-lg border-2 border-sky-300">
           <h4 className="font-semibold mb-2 text-sky-700">💎 核心算法</h4>
           <ul className="text-sm text-sky-600 space-y-1">
-            <li>• 正态分布概率计算</li>
-            <li>• 小样本惩罚系数</li>
-            <li>• 恐惧指数识别市场错杀</li>
+            <li>• 历史位次区间对照</li>
+            <li>• 数据年份透明提示</li>
+            <li>• 小样本与波动风险惩罚</li>
           </ul>
         </div>
 

@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from agents.report_agent import _append_key_decision_evidence
+from agents.report_agent import _append_key_decision_evidence, _format_recommendation
 from models.game_matrix import VolunteerChoice, VolunteerPlan
 from models.report import ReportDraft
 
@@ -56,6 +56,27 @@ def test_report_appends_key_decision_evidence() -> None:
     assert "campus_discount=0.65" in draft.full_markdown
 
 
+def test_calibrated_recommendation_uses_historical_calibration_language() -> None:
+    choice = VolunteerChoice(
+        choice_index=1,
+        school_code="10001",
+        school_name="测试大学",
+        major_group_code="201",
+        group_admission_prob=0.46,
+        raw_group_admission_prob=0.95,
+        probability_is_calibrated=True,
+        probability_calibration_year=2025,
+        first_hit_prob=0.46,
+    )
+
+    text = _format_recommendation(choice)
+
+    assert "历史校准单组命中率 46.0%" in text
+    assert "原始历史模拟 95.0%" in text
+    assert "单点投档概率" not in text
+
+
 if __name__ == "__main__":
     test_report_appends_key_decision_evidence()
+    test_calibrated_recommendation_uses_historical_calibration_language()
     print("report decision evidence smoke tests passed")
