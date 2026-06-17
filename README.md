@@ -41,6 +41,39 @@ Public claim boundary:
 - Do not use demo rows as final application advice.
 - Formal delivery requires current official data, source verification, and counselor signoff.
 
+## Public Deployment
+
+GitHub Pages serves the static frontend from the `main` branch workflow:
+
+- Pages URL: `https://insensible104.github.io/GaokaoAgent/`
+- Static demos work without a backend API key.
+- Live analysis and internal delivery review require a reachable HTTPS backend.
+
+Configure the frontend API base in the repository settings:
+
+```powershell
+gh variable set PUBLIC_API_URL --repo insensible104/GaokaoAgent --body "https://your-backend.example.com"
+```
+
+Configure the backend CORS allowlist with the Pages origin:
+
+```env
+ENVIRONMENT=production
+FRONTEND_URL=https://insensible104.github.io/GaokaoAgent
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=...
+```
+
+Then deploy the backend with Docker Compose:
+
+```powershell
+copy .env.example .env
+notepad .env
+docker compose up --build -d
+```
+
+The same repository also supports one-container same-origin deployment at `/app`, which is useful when the backend host can serve both FastAPI and the built React frontend.
+
 ## Research Prototype Background
 
 GaokaoAgent is a research prototype for Gaokao preference planning. It treats college-application planning as a high-risk, long-horizon, constraint-heavy decision problem rather than a single-turn chatbot task.
@@ -296,4 +329,3 @@ Last updated: 2026-05-20
 ## License
 
 This project is released under the Apache License 2.0. See [LICENSE](LICENSE).
-

@@ -101,9 +101,12 @@ allowed_origins = [
 ]
 
 if IS_PRODUCTION:
-    production_origin = os.getenv("FRONTEND_URL")
-    if production_origin:
-        allowed_origins.append(production_origin)
+    production_origins = [
+        origin.strip().rstrip("/")
+        for origin in os.getenv("FRONTEND_URL", "").split(",")
+        if origin.strip()
+    ]
+    allowed_origins.extend(production_origins)
 
 app.add_middleware(
     CORSMiddleware,

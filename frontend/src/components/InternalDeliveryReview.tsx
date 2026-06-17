@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { buildApiUrl } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameMatrix, MajorGroupRow } from "@/components/GameMatrixView";
 
@@ -583,10 +584,7 @@ export function InternalDeliveryReview({
     setError(null);
 
     try {
-      const apiUrl = import.meta.env.DEV
-        ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "";
-      const response = await fetch(`${apiUrl}/api/delivery/preview`, {
+      const response = await fetch(buildApiUrl("/api/delivery/preview"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -617,10 +615,7 @@ export function InternalDeliveryReview({
     setPortfolioError(null);
 
     try {
-      const apiUrl = import.meta.env.DEV
-        ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "";
-      const response = await fetch(`${apiUrl}/api/delivery/portfolio`);
+      const response = await fetch(buildApiUrl("/api/delivery/portfolio"));
 
       if (!response.ok) {
         const body = await response.text();

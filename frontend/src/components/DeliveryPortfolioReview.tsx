@@ -4,6 +4,7 @@ import { BarChart3, FileSearch, FolderOpen, RefreshCw, ShieldAlert } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { buildApiUrl } from "@/lib/api";
 
 type DeliveryManifestLike = object & {
   case_id?: unknown;
@@ -113,10 +114,7 @@ export function DeliveryPortfolioReview({ sessionManifests }: DeliveryPortfolioR
     setIsLoadingArchive(true);
     setError(null);
     try {
-      const apiUrl = import.meta.env.DEV
-        ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/api/delivery/manifests/recent?limit=50`);
+      const response = await fetch(buildApiUrl("/api/delivery/manifests/recent?limit=50"));
       if (!response.ok) {
         const body = await response.text();
         throw new Error(body || `载入本机交付归档失败 (${response.status})`);
@@ -135,10 +133,7 @@ export function DeliveryPortfolioReview({ sessionManifests }: DeliveryPortfolioR
     setIsLoading(true);
     setError(null);
     try {
-      const apiUrl = import.meta.env.DEV
-        ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/api/delivery/portfolio`, {
+      const response = await fetch(buildApiUrl("/api/delivery/portfolio"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ manifests }),

@@ -18,6 +18,7 @@ const DeliveryPortfolioReview = lazy(() => import("@/components/DeliveryPortfoli
 import type { GameMatrix } from "@/components/GameMatrixView";
 import type { AgentStep } from "@/components/ProgressTracker";
 import type { PathFinderReportPayload } from "@/components/PathFinderReportTemplate";
+import { buildApiUrl } from "@/lib/api";
 import { buildDeliveryReadinessSummary } from "@/lib/deliveryReadiness";
 import type { DeliveryManifest } from "@/components/InternalDeliveryReview";
 
@@ -252,15 +253,13 @@ function AppContent() {
     ]);
 
     try {
-      const apiUrl = import.meta.env.DEV
-        ? "http://localhost:8000"
-        : import.meta.env.VITE_API_URL || "";
+      const analyzeUrl = buildApiUrl("/api/analyze");
 
-      if (isDev) console.log("[DEBUG] Sending request to:", `${apiUrl}/api/analyze`);
+      if (isDev) console.log("[DEBUG] Sending request to:", analyzeUrl);
 
       // 修复：使用fetchWithTimeout添加超时控制
       const response = await fetchWithTimeout(
-        `${apiUrl}/api/analyze`,
+        analyzeUrl,
         {
           method: "POST",
           headers: {

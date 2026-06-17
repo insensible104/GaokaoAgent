@@ -9,17 +9,32 @@ const deliverySource = fs.readFileSync(
   path.join(here, "components", "InternalDeliveryReview.tsx"),
   "utf8"
 );
+const portfolioSource = fs.readFileSync(
+  path.join(here, "components", "DeliveryPortfolioReview.tsx"),
+  "utf8"
+);
+const apiSource = fs.readFileSync(path.join(here, "lib", "api.ts"), "utf8");
 
 for (const [name, source] of [
   ["App", appSource],
   ["InternalDeliveryReview", deliverySource],
+  ["DeliveryPortfolioReview", portfolioSource],
 ]) {
   assert.match(
     source,
-    /: import\.meta\.env\.VITE_API_URL \|\| "";/,
-    `${name} production build should default to same-origin API requests`
+    /buildApiUrl\("/,
+    `${name} should route API calls through the shared API URL helper`
+  );
+  assert.doesNotMatch(
+    source,
+    /: import\.meta\.env\.VITE_API_URL \|\| "http:\/\/localhost:8000";/,
+    `${name} production build must not fall back to localhost`
   );
 }
+
+assert.match(apiSource, /import\.meta\.env\.VITE_API_URL/);
+assert.match(apiSource, /if \(import\.meta\.env\.DEV\) return "http:\/\/localhost:8000";/);
+assert.match(apiSource, /return "";/);
 
 assert.doesNotMatch(
   appSource,
