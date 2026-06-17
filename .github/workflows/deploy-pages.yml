@@ -41,6 +41,9 @@ jobs:
           VITE_SHOW_ADMISSIONS_DEMO: "true"
         run: npm run build
 
+      - name: Add GitHub Pages SPA fallback
+        run: cp frontend/dist/index.html frontend/dist/404.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

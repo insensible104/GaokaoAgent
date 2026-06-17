@@ -57,5 +57,6 @@ assert.match(viteConfig, /VITE_DEV_API_PROXY/);
 assert.match(pagesWorkflow, /actions\/deploy-pages@v4/);
 assert.match(pagesWorkflow, /VITE_BASE_PATH: \/GaokaoAgent\//);
 assert.match(pagesWorkflow, /VITE_API_URL: \$\{\{ vars\.PUBLIC_API_URL \}\}/);
+assert.match(pagesWorkflow, /cp frontend\/dist\/index\.html frontend\/dist\/404\.html/);
 
 console.log("public launch readiness smoke test passed");
