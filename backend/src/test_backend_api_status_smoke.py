@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -120,12 +121,98 @@ def test_runtime_status_exposes_backend_and_agent_capabilities():
     assert status["capabilities"]["multi_agent_deliberation"] is True
     assert status["capabilities"]["critic_audit"] is True
     assert "/api/delivery/preview" in status["entrypoints"]["api"]
+    assert "/api/delivery/portfolio" in status["entrypoints"]["api"]
+    assert "/api/delivery/manifests/recent" in status["entrypoints"]["api"]
     assert "smoke" in status["entrypoints"]["cli_commands"]
 
 
 def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
     from main import DeliveryPreviewRequest, preview_delivery_bundle
 
+    plan = {
+        "province": "广东",
+        "year": 2025,
+        "subject_group": "物理",
+        "user_score": 620,
+        "user_rank": 12000,
+        "choices": [
+            {
+                "choice_index": 1,
+                "school_code": "A001",
+                "school_name": "A大学",
+                "major_group_code": "201",
+                "major_choices": [
+                    {
+                        "school_code": "A001",
+                        "school_name": "A大学",
+                        "major_group_code": "201",
+                        "major_name": "计算机类",
+                        "is_preferred": True,
+                        "user_utility": 0.86,
+                        "major_rank_risk": 0.12,
+                    }
+                ],
+                "obey_adjustment": True,
+                "adjustment_advice": "recommend",
+                "group_admission_prob": 0.38,
+                "expected_major_utility": 0.86,
+                "tail_assignment_risk": 0.10,
+                "strategy_tag": "rush",
+                "explanation": "位次缓冲、概率和专业组结构均已解释。",
+                "quant_evidence": ["rank_buffer=rush", "data_confidence=0.80"],
+            },
+            {
+                "choice_index": 2,
+                "school_code": "B001",
+                "school_name": "B大学",
+                "major_group_code": "202",
+                "major_choices": [
+                    {
+                        "school_code": "B001",
+                        "school_name": "B大学",
+                        "major_group_code": "202",
+                        "major_name": "软件工程",
+                        "is_preferred": True,
+                        "user_utility": 0.82,
+                        "major_rank_risk": 0.10,
+                    }
+                ],
+                "obey_adjustment": True,
+                "adjustment_advice": "recommend",
+                "group_admission_prob": 0.72,
+                "expected_major_utility": 0.82,
+                "tail_assignment_risk": 0.08,
+                "strategy_tag": "target",
+                "explanation": "稳妥区关键志愿，位次缓冲和专业可接受度均已解释。",
+                "quant_evidence": ["rank_buffer=stable", "data_confidence=0.82"],
+            },
+            {
+                "choice_index": 3,
+                "school_code": "C001",
+                "school_name": "C大学",
+                "major_group_code": "203",
+                "major_choices": [
+                    {
+                        "school_code": "C001",
+                        "school_name": "C大学",
+                        "major_group_code": "203",
+                        "major_name": "信息管理",
+                        "is_acceptable": True,
+                        "user_utility": 0.72,
+                        "major_rank_risk": 0.08,
+                    }
+                ],
+                "obey_adjustment": True,
+                "adjustment_advice": "recommend",
+                "group_admission_prob": 0.98,
+                "expected_major_utility": 0.72,
+                "tail_assignment_risk": 0.06,
+                "strategy_tag": "safe",
+                "explanation": "保底安全垫，专业组尾部风险可承受。",
+                "quant_evidence": ["rank_buffer=safe", "data_confidence=0.86"],
+            },
+        ],
+    }
     request = DeliveryPreviewRequest(
         profile={
             "score": 620,
@@ -144,6 +231,7 @@ def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
 第1志愿：A 大学 201 专业组，专业1-6：计算机类、软件工程，调剂建议谨慎。量化校验：位次缓冲和历史数据置信。
 最终以官方招生章程、考试院数据和政策更新为准，仅供参考，请家长复核。
 """,
+        plan=plan,
         case_id="api-smoke-delivery",
     )
 
@@ -155,6 +243,10 @@ def test_delivery_preview_endpoint_builds_internal_preflight_bundle():
         "ready_for_recommendation",
         "needs_clarification",
     }
+    assert response.manifest["plan_quality_status"] != "not_provided"
+    assert "VolunteerPlan JSON" not in response.artifacts["plan_quality_audit"]
+    assert "delivery_bundle" in response.artifacts
+    assert "服务交付包" in response.artifacts["delivery_bundle"]
     assert "expectation_packet" in response.artifacts
     assert "report_quality_audit" in response.artifacts
 
@@ -208,6 +300,84 @@ def test_agency_command_center_reads_delivery_bundle_logs():
     assert response["audit"]["portfolio"]["case_count"] == 2
     assert response["audit"]["escalation_queue"][0]["case_id"] == "case-blocked"
     assert "Agency Command Center" in response["markdown"]
+
+
+def test_delivery_portfolio_endpoint_aggregates_client_delivery_gates():
+    from main import DeliveryPortfolioAuditRequest, audit_delivery_portfolio_api
+
+    request = DeliveryPortfolioAuditRequest(
+        manifests=[
+            {
+                "case_id": "portfolio-ready",
+                "status": "ready_to_deliver",
+                "intake_readiness_score": 0.90,
+                "plan_quality_score": 0.86,
+                "report_quality_score": 0.84,
+                "client_delivery": {
+                    "allowed": True,
+                    "status": "allowed",
+                    "blocked_reason": "",
+                },
+                "delivery_gates": [
+                    {"gate": "intake_audit", "status": "ready_for_recommendation"},
+                    {"gate": "plan_quality", "status": "pass"},
+                    {"gate": "report_quality", "status": "pass"},
+                ],
+            },
+            {
+                "case_id": "portfolio-blocked",
+                "status": "needs_revision",
+                "intake_readiness_score": 0.72,
+                "plan_quality_score": 0.55,
+                "report_quality_score": 0.63,
+                "client_delivery": {
+                    "allowed": False,
+                    "status": "blocked",
+                    "blocked_reason": "客户确认包仅在内部质检通过后开放。",
+                },
+                "delivery_gates": [
+                    {"gate": "intake_audit", "status": "ready_for_recommendation"},
+                    {"gate": "plan_quality", "status": "needs_revision"},
+                    {"gate": "report_quality", "status": "needs_revision"},
+                ],
+            },
+        ]
+    )
+
+    response = asyncio.run(audit_delivery_portfolio_api(request))
+
+    assert response.success is True
+    assert response.audit["case_count"] == 2
+    assert response.audit["client_delivery_allowed_rate"] == 0.5
+    assert response.audit["client_delivery_status_counts"]["blocked"] == 1
+    assert "Client Delivery Gate" in response.markdown
+
+
+def test_recent_delivery_manifest_archive_loader_orders_and_limits(tmp_path):
+    from main import _load_recent_delivery_manifests
+
+    archive_root = tmp_path / "delivery_bundles"
+    first_case = archive_root / "case-old"
+    second_case = archive_root / "case-new"
+    first_case.mkdir(parents=True)
+    second_case.mkdir(parents=True)
+    (first_case / "delivery_bundle.json").write_text(
+        json.dumps({"status": "needs_revision"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (second_case / "delivery_bundle.json").write_text(
+        json.dumps({"case_id": "explicit-new", "status": "ready_to_deliver"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    os.utime(first_case / "delivery_bundle.json", (1_700_000_000, 1_700_000_000))
+    os.utime(second_case / "delivery_bundle.json", (1_700_000_010, 1_700_000_010))
+
+    manifests = _load_recent_delivery_manifests(tmp_path, limit=1)
+
+    assert len(manifests) == 1
+    assert manifests[0]["case_id"] == "explicit-new"
+    assert manifests[0]["status"] == "ready_to_deliver"
+    assert manifests[0]["_archive_path"].endswith("delivery_bundle.json")
 
 
 def test_stats_endpoint_uses_prediction_history_data():

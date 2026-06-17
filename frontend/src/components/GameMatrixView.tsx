@@ -74,8 +74,10 @@ interface PlanChangeExplanation {
 
 export interface MajorGroupRow {
   school_name: string;
+  school_code?: string;
   major_group_code: string;
   major_list: string[];
+  major_options?: Array<Record<string, unknown>>;
   major_count?: number;
   suggested_major_choices?: MajorOption[];
   admission_prob: number;
@@ -84,24 +86,25 @@ export interface MajorGroupRow {
   probability_method?: string;
   probability_calibration_year?: number | null;
   probability_calibration_source?: string;
+  choice_index?: number | null;
   min_rank_pred: number;
   rank_ci_lower: number;
   rank_ci_upper: number;
   volatility: "low" | "medium" | "high";
   adjustment_risk: number;
+  tail_assignment_risk?: number;
+  major_utility_mean?: number;
   worst_case_major: string | null;
   is_blacklist_risk: boolean;
   strategy_tag: "rush" | "target" | "safe";
   sentiment_score?: number;
   news_summary?: string | null;
   is_selected?: boolean;
-  choice_index?: number | null;
   survival_before_prob?: number;
   first_hit_prob?: number;
   cumulative_hit_prob?: number;
   prefix_role?: "key_result" | "active_backup" | "safety_anchor" | "shadowed" | "unclassified" | string;
   is_key_prefix?: boolean;
-  tail_assignment_risk?: number;
   quant_score?: number;
   rank_buffer_score?: number;
   data_confidence_score?: number;
@@ -109,6 +112,10 @@ export interface MajorGroupRow {
   quant_evidence?: string[];
   decision_trace?: DecisionTrace;
   plan_change_explanation?: PlanChangeExplanation;
+  obey_adjustment?: boolean;
+  adjustment_advice?: "recommend" | "cautious" | "avoid";
+  tradeoff_summary?: string;
+  risk_reasons?: string[];
 }
 
 export interface GameMatrix {
@@ -123,6 +130,13 @@ export interface GameMatrix {
   agentic_rl_used?: boolean;
   selection_method?: string;
   volunteer_plan?: {
+    [key: string]: unknown;
+    choices?: Array<{
+      school_name?: string;
+      major_group_code?: string;
+      strategy_tag?: string;
+      quant_evidence?: string[];
+    }>;
     expected_admission_prob?: number;
     admission_probability_lower_bound?: number;
     admission_probability_upper_bound?: number;

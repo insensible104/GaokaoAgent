@@ -15,7 +15,7 @@ from typing import Any, Optional
 from uuid import uuid4
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import HumanMessage
@@ -292,6 +292,7 @@ class DeliveryPreviewRequest(BaseModel):
 
     profile: DeliveryProfileInput
     report: str = Field(..., min_length=1, max_length=120_000)
+    plan: Optional[dict[str, Any]] = None
     case_id: Optional[str] = Field(None, max_length=80)
 
 
@@ -312,8 +313,30 @@ class AgencyCommandCenterResponse(BaseModel):
     success: bool
     message: str
     scanned_bundle_count: int
+
+
+class DeliveryPortfolioAuditRequest(BaseModel):
+    """Request payload for batch delivery-quality review."""
+
+    manifests: list[dict[str, Any]] = Field(..., min_length=1, max_length=200)
+
+
+class DeliveryPortfolioAuditResponse(BaseModel):
+    """Batch delivery-quality audit response for the frontend workspace."""
+
+    success: bool
+    message: str
     audit: dict[str, Any]
     markdown: str
+
+
+class DeliveryManifestArchiveResponse(BaseModel):
+    """Recent delivery manifests persisted by internal preflight runs."""
+
+    success: bool
+    message: str
+    manifest_count: int
+    manifests: list[dict[str, Any]]
 
 
 def _to_plain_data(value: Any) -> Any:
@@ -382,6 +405,30 @@ def build_agency_command_center_from_logs(logs_dir: Path | None = None) -> dict[
     }
 
 
+def _load_recent_delivery_manifests(logs_root: Path, limit: int = 50) -> list[dict[str, Any]]:
+    """Load recent persisted delivery manifests for internal batch review."""
+    archive_root = logs_root / "delivery_bundles"
+    if not archive_root.exists():
+        return []
+    candidates = sorted(
+        archive_root.glob("*/delivery_bundle.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )[:limit]
+    manifests: list[dict[str, Any]] = []
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Skipping unreadable delivery manifest %s: %s", path, exc)
+            continue
+        if isinstance(payload, dict):
+            payload.setdefault("case_id", path.parent.name)
+            payload.setdefault("_archive_path", str(path.relative_to(logs_root)))
+            manifests.append(payload)
+    return manifests
+
+
 def _build_delivery_profile(input_profile: DeliveryProfileInput):
     """Convert API input to the canonical UserProfile model."""
     from models.user_profile import HollandCode, RiskTolerance, SchoolMajorPreference, UserProfile
@@ -426,6 +473,17 @@ def _build_delivery_profile(input_profile: DeliveryProfileInput):
         career_values=input_profile.career_values,
         field_provenance=input_profile.field_provenance,
     )
+
+
+def _build_delivery_plan(plan_payload: dict[str, Any] | None):
+    """Convert an optional API VolunteerPlan payload into the canonical model."""
+    if not plan_payload:
+        return None
+    from models.game_matrix import VolunteerPlan
+
+    plan = VolunteerPlan.model_validate(plan_payload)
+    plan.calculate_statistics()
+    return plan
 
 
 def build_user_message(request: QueryRequest) -> str:
@@ -484,6 +542,7 @@ def get_runtime_status() -> dict[str, Any]:
                 "/api/analyze",
                 "/api/delivery/preview",
                 "/api/delivery/portfolio",
+                "/api/delivery/manifests/recent",
                 "/api/stats",
             ],
             "cli_commands": [
@@ -685,9 +744,15 @@ async def preview_delivery_bundle(request: DeliveryPreviewRequest):
             profile=_build_delivery_profile(request.profile),
             report_payload=request.report,
             output_dir=output_dir,
+            plan=_build_delivery_plan(request.plan),
             case_id=case_id,
         )
         artifact_contents: dict[str, str] = {}
+        bundle_index_path = output_dir / "delivery_bundle.md"
+        if bundle_index_path.is_file():
+            artifact_contents["delivery_bundle"] = bundle_index_path.read_text(
+                encoding="utf-8"
+            )
         for artifact in manifest.get("artifacts", []) or []:
             path = output_dir / str(artifact.get("path", ""))
             if path.is_file() and path.suffix == ".md":
@@ -720,6 +785,50 @@ async def get_delivery_portfolio():
         logger.error("Agency command center failed", exc_info=True)
         if IS_PRODUCTION:
             raise HTTPException(status_code=500, detail="Unable to build agency command center") from exc
+        raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
+
+
+@app.get("/api/delivery/manifests/recent", response_model=DeliveryManifestArchiveResponse)
+async def recent_delivery_manifests(
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Return recent persisted delivery manifests from the local backend archive."""
+    try:
+        manifests = _load_recent_delivery_manifests(BACKEND_ROOT / "logs", limit=limit)
+        return DeliveryManifestArchiveResponse(
+            success=True,
+            message=f"已载入 {len(manifests)} 个本机交付归档",
+            manifest_count=len(manifests),
+            manifests=manifests,
+        )
+    except Exception as exc:
+        logger.error("Recent delivery manifest load failed", exc_info=True)
+        if IS_PRODUCTION:
+            raise HTTPException(status_code=500, detail="Unable to load delivery manifests") from exc
+        raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
+
+
+@app.post("/api/delivery/portfolio", response_model=DeliveryPortfolioAuditResponse)
+async def audit_delivery_portfolio_api(request: DeliveryPortfolioAuditRequest):
+    """Aggregate many delivery manifests into an internal service-quality audit."""
+    try:
+        from evaluation.delivery_portfolio import (
+            audit_delivery_portfolio,
+            build_markdown_delivery_portfolio_audit,
+        )
+
+        result = audit_delivery_portfolio(request.manifests)
+        status = str(result.get("status", "unknown"))
+        return DeliveryPortfolioAuditResponse(
+            success=status not in {"no_cases"},
+            message=f"批量交付复盘完成：{status}",
+            audit=result,
+            markdown=build_markdown_delivery_portfolio_audit(result),
+        )
+    except Exception as exc:
+        logger.error("Delivery portfolio audit failed", exc_info=True)
+        if IS_PRODUCTION:
+            raise HTTPException(status_code=500, detail="Unable to audit delivery portfolio") from exc
         raise HTTPException(status_code=500, detail=f"Development error: {exc}") from exc
 
 

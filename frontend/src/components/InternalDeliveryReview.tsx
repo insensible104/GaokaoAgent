@@ -5,12 +5,14 @@ import {
   BarChart3,
   CheckCircle2,
   ClipboardCheck,
+  FileDown,
   FileText,
   ShieldAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { GameMatrix, MajorGroupRow } from "@/components/GameMatrixView";
 
 interface DeliveryProfile {
   score: number;
@@ -41,7 +43,8 @@ interface DeliveryProfile {
   field_provenance?: Record<string, string>;
 }
 
-interface DeliveryManifest {
+export interface DeliveryManifest {
+  case_id?: string;
   status: string;
   intake_status?: string;
   intake_readiness_score?: number;
@@ -50,6 +53,19 @@ interface DeliveryManifest {
   expectation_status?: string;
   report_quality_status?: string;
   report_quality_score?: number;
+  client_delivery?: {
+    allowed: boolean;
+    status: string;
+    artifact_audiences?: string[];
+    blocked_reason?: string;
+  };
+  artifacts?: Array<{
+    id: string;
+    label: string;
+    path: string;
+    required: boolean;
+    audience?: "internal_review" | "client_confirmation" | "client_final" | string;
+  }>;
   delivery_gates?: Array<{
     gate: string;
     status: string;
@@ -237,6 +253,46 @@ interface AgencyCommandCenter {
 interface InternalDeliveryReviewProps {
   profile: DeliveryProfile | null;
   report: string | null;
+  gameMatrix?: GameMatrix | null;
+  onManifestGenerated?: (manifest: DeliveryManifest) => void;
+}
+
+interface VolunteerMajorPayload {
+  school_code: string;
+  school_name: string;
+  major_group_code: string;
+  major_name: string;
+  is_preferred?: boolean;
+  is_acceptable?: boolean;
+  is_blacklisted?: boolean;
+  user_utility?: number;
+  major_rank_risk?: number;
+}
+
+interface VolunteerChoicePayload {
+  choice_index: number;
+  school_code: string;
+  school_name: string;
+  major_group_code: string;
+  major_choices: VolunteerMajorPayload[];
+  obey_adjustment: boolean;
+  adjustment_advice: "recommend" | "cautious" | "avoid";
+  group_admission_prob: number;
+  expected_major_utility: number;
+  worst_case_major?: string | null;
+  tail_assignment_risk: number;
+  strategy_tag: "rush" | "target" | "safe";
+  explanation: string;
+  quant_evidence: string[];
+}
+
+interface VolunteerPlanPayload {
+  province: string;
+  year: number;
+  subject_group: string;
+  user_score?: number;
+  user_rank?: number;
+  choices: VolunteerChoicePayload[];
 }
 
 const statusLabel: Record<string, string> = {
@@ -266,6 +322,9 @@ const statusLabel: Record<string, string> = {
   twice_weekly: "每周两次",
   weekly: "每周复盘",
 };
+
+const CLIENT_FACING_ARTIFACT_IDS = new Set(["expectation_packet", "final_report"]);
+const CLIENT_FACING_AUDIENCES = new Set(["client_confirmation", "client_final"]);
 
 function statusTone(status: string | undefined) {
   if (!status) return "border-slate-300 bg-slate-50 text-slate-700";
@@ -304,7 +363,140 @@ function artifactTitle(id: string) {
   return labels[id] || id;
 }
 
-export function InternalDeliveryReview({ profile, report }: InternalDeliveryReviewProps) {
+function downloadMarkdown(filename: string, content: string) {
+  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+function boundedNumber(value: unknown, fallback: number, min = 0, max = 1) {
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback;
+  return Math.max(min, Math.min(max, value));
+}
+
+function stringFromRecord(value: unknown, key: string) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  const item = (value as Record<string, unknown>)[key];
+  return typeof item === "string" ? item : "";
+}
+
+function majorFromRecord(
+  value: unknown,
+  row: MajorGroupRow,
+  profile: DeliveryProfile
+): VolunteerMajorPayload | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const majorName = typeof record.major_name === "string" ? record.major_name : "";
+  if (!majorName) return null;
+  return {
+    school_code: stringFromRecord(record, "school_code") || row.school_code || "",
+    school_name: stringFromRecord(record, "school_name") || row.school_name,
+    major_group_code: stringFromRecord(record, "major_group_code") || row.major_group_code,
+    major_name: majorName,
+    is_preferred: (profile.preferred_majors || []).some((major) => majorName.includes(major)),
+    is_acceptable: record.is_acceptable !== false,
+    is_blacklisted:
+      record.is_blacklisted === true ||
+      (profile.blacklist_majors || []).some((major) => majorName.includes(major)),
+    user_utility: boundedNumber(record.user_utility, row.major_utility_mean ?? 0.55),
+    major_rank_risk: boundedNumber(record.major_rank_risk, row.tail_assignment_risk ?? row.adjustment_risk),
+  };
+}
+
+function fallbackMajors(row: MajorGroupRow, profile: DeliveryProfile): VolunteerMajorPayload[] {
+  const structured = [...(row.suggested_major_choices || []), ...(row.major_options || [])]
+    .map((item) => majorFromRecord(item, row, profile))
+    .filter((item): item is VolunteerMajorPayload => item !== null)
+    .slice(0, 6);
+  if (structured.length > 0) return structured;
+
+  const majors = row.major_list.length > 0
+    ? row.major_list.slice(0, 6)
+    : [row.worst_case_major || "待人工复核专业"];
+  return majors.map((majorName) => ({
+    school_code: row.school_code || "",
+    school_name: row.school_name,
+    major_group_code: row.major_group_code,
+    major_name: majorName,
+    is_preferred: (profile.preferred_majors || []).some((major) => majorName.includes(major)),
+    is_acceptable: !(profile.blacklist_majors || []).some((major) => majorName.includes(major)),
+    is_blacklisted:
+      (row.is_blacklist_risk && majorName === row.worst_case_major) ||
+      (profile.blacklist_majors || []).some((major) => majorName.includes(major)),
+    user_utility: boundedNumber(row.major_utility_mean, row.strategy_tag === "safe" ? 0.62 : 0.70),
+    major_rank_risk: boundedNumber(row.tail_assignment_risk ?? row.adjustment_risk, 0.20),
+  }));
+}
+
+function buildPlanFromGameMatrix(
+  profile: DeliveryProfile | null,
+  gameMatrix?: GameMatrix | null
+): VolunteerPlanPayload | Record<string, unknown> | undefined {
+  if (!profile || !gameMatrix) return undefined;
+  if (gameMatrix.volunteer_plan && typeof gameMatrix.volunteer_plan === "object") {
+    const rawPlan = gameMatrix.volunteer_plan as Record<string, unknown>;
+    return {
+      ...rawPlan,
+      subject_group: stringFromRecord(rawPlan, "subject_group") || profile.subject_group,
+      user_score: Number(rawPlan.user_score ?? profile.score),
+      user_rank: rawPlan.user_rank || profile.rank ? Number(rawPlan.user_rank ?? profile.rank) : undefined,
+    };
+  }
+
+  const rows = [...(gameMatrix.major_group_rows || [])]
+    .sort((left, right) => (left.choice_index || 999) - (right.choice_index || 999))
+    .slice(0, 45);
+  if (rows.length === 0) return undefined;
+
+  return {
+    province: "广东",
+    year: 2025,
+    subject_group: profile.subject_group,
+    user_score: profile.score,
+    user_rank: profile.rank,
+    choices: rows.map((row, index) => ({
+      choice_index: row.choice_index || index + 1,
+      school_code: row.school_code || "",
+      school_name: row.school_name,
+      major_group_code: row.major_group_code,
+      major_choices: fallbackMajors(row, profile),
+      obey_adjustment: row.obey_adjustment ?? true,
+      adjustment_advice:
+        row.adjustment_advice ||
+        (row.adjustment_risk >= 0.55
+          ? "avoid"
+          : row.adjustment_risk >= 0.32
+            ? "cautious"
+            : "recommend"),
+      group_admission_prob: boundedNumber(row.admission_prob, 0),
+      expected_major_utility: boundedNumber(row.major_utility_mean, row.strategy_tag === "safe" ? 0.62 : 0.72),
+      worst_case_major: row.worst_case_major,
+      tail_assignment_risk: boundedNumber(row.tail_assignment_risk ?? row.adjustment_risk, 0),
+      strategy_tag: row.strategy_tag,
+      explanation:
+        row.tradeoff_summary ||
+        row.risk_reasons?.join("；") ||
+        `基于录取概率、位次区间、调剂风险和${row.strategy_tag}策略标签生成。`,
+      quant_evidence: row.quant_evidence || [
+        `admission_prob=${row.admission_prob.toFixed(3)}`,
+        `min_rank_pred=${row.min_rank_pred}`,
+        `rank_ci=${row.rank_ci_lower}-${row.rank_ci_upper}`,
+      ],
+    })),
+  };
+}
+
+export function InternalDeliveryReview({
+  profile,
+  report,
+  gameMatrix,
+  onManifestGenerated,
+}: InternalDeliveryReviewProps) {
   const [preview, setPreview] = useState<DeliveryPreview | null>(null);
   const [commandCenter, setCommandCenter] = useState<AgencyCommandCenter | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -313,6 +505,7 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
 
   const canRun = Boolean(profile?.score && profile?.subject_group && report);
+  const plan = useMemo(() => buildPlanFromGameMatrix(profile, gameMatrix), [profile, gameMatrix]);
   const orderedArtifacts = useMemo(() => {
     if (!preview) return [];
     const preferredOrder = [
@@ -327,6 +520,62 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
       ([left], [right]) => preferredOrder.indexOf(left) - preferredOrder.indexOf(right)
     );
   }, [preview]);
+  const clientFacingArtifacts = useMemo(
+    () => {
+      const artifactAudienceById = new Map(
+        (preview?.manifest.artifacts || []).map((artifact) => [artifact.id, artifact.audience])
+      );
+      return orderedArtifacts.filter(([id]) => {
+        const audience = artifactAudienceById.get(id);
+        if (audience) return CLIENT_FACING_AUDIENCES.has(audience);
+        return CLIENT_FACING_ARTIFACT_IDS.has(id);
+      });
+    },
+    [orderedArtifacts, preview]
+  );
+  const clientDeliveryAllowed = preview?.manifest.client_delivery?.allowed ?? true;
+  const clientDeliveryBlockedReason =
+    preview?.manifest.client_delivery?.blocked_reason ||
+    "客户确认包暂不可下载，请先修订内部质检问题。";
+
+  function downloadCombinedBundle() {
+    if (!preview || orderedArtifacts.length === 0) return;
+    const content = [
+      `# GaokaoAgent 交付预检包`,
+      "",
+      `Case: ${preview.case_id}`,
+      `Status: ${preview.manifest.status}`,
+      "",
+      ...orderedArtifacts.flatMap(([id, artifact]) => [
+        "---",
+        "",
+        `# ${artifactTitle(id)}`,
+        "",
+        artifact.trim(),
+        "",
+      ]),
+    ].join("\n");
+    downloadMarkdown(`${preview.case_id}-delivery-preview.md`, content);
+  }
+
+  function downloadClientBundle() {
+    if (!preview || clientFacingArtifacts.length === 0) return;
+    const content = [
+      `# GaokaoAgent 客户确认包`,
+      "",
+      `Case: ${preview.case_id}`,
+      "",
+      ...clientFacingArtifacts.flatMap(([id, artifact]) => [
+        "---",
+        "",
+        `# ${artifactTitle(id)}`,
+        "",
+        artifact.trim(),
+        "",
+      ]),
+    ].join("\n");
+    downloadMarkdown(`${preview.case_id}-client-confirmation.md`, content);
+  }
 
   async function runReview() {
     if (!profile || !report) return;
@@ -343,6 +592,7 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
         body: JSON.stringify({
           profile,
           report,
+          plan,
           case_id: `web-${profile.subject_group}-${profile.rank || profile.score}`,
         }),
       });
@@ -352,7 +602,9 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
         throw new Error(body || `交付预检失败 (${response.status})`);
       }
 
-      setPreview(await response.json());
+      const nextPreview: DeliveryPreview = await response.json();
+      setPreview(nextPreview);
+      onManifestGenerated?.(nextPreview.manifest);
     } catch (err) {
       setError(err instanceof Error ? err.message : "交付预检失败");
     } finally {
@@ -393,6 +645,7 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             生成客户交付前的问诊、预期确认、风险解释、推荐依据和免责边界质检。
+            {plan ? " 已带入结构化志愿表。" : " 当前未检测到结构化志愿表。"}
           </p>
         </div>
         <Button
@@ -978,10 +1231,36 @@ export function InternalDeliveryReview({ profile, report }: InternalDeliveryRevi
 
           {orderedArtifacts.length > 0 && (
             <Tabs defaultValue={orderedArtifacts[0][0]} className="rounded-lg border border-slate-200 p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                <FileText className="size-4 text-slate-600" aria-hidden="true" />
-                交付材料预览
+              <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  <FileText className="size-4 text-slate-600" aria-hidden="true" />
+                  交付材料预览
+                </div>
+                <div className="flex flex-col gap-2 md:flex-row">
+                  <Button
+                    type="button"
+                    onClick={downloadClientBundle}
+                    disabled={clientFacingArtifacts.length === 0 || !clientDeliveryAllowed}
+                    className="w-full bg-cyan-700 text-white hover:bg-cyan-800 md:w-auto"
+                  >
+                    <FileDown className="size-4" aria-hidden="true" />
+                    下载客户确认包
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={downloadCombinedBundle}
+                    className="w-full bg-slate-800 text-white hover:bg-slate-900 md:w-auto"
+                  >
+                    <FileDown className="size-4" aria-hidden="true" />
+                    下载完整预检包
+                  </Button>
+                </div>
               </div>
+              {!clientDeliveryAllowed && (
+                <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                  {clientDeliveryBlockedReason}
+                </div>
+              )}
               <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 bg-slate-100">
                 {orderedArtifacts.map(([id]) => (
                   <TabsTrigger key={id} value={id} className="min-h-8 flex-none">

@@ -17,6 +17,14 @@ def test_next_iteration_plan_merges_audit_repair_and_replay_artifacts() -> None:
                     "target": "sliding_rate <= 3%",
                     "recommendation": "收紧 safe_anchor 门槛。",
                     "evidence": {"sliding_rate": 0.12},
+                },
+                {
+                    "severity": "P0",
+                    "area": "delivery_portfolio_client_delivery",
+                    "finding": "批量案例中客户确认包允许交付比例低于规模化服务目标",
+                    "target": "client_delivery_allowed_rate >= 85%",
+                    "recommendation": "优先处理高频 client_delivery blocked reason。",
+                    "evidence": {"client_delivery_allowed_rate": 0.40},
                 }
             ],
         },
@@ -70,6 +78,7 @@ def test_next_iteration_plan_merges_audit_repair_and_replay_artifacts() -> None:
         source_paths={
             "coverage_repair_plan": "logs/experiments/run/benchmark_coverage_repair_plan.json",
             "replay_queue_jsonl": "logs/experiments/run/failure_replay_queue.jsonl",
+            "delivery_bundle_glob": "logs/cases/*/delivery_bundle.json",
         },
     )
     markdown = build_markdown_next_iteration_plan(result)
@@ -80,6 +89,8 @@ def test_next_iteration_plan_merges_audit_repair_and_replay_artifacts() -> None:
     assert any(item["source"] == "failure_replay_queue" for item in result["work_items"])
     assert any("generate_frozen_plans_2025.py" in command for command in result["next_run_commands"])
     assert any("failure_replay_queue.jsonl" in command for command in result["next_run_commands"])
+    assert any("delivery-portfolio-audit" in command for command in result["next_run_commands"])
+    assert any("logs/cases/*/delivery_bundle.json" in command for command in result["next_run_commands"])
     assert "Next Iteration Plan" in markdown
 
 

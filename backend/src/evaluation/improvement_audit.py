@@ -24,6 +24,7 @@ TARGETS = {
     "plan_quality_score": 0.78,
     "report_quality_score": 0.78,
     "portfolio_ready_to_deliver_rate": 0.80,
+    "portfolio_client_delivery_allowed_rate": 0.85,
     "portfolio_blocked_rate": 0.05,
     "research_evidence_confidence": 0.55,
 }
@@ -553,6 +554,7 @@ def _audit_delivery_portfolio(portfolio: dict[str, Any]) -> list[dict[str, Any]]
 
     ready_rate = _float(portfolio, "ready_to_deliver_rate")
     blocked_rate = _float(portfolio, "blocked_rate")
+    client_delivery_allowed_rate = _float(portfolio, "client_delivery_allowed_rate")
     ready_severity = _severity(
         "portfolio_ready_to_deliver_rate",
         ready_rate,
@@ -596,6 +598,46 @@ def _audit_delivery_portfolio(portfolio: dict[str, Any]) -> list[dict[str, Any]]
                 },
             )
         )
+    if "client_delivery_allowed_rate" in portfolio:
+        client_delivery_severity = _severity(
+            "portfolio_client_delivery_allowed_rate",
+            client_delivery_allowed_rate,
+            TARGETS["portfolio_client_delivery_allowed_rate"],
+            higher_is_better=True,
+        )
+        if client_delivery_severity:
+            findings.append(
+                _finding(
+                    severity=(
+                        "P0"
+                        if client_delivery_allowed_rate < 0.50
+                        else client_delivery_severity
+                    ),
+                    area="delivery_portfolio_client_delivery",
+                    finding="批量案例中客户确认包允许交付比例低于规模化服务目标",
+                    target=(
+                        "client_delivery_allowed_rate >= "
+                        f"{TARGETS['portfolio_client_delivery_allowed_rate']:.0%}"
+                    ),
+                    recommendation="优先处理高频 client_delivery blocked reason，减少已生成但仍不能发给家庭的案例。",
+                    evidence={
+                        "case_count": case_count,
+                        "client_delivery_allowed_rate": round(client_delivery_allowed_rate, 6),
+                        "client_delivery_blocked_rate": round(
+                            _float(portfolio, "client_delivery_blocked_rate"),
+                            6,
+                        ),
+                        "client_delivery_status_counts": portfolio.get(
+                            "client_delivery_status_counts",
+                            {},
+                        ),
+                        "top_client_delivery_blocked_reasons": portfolio.get(
+                            "top_client_delivery_blocked_reasons",
+                            [],
+                        )[:5],
+                    },
+                )
+            )
     for gate in portfolio.get("top_failed_gates", [])[:3]:
         failed_rate = _float(gate, "failed_rate")
         if failed_rate < 0.20:

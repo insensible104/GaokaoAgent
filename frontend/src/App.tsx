@@ -12,12 +12,14 @@ const InvestmentResearchReportPreview = lazy(() => import("@/components/PathFind
 const DeliveryReadinessConsole = lazy(() => import("@/components/DeliveryReadinessConsole").then(module => ({ default: module.DeliveryReadinessConsole })));
 const AdmissionsOpportunityDemoCasePanel = lazy(() => import("@/components/AdmissionsOpportunityDemoCasePanel").then(module => ({ default: module.AdmissionsOpportunityDemoCasePanel })));
 const ExternalPlanAuditDemoPanel = lazy(() => import("@/components/ExternalPlanAuditDemoPanel").then(module => ({ default: module.ExternalPlanAuditDemoPanel })));
+const DeliveryPortfolioReview = lazy(() => import("@/components/DeliveryPortfolioReview").then(module => ({ default: module.DeliveryPortfolioReview })));
 
 // 导入类型
 import type { GameMatrix } from "@/components/GameMatrixView";
 import type { AgentStep } from "@/components/ProgressTracker";
 import type { PathFinderReportPayload } from "@/components/PathFinderReportTemplate";
 import { buildDeliveryReadinessSummary } from "@/lib/deliveryReadiness";
+import type { DeliveryManifest } from "@/components/InternalDeliveryReview";
 
 interface AnalysisResult {
   success: boolean;
@@ -196,6 +198,7 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [progressSteps, setProgressSteps] = useState<AgentStep[]>([]);
   const [deliveryProfile, setDeliveryProfile] = useState<DeliveryProfile | null>(null);
+  const [deliveryManifests, setDeliveryManifests] = useState<DeliveryManifest[]>([]);
   const admissionsOpportunityDemoRequested =
     window.location.pathname.includes("admissions-opportunity-demo") ||
     new URLSearchParams(window.location.search).get("demo") === "admissions-opportunity";
@@ -215,6 +218,15 @@ function AppContent() {
         abortControllerRef.current.abort();
       }
     };
+  }, []);
+
+  const handleDeliveryManifestGenerated = useCallback((manifest: DeliveryManifest) => {
+    setDeliveryManifests((current) => {
+      const caseId = manifest.case_id;
+      if (!caseId) return [...current, manifest];
+      const others = current.filter((item) => item.case_id !== caseId);
+      return [...others, manifest];
+    });
   }, []);
 
   // 修复P2-4: 使用useCallback避免子组件不必要的重渲染
@@ -449,6 +461,7 @@ function AppContent() {
     setError(null);
     setProgressSteps([]);
     setDeliveryProfile(null);
+    setDeliveryManifests([]);
   };
 
   const openReportTemplatePreview = useCallback(() => {
@@ -620,7 +633,11 @@ function AppContent() {
                 <InternalDeliveryReview
                   profile={deliveryProfile}
                   report={result.report}
+                  gameMatrix={result.game_matrix}
+                  onManifestGenerated={handleDeliveryManifestGenerated}
                 />
+
+                <DeliveryPortfolioReview sessionManifests={deliveryManifests} />
 
                 {/* Report View */}
                 <ReportView

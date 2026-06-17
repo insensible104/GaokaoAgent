@@ -183,8 +183,25 @@ def _add_research_items(items: list[dict[str, Any]], research_evidence_audit: di
     )
 
 
+def _has_delivery_portfolio_work(improvement_audit: dict[str, Any] | None) -> bool:
+    if not improvement_audit:
+        return False
+    delivery_areas = {
+        "delivery_portfolio",
+        "delivery_portfolio_gate",
+        "delivery_portfolio_client_delivery",
+    }
+    findings = list(improvement_audit.get("prioritized_actions") or [])
+    findings.extend(improvement_audit.get("findings") or [])
+    for finding in findings:
+        if str(finding.get("area") or "") in delivery_areas:
+            return True
+    return False
+
+
 def _commands(
     *,
+    improvement_audit: dict[str, Any] | None,
     source_paths: Mapping[str, str] | None,
     coverage_repair_plan: dict[str, Any] | None,
     replay_queue_summary: dict[str, Any] | None,
@@ -207,6 +224,15 @@ def _commands(
             "--actual-outcomes data/actual_2025.csv "
             f"--plans-jsonl {queue_path} "
             "--run-ablation"
+        )
+    if _has_delivery_portfolio_work(improvement_audit):
+        bundle_glob = paths.get("delivery_bundle_glob") or "logs/delivery_*/delivery_bundle.json"
+        commands.append(
+            "python scripts/gaokao_agent.py "
+            "delivery-portfolio-audit "
+            f'--bundle-glob "{bundle_glob}" '
+            "--output logs/delivery_portfolio_audit.json "
+            "--report-md logs/delivery_portfolio_audit.md"
         )
     if not commands:
         commands.append(
@@ -254,6 +280,7 @@ def build_next_iteration_plan(
         "priority_counts": {priority: priority_counts.get(priority, 0) for priority in ("P0", "P1", "P2", "P3")},
         "work_items": items,
         "next_run_commands": _commands(
+            improvement_audit=improvement_audit,
             source_paths=source_paths,
             coverage_repair_plan=coverage_repair_plan,
             replay_queue_summary=replay_queue_summary,
