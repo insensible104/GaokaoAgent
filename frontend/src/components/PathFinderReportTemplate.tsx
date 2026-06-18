@@ -33,6 +33,37 @@ type RiskItem = {
   action: string;
 };
 
+type EvaluationItem = {
+  row: string;
+  target: string;
+  probability: string;
+  fit: string;
+  risk: string;
+  evidence: string;
+  decision: string;
+};
+
+type PortfolioDimension = {
+  label: string;
+  value: string;
+  note: string;
+  tone?: "blue" | "green" | "orange" | "ink";
+};
+
+type PortfolioDiagnosis = {
+  verdict: string;
+  summary: string;
+  dimensions: PortfolioDimension[];
+  nextAction: string;
+};
+
+type CounterEvidenceItem = {
+  question: string;
+  status: "已过" | "待补" | "阻塞";
+  whyItMatters: string;
+  requiredAction: string;
+};
+
 type ReportChoice = {
   choice_index?: number;
   school_name?: string;
@@ -118,6 +149,9 @@ export type PathFinderReportPayload = {
 type ReportRenderData = {
   metrics: Metric[];
   cards: VolunteerCard[];
+  evaluations: EvaluationItem[];
+  portfolioDiagnosis: PortfolioDiagnosis;
+  counterEvidence: CounterEvidenceItem[];
   evidence: EvidenceItem[];
   risks: RiskItem[];
   deliveryReadiness: DeliveryReadinessSummary;
@@ -285,6 +319,85 @@ const defaultRisks: RiskItem[] = [
   },
 ];
 
+const defaultEvaluations: EvaluationItem[] = [
+  {
+    row: "01",
+    target: "北京航空航天大学 003",
+    probability: "12%",
+    fit: "专业方向强匹配",
+    risk: "冲刺失败概率高",
+    evidence: "历史位次接近边界，专业组尾部需要复核",
+    decision: "保留为前序冲刺，不承担最终落点",
+  },
+  {
+    row: "02",
+    target: "北京理工大学 005",
+    probability: "10%",
+    fit: "工程实践匹配",
+    risk: "需要后续稳健行承接",
+    evidence: "院校层次和专业方向成立，但概率不足以单独支撑",
+    decision: "可冲，但必须与第 03/04 行绑定讨论",
+  },
+  {
+    row: "03",
+    target: "电子科技大学 007",
+    probability: "18%",
+    fit: "电子信息主线最强",
+    risk: "同组调剂方向需确认",
+    evidence: "专业方向、选科背景和长期就业路径一致",
+    decision: "作为核心解释行，优先补招生章程证据",
+  },
+  {
+    row: "04",
+    target: "东南大学 006",
+    probability: "16%",
+    fit: "平台和城市均衡",
+    risk: "专业组内部分流待确认",
+    evidence: "承接前序冲刺失败后的主要落点",
+    decision: "保留为稳健层核心行",
+  },
+];
+
+const defaultPortfolioDiagnosis: PortfolioDiagnosis = {
+  verdict: "可以讨论，但还不能当作最终填报稿",
+  summary:
+    "当前结构有明确冲刺价值，也有稳健承接和尾部缓冲；真正的问题不是学校数量，而是第 03/04 行能否承接前两行冲刺失败后的录取落点。",
+  dimensions: [
+    { label: "冲稳保结构", value: "2 / 2 / 1", note: "前序有冲刺，尾部有缓冲，但保底数量偏少。", tone: "blue" },
+    { label: "关键落点", value: "第 03-04 行", note: "需要证明不是装饰性志愿，而是真正承接失败风险。", tone: "green" },
+    { label: "尾部风险", value: "可控但需复核", note: "服从调剂前必须列出不接受专业。", tone: "orange" },
+    { label: "交付结论", value: "顾问复核后交付", note: "还需当年计划、章程和体检限制复核。", tone: "ink" },
+  ],
+  nextAction: "先补第 03/04 行的专业组明细、近三年位次波动和调剂去向，再决定是否提高冲刺比例。",
+};
+
+const defaultCounterEvidence: CounterEvidenceItem[] = [
+  {
+    question: "当年招生计划是否缩招或专业组重组？",
+    status: "待补",
+    whyItMatters: "计划变化会直接改变历史位次的可比性。",
+    requiredAction: "补 2026 招生计划和 2025 专业组口径对照。",
+  },
+  {
+    question: "专业组尾部是否混入明确不接受方向？",
+    status: "待补",
+    whyItMatters: "服从调剂风险不是抽象风险，而是具体落到某些专业。",
+    requiredAction: "列出组内全部专业，标记黑名单和可接受兜底专业。",
+  },
+  {
+    question: "公众号/舆情趋势能否被官方数据支持？",
+    status: "阻塞",
+    whyItMatters: "舆情只能生成假设，不能直接证明分数变化。",
+    requiredAction: "至少补官方计划变化、往年位次波动和多源公开讨论截图。",
+  },
+  {
+    question: "家庭是否理解专业组与单专业的区别？",
+    status: "已过",
+    whyItMatters: "如果概念没过，家长会把专业组误读成单一理想专业。",
+    requiredAction: "交付时保留一页概念解释和调剂确认签字。",
+  },
+];
+
 const toVolunteerCard = (row: ReportChoice | ReportMajorGroupRow, index: number): VolunteerCard => {
   const school = row.school_name ?? "待定院校";
   const code = row.school_code ?? String(10000 + index).padStart(5, "0");
@@ -306,6 +419,112 @@ const toVolunteerCard = (row: ReportChoice | ReportMajorGroupRow, index: number)
     risk: formatPercent(row.tail_assignment_risk),
     reason: row.quant_evidence?.[0] ?? "证据说明待补充，正式交付前需要补齐该行推荐理由。",
   };
+};
+
+const toEvaluationItem = (row: ReportChoice | ReportMajorGroupRow, index: number): EvaluationItem => {
+  const card = toVolunteerCard(row, index);
+  const probability =
+    "group_admission_prob" in row
+      ? formatPercent(row.group_admission_prob)
+      : "admission_prob" in row
+        ? formatPercent(row.admission_prob)
+        : card.gap;
+  const riskValue = typeof row.tail_assignment_risk === "number" ? row.tail_assignment_risk : undefined;
+  const risk =
+    typeof riskValue === "number"
+      ? riskValue >= 0.22
+        ? "尾部风险高"
+        : riskValue >= 0.12
+          ? "尾部风险中"
+          : "尾部风险低"
+      : "尾部风险待测";
+  const strategy = formatStrategyLabel(row.strategy_tag);
+  const fit =
+    strategy === "冲刺"
+      ? "机会价值高，不能承担落点"
+      : strategy === "保底"
+        ? "用于风险缓冲，不包装成同等推荐"
+        : "承担主要录取落点";
+  return {
+    row: card.order,
+    target: `${card.school} ${card.group}`,
+    probability,
+    fit,
+    risk,
+    evidence: row.quant_evidence?.slice(0, 2).join("；") || card.reason,
+    decision:
+      strategy === "冲刺"
+        ? "保留冲刺，但必须由稳健行承接"
+        : strategy === "保底"
+          ? "保留兜底，复核可接受专业"
+          : "作为核心解释行，优先补齐证据",
+  };
+};
+
+const buildPortfolioDiagnosis = (
+  gameMatrix: PathFinderReportPayload["gameMatrix"] | undefined | null,
+  cards: VolunteerCard[],
+  deliveryReadiness: DeliveryReadinessSummary,
+): PortfolioDiagnosis => {
+  if (!gameMatrix) return defaultPortfolioDiagnosis;
+  const plan = gameMatrix.volunteer_plan;
+  const structure = `${gameMatrix.total_rush ?? 0} / ${gameMatrix.total_target ?? 0} / ${gameMatrix.total_safe ?? 0}`;
+  const lower = formatPercent(plan?.admission_probability_lower_bound);
+  const upper = formatPercent(plan?.admission_probability_upper_bound);
+  const expected = formatPercent(plan?.expected_admission_prob);
+  const safeCount = gameMatrix.total_safe ?? cards.filter((card) => card.strategy === "保底").length;
+  const shadowed = plan?.shadowed_choice_count ?? 0;
+  const blacklist = plan?.blacklist_violation_count ?? 0;
+  return {
+    verdict:
+      deliveryReadiness.status === "ready" ? "可以进入家庭沟通版" : "只能作为顾问复核稿，不能直接交付",
+    summary: `当前组合的预估命中为 ${expected}，保守区间 ${lower} - ${upper}。真正需要解释的是关键前序是否承接得住，以及尾部风险是否被具体专业组吸收。`,
+    dimensions: [
+      { label: "冲稳保结构", value: structure, note: "判断是否有冲刺价值、稳健承接和尾部缓冲。", tone: "blue" },
+      { label: "关键前序", value: String(plan?.key_prefix_count ?? 0), note: "只解释真正影响录取落点的行。", tone: "green" },
+      { label: "遮蔽/重复", value: String(shadowed), note: "如果过多，说明志愿顺序没有真实增益。", tone: shadowed > 0 ? "orange" : "green" },
+      { label: "保底与黑名单", value: `${safeCount} / ${blacklist}`, note: "保底不足或黑名单冲突都不能交付。", tone: safeCount < 1 || blacklist > 0 ? "orange" : "ink" },
+    ],
+    nextAction:
+      deliveryReadiness.nextAction ||
+      "逐行复核当年计划、专业组明细、调剂风险和家庭不可接受方向，再生成家庭版结论。",
+  };
+};
+
+const buildCounterEvidence = (
+  gameMatrix: PathFinderReportPayload["gameMatrix"] | undefined | null,
+  deliveryReadiness: DeliveryReadinessSummary,
+): CounterEvidenceItem[] => {
+  if (!gameMatrix) return defaultCounterEvidence;
+  const dataBoundary = gameMatrix.plan_audit_summary?.data_boundary ?? gameMatrix.data_vintage;
+  const formalReady = dataBoundary?.formal_recommendation_ready === true;
+  const hasCoverageDeficit = Object.values(gameMatrix.plan_audit_summary?.coverage?.deficits ?? {}).some((value) => value > 0);
+  return [
+    {
+      question: "当年招生计划、章程、体检和单科限制是否已复核？",
+      status: formalReady ? "已过" : "待补",
+      whyItMatters: "这些文件决定历史位次能否外推到当年。",
+      requiredAction: formalReady ? "保留证据截图和版本日期。" : "补齐官方文件后再转家庭版。",
+    },
+    {
+      question: "证据覆盖是否足够支撑每一行志愿解释？",
+      status: hasCoverageDeficit ? "阻塞" : "已过",
+      whyItMatters: "没有逐行证据，报告会退化成漂亮但不可审计的建议。",
+      requiredAction: hasCoverageDeficit ? "先补缺口最多的证据类型。" : "保留证据账本编号。",
+    },
+    {
+      question: "服从调剂风险是否落到具体专业？",
+      status: "待补",
+      whyItMatters: "家长需要知道最差可能落到哪里，而不是只看学校名。",
+      requiredAction: "列出每个专业组内不接受专业和可接受兜底专业。",
+    },
+    {
+      question: "趋势机会是否通过反证检查？",
+      status: deliveryReadiness.status === "ready" ? "待补" : "阻塞",
+      whyItMatters: "趋势只能提高研究优先级，不能替代位次和官方计划证据。",
+      requiredAction: "补计划变化、位次波动和公开舆情的相互印证。",
+    },
+  ];
 };
 
 export function buildReportPayload(payload?: PathFinderReportPayload | null): ReportRenderData {
@@ -376,9 +595,17 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
       deliveryProfile,
       report: payload?.report,
     });
+  const evaluations = sourceCards.length
+    ? (choices.length > 0 ? choices : majorRows).slice(0, 6).map(toEvaluationItem)
+    : defaultEvaluations;
+  const portfolioDiagnosis = buildPortfolioDiagnosis(gameMatrix, cards, deliveryReadiness);
+  const counterEvidence = buildCounterEvidence(gameMatrix, deliveryReadiness);
   return {
     metrics,
     cards,
+    evaluations,
+    portfolioDiagnosis,
+    counterEvidence,
     evidence,
     risks,
     deliveryReadiness,
@@ -920,6 +1147,151 @@ const ReportStyles = () => (
       margin: 0;
     }
 
+    .portfolio-diagnosis {
+      background: white;
+      border: 1px solid var(--brochure-line);
+      box-shadow: 0 12px 28px rgba(31, 68, 103, .08);
+      margin-top: 14px;
+      padding: 15px;
+    }
+
+    .portfolio-diagnosis__main {
+      border-bottom: 1px solid var(--brochure-line);
+      padding-bottom: 12px;
+    }
+
+    .portfolio-diagnosis__main h3 {
+      font-size: 22px;
+      line-height: 1.12;
+      margin: 6px 0 8px;
+    }
+
+    .portfolio-diagnosis__main p,
+    .evaluation-matrix__head span,
+    .portfolio-diagnosis__action span {
+      color: #4d6072;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.62;
+    }
+
+    .portfolio-diagnosis__grid {
+      display: grid;
+      gap: 9px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+
+    .portfolio-diagnosis__grid .metric {
+      padding: 10px;
+    }
+
+    .portfolio-diagnosis__grid .metric strong {
+      font-size: 20px;
+      white-space: nowrap;
+    }
+
+    .portfolio-diagnosis__action {
+      align-items: flex-start;
+      background: #F2F7FF;
+      border: 1px solid var(--brochure-line);
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 25mm 1fr;
+      margin-top: 11px;
+      padding: 10px 12px;
+    }
+
+    .portfolio-diagnosis__action b {
+      color: var(--brochure-ink);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .evaluation-matrix {
+      background: white;
+      border: 1px solid var(--brochure-line);
+      margin-top: 13px;
+      padding: 13px;
+    }
+
+    .evaluation-matrix__head {
+      align-items: baseline;
+      border-bottom: 1px solid var(--brochure-line);
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      padding-bottom: 9px;
+    }
+
+    .evaluation-matrix__table {
+      display: grid;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .evaluation-matrix__table article {
+      align-items: stretch;
+      border: 1px solid #DCE8F5;
+      display: grid;
+      gap: 0;
+      grid-template-columns: 9mm minmax(0, 1fr) 18mm 26mm 24mm 35mm;
+      min-height: 42px;
+    }
+
+    .evaluation-matrix__table b {
+      align-items: center;
+      background: var(--brochure-ink);
+      color: white;
+      display: flex;
+      font-size: 13px;
+      justify-content: center;
+    }
+
+    .evaluation-matrix__table div {
+      min-width: 0;
+      padding: 7px 9px;
+    }
+
+    .evaluation-matrix__table strong {
+      display: block;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .evaluation-matrix__table p {
+      color: var(--brochure-muted);
+      font-size: 10px;
+      line-height: 1.35;
+      margin: 2px 0 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .evaluation-matrix__table span,
+    .evaluation-matrix__table em {
+      align-items: center;
+      border-left: 1px solid #DCE8F5;
+      color: #35506B;
+      display: flex;
+      font-size: 10px;
+      font-style: normal;
+      font-weight: 800;
+      justify-content: center;
+      line-height: 1.28;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .evaluation-matrix__table em {
+      color: var(--brochure-ink);
+      justify-content: flex-start;
+      text-align: left;
+    }
+
     .advisor-note,
     .emotion-value-strip,
     .data-boundary {
@@ -1128,6 +1500,71 @@ const ReportStyles = () => (
       flex: 1;
     }
 
+    .counter-evidence {
+      background: white;
+      border: 1px solid var(--brochure-line);
+      margin-top: 13px;
+      padding: 13px;
+    }
+
+    .counter-evidence__grid {
+      display: grid;
+      gap: 9px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 10px;
+    }
+
+    .counter-evidence__item {
+      border: 1px solid #DCE8F5;
+      padding: 10px;
+    }
+
+    .counter-evidence__item div {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+
+    .counter-evidence__item strong {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .counter-evidence__item span {
+      background: #EAF3FF;
+      color: #1F5E99;
+      flex: 0 0 auto;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 4px 7px;
+    }
+
+    .counter-evidence__item--阻塞 span {
+      background: #FFF0E7;
+      color: #C14E2A;
+    }
+
+    .counter-evidence__item--已过 span {
+      background: #E7F7F2;
+      color: #0F766E;
+    }
+
+    .counter-evidence__item p,
+    .counter-evidence__item b {
+      color: #4d6072;
+      display: block;
+      font-size: 11px;
+      line-height: 1.48;
+      margin: 0;
+    }
+
+    .counter-evidence__item b {
+      color: var(--brochure-ink);
+      margin-top: 5px;
+    }
+
     .data-boundary {
       background: #F2F7FF;
       border: 1px solid #C8D8EA;
@@ -1205,6 +1642,74 @@ const MetricGrid = ({ metrics }: { metrics: Metric[] }) => (
       </article>
     ))}
   </div>
+);
+
+const PortfolioDiagnosisPanel = ({ diagnosis }: { diagnosis: PortfolioDiagnosis }) => (
+  <section className="portfolio-diagnosis PortfolioDiagnosis">
+    <div className="portfolio-diagnosis__main">
+      <p className="small-label">组合诊断</p>
+      <h3>{diagnosis.verdict}</h3>
+      <p>{diagnosis.summary}</p>
+    </div>
+    <div className="portfolio-diagnosis__grid">
+      {diagnosis.dimensions.map((dimension) => (
+        <article className={`metric metric--${dimension.tone ?? "blue"}`} key={dimension.label}>
+          <span>{dimension.label}</span>
+          <strong>{dimension.value}</strong>
+          <p>{dimension.note}</p>
+        </article>
+      ))}
+    </div>
+    <div className="portfolio-diagnosis__action">
+      <b>下一步复核</b>
+      <span>{diagnosis.nextAction}</span>
+    </div>
+  </section>
+);
+
+const EvaluationMatrix = ({ items }: { items: EvaluationItem[] }) => (
+  <section className="evaluation-matrix EvaluationMatrix">
+    <div className="evaluation-matrix__head">
+      <p className="small-label">行级评估矩阵</p>
+      <span>不是只看学校名，而是逐行评估概率、适配、风险、证据强度和处理意见。</span>
+    </div>
+    <div className="evaluation-matrix__table">
+      {items.slice(0, 4).map((item) => (
+        <article key={`${item.row}-${item.target}`}>
+          <b>{item.row}</b>
+          <div>
+            <strong>{item.target}</strong>
+            <p>{item.evidence}</p>
+          </div>
+          <span>{item.probability}</span>
+          <span>{item.fit}</span>
+          <span>{item.risk}</span>
+          <em>{item.decision}</em>
+        </article>
+      ))}
+    </div>
+  </section>
+);
+
+const CounterEvidenceChecklist = ({ items }: { items: CounterEvidenceItem[] }) => (
+  <section className="counter-evidence CounterEvidenceChecklist">
+    <div className="evaluation-matrix__head">
+      <p className="small-label">反证清单</p>
+      <span>趋势判断必须先过反证检查；没有通过的项只能写成假设，不能写成确定机会。</span>
+    </div>
+    <div className="counter-evidence__grid">
+      {items.map((item) => (
+        <article className={`counter-evidence__item counter-evidence__item--${item.status}`} key={item.question}>
+          <div>
+            <strong>{item.question}</strong>
+            <span>{item.status}</span>
+          </div>
+          <p>{item.whyItMatters}</p>
+          <b>{item.requiredAction}</b>
+        </article>
+      ))}
+    </div>
+  </section>
 );
 
 const VolunteerCardDeck = ({ cards }: { cards: VolunteerCard[] }) => (
@@ -1361,16 +1866,11 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <MetricGrid metrics={reportData.metrics} />
           </div>
           <DecisionEvidenceCard data={reportData} />
+          <PortfolioDiagnosisPanel diagnosis={reportData.portfolioDiagnosis} />
           <section className="emotion-value-strip">
             <strong>这一版方案<br />先稳住家庭判断</strong>
             <p>{reportData.comfortLine}</p>
           </section>
-          <div className="toc-grid">
-            <article><span>01</span><h3>志愿卡片</h3><p>院校代码、院校名称、专业组和风险放在同一张卡里，接近真实填报系统。</p></article>
-            <article><span>02</span><h3>专业路径</h3><p>解释为什么半导体、电子信息、自动化更适合当前画像。</p></article>
-            <article><span>03</span><h3>风险提示</h3><p>不只说能不能上，也说调剂、分流、计划变化怎么处理。</p></article>
-            <article><span>04</span><h3>交付边界</h3><p>正式填报前必须复核当年计划、章程、体检和单科限制。</p></article>
-          </div>
           <PageFooter page="02" />
         </div>
       </section>
@@ -1379,6 +1879,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
         <div className="report-page__inner">
           <SectionTitle index="02" title="志愿表总览" subtitle="把高考系统序号、学校代码、策略位置和风险放在同一张卡里" />
           <VolunteerCardDeck cards={primaryCards} />
+          <EvaluationMatrix items={reportData.evaluations} />
           <section className="emotion-value-strip">
             <strong>不是简单排名<br />而是承接关系</strong>
             <p>前序冲刺失败后，稳健段要能真实承接；如果某一行不会影响最终落点，就不应该在报告里被过度包装。</p>
@@ -1421,6 +1922,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
               <p>土木、化工、纯材料等方向若进入专业组，需要在服从调剂前单独标红复核。</p>
             </article>
           </div>
+          <CounterEvidenceChecklist items={reportData.counterEvidence} />
           <PageFooter page="05" />
         </div>
       </section>
