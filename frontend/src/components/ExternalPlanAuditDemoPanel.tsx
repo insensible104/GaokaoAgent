@@ -144,18 +144,69 @@ const externalPlanText = [
 ].join("\n");
 
 export const ExternalPlanAuditDemoPanel: React.FC = () => (
-  <div className="space-y-5">
-    <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-xs font-semibold uppercase text-indigo-700">PathFinder Lite demo</p>
-      <h1 className="mt-2 text-3xl font-bold text-slate-950">External plan audit</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-700">
-        Paste a Qwen, family, teacher, or peer project plan and compare it against a structured PathFinder slate.
-        This public demo checks overlap, missing safe anchors, duplicate rows, and review actions. It does not turn
-        demo evidence into a final admissions claim.
+  <section className="space-y-5">
+    <header className="border border-[#D8D2C2] bg-[#F1ECDE] p-5">
+      <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#A6300E]">
+        Evidence Workbench / External audit
       </p>
-    </section>
-    <ExternalPlanComparator gameMatrix={demoGameMatrix} initialText={externalPlanText} />
-  </div>
+      <div className="mt-4 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <div>
+          <h1 className="text-3xl font-semibold leading-tight text-[#1B1B1A]">External plan audit</h1>
+          <p className="mt-3 max-w-4xl text-sm leading-6 text-[#3E4A5C]">
+            把 Qwen、家长、老师或同学给出的志愿方案拆成可审计的行，再和 PathFinder 的结构化志愿表对齐。
+            这个公开演示重点检查覆盖缺口、缺失保底、重复行和需要顾问复核的表达边界。
+          </p>
+        </div>
+        <div className="grid grid-cols-2 border border-[#D8D2C2] bg-[#FBFAF6] text-sm">
+          <div className="border-b border-r border-[#D8D2C2] p-3">
+            <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Input</span>
+            <b>4 pasted rows</b>
+          </div>
+          <div className="border-b border-[#D8D2C2] p-3">
+            <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Reference</span>
+            <b>3 structured rows</b>
+          </div>
+          <div className="border-r border-[#D8D2C2] p-3">
+            <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Audit</span>
+            <b>coverage gap</b>
+          </div>
+          <div className="p-3">
+            <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Boundary</span>
+            <b>Counselor signoff</b>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div className="workbench-grid grid grid-cols-1 gap-5 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
+      <aside className="workbench-rail border border-[#D8D2C2] bg-white p-4">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0D8A5A]">Plan to inspect</p>
+        <pre className="mt-3 whitespace-pre-wrap border border-[#D8D2C2] bg-[#FBFAF6] p-3 font-mono text-xs leading-5 text-[#1B1B1A]">
+          {externalPlanText}
+        </pre>
+        <p className="mt-3 text-xs leading-5 text-[#3E4A5C]">
+          这里故意保留未知学校和未知保底行，用来展示“外部答案流畅但结构不可交付”的问题。
+        </p>
+      </aside>
+
+      <main className="workbench-main min-w-0 border border-[#D8D2C2] bg-white p-4">
+        <ExternalPlanComparator gameMatrix={demoGameMatrix} initialText={externalPlanText} />
+      </main>
+
+      <aside className="workbench-decision border border-[#D8D2C2] bg-[#0A0E1A] p-4 text-[#E8ECF4]">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#FFA02F]">Decision output</p>
+        <h2 className="mt-3 text-xl font-semibold">不能直接交付给家庭</h2>
+        <ul className="mt-4 space-y-3 text-sm leading-6 text-[#C9D2E3]">
+          <li>外部方案有无法匹配的学校和专业组，不能当作正式志愿表。</li>
+          <li>保底行需要回到历史位次、调剂风险和当年计划重新检查。</li>
+          <li>允许展示的是审计结果，不是录取承诺。</li>
+        </ul>
+        <div className="mt-5 border border-[#2A3050] p-3 font-mono text-xs text-[#FFA02F]">
+          Counselor signoff required before any family-facing wording.
+        </div>
+      </aside>
+    </div>
+  </section>
 );
 
 export default ExternalPlanAuditDemoPanel;

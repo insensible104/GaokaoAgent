@@ -401,7 +401,7 @@ function AppContent() {
         steps.push({
           agent: 'ai_reasoning',
           status: 'completed',
-          message: `🔍 ${gameRouterMatch[1].trim()}`
+          message: `Deep research: ${gameRouterMatch[1].trim()}`
         });
         continue;
       }
@@ -412,7 +412,7 @@ function AppContent() {
         steps.push({
           agent: 'ai_reasoning',
           status: 'completed',
-          message: `⚠️ ${criticRouterMatch[1].trim()}`
+          message: `Review warning: ${criticRouterMatch[1].trim()}`
         });
         continue;
       }
@@ -421,7 +421,7 @@ function AppContent() {
       const researchMatch = log.match(/\[(PLAN|EXECUTE|REFLECT)\]\s*(.+)/);
       if (researchMatch) {
         const [, phase, message] = researchMatch;
-        const cleanMessage = message.replace(/🎯|🔍|🤔/g, '').trim();
+        const cleanMessage = message.replace(/目标|检索|反思/g, '').trim();
 
         steps.push({
           agent: `deep_research_${phase.toLowerCase()}`,
@@ -488,10 +488,12 @@ function AppContent() {
     );
   }
 
+  const publicShellClass = "public-shell min-h-screen bg-[#FBFAF6] text-[#1B1B1A]";
+
   if (externalPlanAuditDemoRequested) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
-        <main className="container mx-auto max-w-6xl px-4 py-8">
+      <div className={publicShellClass}>
+        <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
           <Suspense fallback={<div className="text-center py-4">Loading external plan audit demo...</div>}>
             <ExternalPlanAuditDemoPanel />
           </Suspense>
@@ -502,8 +504,8 @@ function AppContent() {
 
   if (admissionsOpportunityDemoRequested) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
-        <main className="container mx-auto max-w-6xl px-4 py-8">
+      <div className={publicShellClass}>
+        <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
           <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
             <AdmissionsOpportunityDemoCasePanel />
           </Suspense>
@@ -513,51 +515,98 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header */}
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-cyan-600">
-            GaokaoAgent
-          </h1>
-          <p className="text-xl text-sky-700 font-medium">
-            AI驱动的高考志愿决策系统 · 基于博弈论的量化分析
-          </p>
+    <div className={publicShellClass}>
+      <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+        <header className="mb-8 border-b border-[#D8D2C2] pb-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-4xl">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#A6300E]">
+                Evidence Workbench / Public Preview
+              </p>
+              <h1 className="mt-3 max-w-4xl text-4xl font-semibold leading-tight tracking-normal text-[#1B1B1A] sm:text-5xl">
+                GaokaoAgent
+              </h1>
+              <p className="mt-4 max-w-3xl text-base leading-7 text-[#3E4A5C]">
+                志愿表体检、趋势机会、证据账本、交付边界。我们不把大模型回答直接包装成建议，而是把量化结果、深度调研和人工复核边界放在同一个工作台里。
+              </p>
+            </div>
+            <div className="grid min-w-[280px] grid-cols-2 border border-[#D8D2C2] bg-[#F1ECDE] text-sm">
+              <div className="border-b border-r border-[#D8D2C2] p-3">
+                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Engine</span>
+                <b>DeepSeek API</b>
+              </div>
+              <div className="border-b border-[#D8D2C2] p-3">
+                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Deploy</span>
+                <b>GitHub Pages</b>
+              </div>
+              <div className="border-r border-[#D8D2C2] p-3">
+                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Demos</span>
+                <b>2 public</b>
+              </div>
+              <div className="p-3">
+                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Claim</span>
+                <b>Evidence-bound</b>
+              </div>
+            </div>
+          </div>
         </header>
 
         {/* Main Content */}
         <main>
           {!result && !isAnalyzing && !error && (
             <div className="space-y-6">
-              <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <section className="grid grid-cols-1 gap-0 border border-[#D8D2C2] bg-[#FBFAF6] lg:grid-cols-[1.25fr_1fr_1fr]">
+                <div className="border-b border-[#D8D2C2] p-5 lg:border-b-0 lg:border-r">
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">
+                    Why this exists
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold leading-snug text-[#1B1B1A]">
+                    先审计一张志愿表，再讨论能不能冲。
+                  </h2>
+                  <p className="mt-3 text-sm leading-6 text-[#3E4A5C]">
+                    爆点不应该是“AI 给你推荐学校”，而是发现普通答案漏掉的结构风险、趋势机会和证据缺口。
+                  </p>
+                </div>
                 <a
                   href="/app/external-plan-audit-demo"
-                  className="rounded-lg border border-indigo-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="border-b border-[#D8D2C2] p-5 transition hover:bg-[#F1ECDE] lg:border-b-0 lg:border-r"
                 >
-                  <p className="text-xs font-semibold uppercase text-indigo-700">Public demo</p>
-                  <h2 className="mt-2 text-xl font-bold text-slate-950">Audit an external plan</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Compare a Qwen, family, teacher, or peer plan against PathFinder's structured slate.
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0D8A5A]">Public demo 01</p>
+                  <h2 className="mt-2 text-xl font-semibold text-[#1B1B1A]">External plan audit</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#3E4A5C]">
+                    把 Qwen、家长、老师或同学给出的方案拆成可检查的行，标出缺失保底、重复风险和不能对家长说出口的结论。
                   </p>
                 </a>
                 <a
                   href="/app/admissions-opportunity-demo"
-                  className="rounded-lg border border-emerald-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="p-5 transition hover:bg-[#F1ECDE]"
                 >
-                  <p className="text-xs font-semibold uppercase text-emerald-700">Public demo</p>
-                  <h2 className="mt-2 text-xl font-bold text-slate-950">Review an evidence workflow</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    See how plan changes, public attention, web evidence, and counselor review stay separated.
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">Public demo 02</p>
+                  <h2 className="mt-2 text-xl font-semibold text-[#1B1B1A]">Opportunity research workflow</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#3E4A5C]">
+                    看计划变化、公众号舆情、公开证据和顾问复核如何进入同一个证据账本，而不是混成一句“趋势不错”。
                   </p>
                 </a>
               </section>
-              <GaokaoAgentForm onSubmit={handleSubmit} />
+              <section className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="border border-[#D8D2C2] bg-white p-4">
+                  <GaokaoAgentForm onSubmit={handleSubmit} />
+                </div>
+                <aside className="border border-[#D8D2C2] bg-[#F1ECDE] p-5">
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#736D5A]">Research taste check</p>
+                  <h3 className="mt-3 text-xl font-semibold text-[#1B1B1A]">公开演示先证明两件事</h3>
+                  <ol className="mt-4 space-y-3 text-sm leading-6 text-[#3E4A5C]">
+                    <li><b>1.</b> 看得全面且准确：每个结论都能回到证据、数据边界和复核动作。</li>
+                    <li><b>2.</b> 能分析趋势：只允许把“趋势机会”写成有置信度和反证要求的假设。</li>
+                  </ol>
+                </aside>
+              </section>
               {showAdmissionsOpportunityDemo && (
                 <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
-                  <section className="rounded-2xl border border-sky-200 bg-white/85 p-4 shadow-sm">
+                  <section className="border border-[#D8D2C2] bg-white p-4">
                     <div className="mb-4">
-                      <p className="text-xs font-semibold uppercase text-sky-700">Internal evidence demo</p>
-                      <h2 className="text-xl font-bold text-slate-950">Admissions opportunity demo case</h2>
+                      <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">Internal evidence demo</p>
+                      <h2 className="text-xl font-semibold text-[#1B1B1A]">Admissions opportunity demo case</h2>
                     </div>
                     <AdmissionsOpportunityDemoCasePanel />
                   </section>
@@ -589,12 +638,12 @@ function AppContent() {
                   intentType={undefined}
                 />
                 {/* 错误提示卡片 */}
-                <div className="bg-red-50 backdrop-blur-sm rounded-2xl p-8 shadow-lg border-2 border-red-300">
-                  <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ 请求失败</h2>
+                <div className="border-2 border-red-300 bg-red-50 p-8">
+                  <h2 className="text-2xl font-bold text-red-600 mb-4">请求失败</h2>
                   <p className="text-red-800 mb-6">{error}</p>
                   <button
                     onClick={handleReset}
-                    className="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-semibold transition-colors shadow-md"
+                    className="px-6 py-3 bg-[#1B1B1A] hover:bg-[#3E4A5C] text-white font-semibold transition-colors"
                   >
                     返回重试
                   </button>
@@ -650,10 +699,10 @@ function AppContent() {
         </main>
 
         {/* Footer */}
-        <footer className="mt-16 text-center text-sky-600 text-sm">
+        <footer className="mt-16 border-t border-[#D8D2C2] pt-6 text-center text-sm text-[#3E4A5C]">
           <p>
             GaokaoAgent · Powered by LangGraph & Ollama ·{" "}
-            <span className="text-cyan-600 font-semibold">混合智能架构</span>
+            <span className="font-semibold text-[#A6300E]">Evidence Workbench</span>
           </p>
         </footer>
       </div>

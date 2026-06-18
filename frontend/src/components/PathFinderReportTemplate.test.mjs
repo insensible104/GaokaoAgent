@@ -29,7 +29,7 @@ for (const token of [
   "sessionStorage",
   "gameMatrix",
   "deliveryProfile",
-  "modern-education-brochure",
+  "research-report",
   "cover-modern",
   "VolunteerCardDeck",
   "VolunteerMatrix",
@@ -46,7 +46,14 @@ for (const token of [
   "11845",
   "广东工业大学",
   "206 专业组",
-  "现代中文升学画册试样",
+  "Research Report",
+  "Hidden opportunity radar",
+  "Trend analysis",
+  "Counselor signoff",
+  "志愿表体检",
+  "趋势机会",
+  "证据账本",
+  "交付边界",
 ]) {
   assert(
     source.includes(token),
@@ -57,6 +64,8 @@ for (const token of [
 for (const badToken of [
   "DataBoundary</p>",
   "VolunteerMatrix</span>",
+  "现代中文升学画册试样",
+  "bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50",
 ]) {
   assert(
     !source.includes(badToken),

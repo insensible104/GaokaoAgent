@@ -145,15 +145,15 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-white to-sky-50 rounded-2xl p-8 shadow-lg border-2 border-sky-200">
+    <div className="border border-[#D8D2C2] bg-[#FBFAF6] p-6">
       <h2
         id="form-title"
-        className="text-3xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-cyan-600"
+        className="mb-2 text-3xl font-semibold text-[#1B1B1A]"
       >
         填写您的高考信息
       </h2>
-      <p id="form-description" className="text-sky-700 mb-6">
-        请如实填写，系统将基于量化算法为您生成个性化志愿方案
+      <p id="form-description" className="mb-6 text-sm leading-6 text-[#3E4A5C]">
+        请如实填写，系统会把分数、位次、专业偏好和风险边界转成可审计的志愿分析输入。
       </p>
 
       <form
@@ -164,19 +164,19 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
       >
         {/* 基本信息卡片 */}
         <Card
-          className="p-6 bg-sky-50/50 border-sky-300"
+          className="border-[#D8D2C2] bg-white p-5 shadow-none"
           role="group"
           aria-labelledby="basic-info-heading"
         >
           <h3
             id="basic-info-heading"
-            className="text-xl font-semibold mb-4 text-sky-700 flex items-center"
+            className="mb-4 text-xl font-semibold text-[#1B1B1A]"
           >
-            <span className="mr-2" aria-hidden="true">📊</span> 基本信息
+            基本信息
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="totalScore" className="text-sky-800">
+              <Label htmlFor="totalScore" className="text-[#3E4A5C]">
                 高考总分 <span className="text-red-500" aria-label="必填">*</span>
               </Label>
               <Input
@@ -189,7 +189,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 aria-required="true"
                 aria-label="高考总分"
                 aria-describedby="totalScore-hint"
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
               <span id="totalScore-hint" className="sr-only">
                 请输入您的高考总分，范围0-900
@@ -197,7 +197,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="rank" className="text-sky-800">
+              <Label htmlFor="rank" className="text-[#3E4A5C]">
                 全省位次 <span className="text-red-500" aria-label="必填">*</span>
               </Label>
               <Input
@@ -210,7 +210,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 aria-required="true"
                 aria-label="全省位次"
                 aria-describedby="rank-hint"
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
               <span id="rank-hint" className="sr-only">
                 请输入您的全省位次
@@ -218,14 +218,14 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subject" className="text-sky-800">
+              <Label htmlFor="subject" className="text-[#3E4A5C]">
                 选科组合 <span className="text-red-500">*</span>
               </Label>
               <Select value={subjectGroup} onValueChange={setSubjectGroup}>
-                <SelectTrigger className="bg-white border-sky-300 text-sky-900">
+                <SelectTrigger className="bg-white border-[#D8D2C2] text-[#1B1B1A]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-sky-300 text-sky-900">
+                <SelectContent className="bg-white border-[#D8D2C2] text-[#1B1B1A]">
                   <SelectItem value="物理">物理类</SelectItem>
                   <SelectItem value="历史">历史类</SelectItem>
                 </SelectContent>
@@ -235,18 +235,18 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
         </Card>
 
         {/* 各科成绩卡片 */}
-        <Card className="p-6 bg-sky-50/50 border-sky-300">
-          <h3 className="text-xl font-semibold mb-4 text-cyan-700 flex items-center">
-            <span className="mr-2">📝</span> 各科成绩（可选）
+        <Card className="border-[#D8D2C2] bg-white p-5 shadow-none">
+          <h3 className="mb-4 text-xl font-semibold text-[#1B1B1A]">
+            各科成绩（可选）
           </h3>
-          <p className="text-sm text-sky-600 mb-4">
+          <p className="mb-4 text-sm leading-6 text-[#3E4A5C]">
             填写各科分数可帮助系统分析您的学科优势，推荐更匹配的专业
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {/* 必考科目 */}
             <div className="space-y-2">
-              <Label htmlFor="chinese" className="text-sky-800">语文</Label>
+              <Label htmlFor="chinese" className="text-[#3E4A5C]">语文</Label>
               <Input
                 id="chinese"
                 type="number"
@@ -254,12 +254,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 placeholder="0-150"
                 value={chinese}
                 onChange={(e) => setChinese(e.target.value)}
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="math" className="text-sky-800">数学</Label>
+              <Label htmlFor="math" className="text-[#3E4A5C]">数学</Label>
               <Input
                 id="math"
                 type="number"
@@ -267,12 +267,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 placeholder="0-150"
                 value={math}
                 onChange={(e) => setMath(e.target.value)}
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="english" className="text-sky-800">英语</Label>
+              <Label htmlFor="english" className="text-[#3E4A5C]">英语</Label>
               <Input
                 id="english"
                 type="number"
@@ -280,7 +280,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 placeholder="0-150"
                 value={english}
                 onChange={(e) => setEnglish(e.target.value)}
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
             </div>
 
@@ -288,7 +288,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
             {subjectGroup === "物理" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="physics" className="text-sky-800">物理</Label>
+                  <Label htmlFor="physics" className="text-[#3E4A5C]">物理</Label>
                   <Input
                     id="physics"
                     type="number"
@@ -296,12 +296,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                     placeholder="0-100"
                     value={physics}
                     onChange={(e) => setPhysics(e.target.value)}
-                    className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                    className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="chemistry" className="text-sky-800">化学</Label>
+                  <Label htmlFor="chemistry" className="text-[#3E4A5C]">化学</Label>
                   <Input
                     id="chemistry"
                     type="number"
@@ -309,12 +309,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                     placeholder="0-100"
                     value={chemistry}
                     onChange={(e) => setChemistry(e.target.value)}
-                    className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                    className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="biology" className="text-sky-800">生物</Label>
+                  <Label htmlFor="biology" className="text-[#3E4A5C]">生物</Label>
                   <Input
                     id="biology"
                     type="number"
@@ -322,7 +322,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                     placeholder="0-100"
                     value={biology}
                     onChange={(e) => setBiology(e.target.value)}
-                    className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                    className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
                   />
                 </div>
               </>
@@ -331,7 +331,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
             {subjectGroup === "历史" && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="history" className="text-sky-800">历史</Label>
+                  <Label htmlFor="history" className="text-[#3E4A5C]">历史</Label>
                   <Input
                     id="history"
                     type="number"
@@ -339,12 +339,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                     placeholder="0-100"
                     value={history}
                     onChange={(e) => setHistory(e.target.value)}
-                    className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                    className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="politics" className="text-sky-800">政治</Label>
+                  <Label htmlFor="politics" className="text-[#3E4A5C]">政治</Label>
                   <Input
                     id="politics"
                     type="number"
@@ -352,12 +352,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                     placeholder="0-100"
                     value={politics}
                     onChange={(e) => setPolitics(e.target.value)}
-                    className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                    className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="geography" className="text-sky-800">地理</Label>
+                  <Label htmlFor="geography" className="text-[#3E4A5C]">地理</Label>
                   <Input
                     id="geography"
                     type="number"
@@ -365,7 +365,7 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                     placeholder="0-100"
                     value={geography}
                     onChange={(e) => setGeography(e.target.value)}
-                    className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                    className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
                   />
                 </div>
               </>
@@ -374,14 +374,14 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
         </Card>
 
         {/* 志愿偏好卡片 */}
-        <Card className="p-6 bg-sky-50/50 border-sky-300">
-          <h3 className="text-xl font-semibold mb-4 text-sky-700 flex items-center">
-            <span className="mr-2">🎯</span> 志愿偏好
+        <Card className="border-[#D8D2C2] bg-white p-5 shadow-none">
+          <h3 className="mb-4 text-xl font-semibold text-[#1B1B1A]">
+            志愿偏好
           </h3>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="preferredMajors" className="text-sky-800">
+              <Label htmlFor="preferredMajors" className="text-[#3E4A5C]">
                 想学的专业方向
               </Label>
               <Input
@@ -389,12 +389,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 placeholder="例如：计算机、人工智能、电子信息"
                 value={preferredMajors}
                 onChange={(e) => setPreferredMajors(e.target.value)}
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="blacklistMajors" className="text-sky-800">
+              <Label htmlFor="blacklistMajors" className="text-[#3E4A5C]">
                 不想学的专业（黑名单）
               </Label>
               <Input
@@ -402,12 +402,12 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 placeholder="例如：土木、化工、生物制药"
                 value={blacklistMajors}
                 onChange={(e) => setBlacklistMajors(e.target.value)}
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="preferredCities" className="text-sky-800">
+              <Label htmlFor="preferredCities" className="text-[#3E4A5C]">
                 偏好城市/地区
               </Label>
               <Input
@@ -415,19 +415,19 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
                 placeholder="例如：北京、上海、江浙、不排斥中西部"
                 value={preferredCities}
                 onChange={(e) => setPreferredCities(e.target.value)}
-                className="bg-white border-sky-300 text-sky-900 placeholder-sky-400 focus:border-sky-500 focus:ring-sky-500"
+                className="bg-white border-[#D8D2C2] text-[#1B1B1A] placeholder-[#736D5A] focus:border-[#A6300E] focus:ring-[#A6300E]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="risk" className="text-sky-800">
+              <Label htmlFor="risk" className="text-[#3E4A5C]">
                 风险偏好
               </Label>
               <Select value={riskTolerance} onValueChange={setRiskTolerance}>
-                <SelectTrigger className="bg-white border-sky-300 text-sky-900">
+                <SelectTrigger className="bg-white border-[#D8D2C2] text-[#1B1B1A]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-sky-300 text-sky-900">
+                <SelectContent className="bg-white border-[#D8D2C2] text-[#1B1B1A]">
                   <SelectItem value="conservative">保守型 - 稳妥优先，避免滑档</SelectItem>
                   <SelectItem value="balanced">平衡型 - 冲稳保均衡</SelectItem>
                   <SelectItem value="aggressive">激进型 - 冲刺名校，可承受风险</SelectItem>
@@ -449,27 +449,26 @@ const GaokaoAgentFormComponent = ({ onSubmit }: GaokaoAgentFormProps) => {
         {/* 提交按钮 */}
         <Button
           type="submit"
-          className="w-full bg-gradient-to-r from-sky-500 via-cyan-500 to-blue-500 hover:from-sky-600 hover:via-cyan-600 hover:to-blue-600 text-white font-bold py-6 text-lg rounded-xl shadow-lg transform transition hover:scale-105"
+          className="w-full rounded-none bg-[#1B1B1A] py-6 text-lg font-bold text-white shadow-none transition hover:bg-[#3E4A5C]"
         >
-          <span className="mr-2">🚀</span>
-          开始AI智能分析
+          开始证据化分析
         </Button>
       </form>
 
       {/* 功能说明 */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 bg-gradient-to-br from-sky-100 to-sky-50 rounded-lg border-2 border-sky-300">
-          <h4 className="font-semibold mb-2 text-sky-700">💎 核心算法</h4>
-          <ul className="text-sm text-sky-600 space-y-1">
+        <div className="border border-[#D8D2C2] bg-white p-4">
+          <h4 className="mb-2 font-semibold text-[#1B1B1A]">核心算法</h4>
+          <ul className="space-y-1 text-sm text-[#3E4A5C]">
             <li>• 历史位次区间对照</li>
             <li>• 数据年份透明提示</li>
             <li>• 小样本与波动风险惩罚</li>
           </ul>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-cyan-100 to-cyan-50 rounded-lg border-2 border-cyan-300">
-          <h4 className="font-semibold mb-2 text-cyan-700">🛡️ 风险管控</h4>
-          <ul className="text-sm text-cyan-600 space-y-1">
+        <div className="border border-[#D8D2C2] bg-white p-4">
+          <h4 className="mb-2 font-semibold text-[#1B1B1A]">风险管控</h4>
+          <ul className="space-y-1 text-sm text-[#3E4A5C]">
             <li>• 调剂地狱模拟器</li>
             <li>• 黑名单专业预警</li>
             <li>• 4级审计机制</li>

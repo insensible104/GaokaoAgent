@@ -405,28 +405,28 @@ const ReportStyles = () => (
     }
 
     :root {
-      --brochure-ink: #17324d;
-      --brochure-blue: #2f78b7;
-      --brochure-sky: #dcecf6;
-      --brochure-mint: #dbeee6;
-      --brochure-orange: #f2a05d;
-      --brochure-paper: #fbf7ef;
-      --brochure-soft: #f4f7f9;
-      --brochure-line: #d7e0e6;
-      --brochure-muted: #647586;
+      --brochure-ink: #1B1B1A;
+      --brochure-blue: #3E4A5C;
+      --brochure-sky: #EFE8D8;
+      --brochure-mint: #E6EFE8;
+      --brochure-orange: #A6300E;
+      --brochure-paper: #FBFAF6;
+      --brochure-soft: #F1ECDE;
+      --brochure-line: #D8D2C2;
+      --brochure-muted: #736D5A;
     }
 
     .report-preview-shell {
-      background: #e9edf1;
+      background: #E7E0D0;
       min-height: 100vh;
       padding: 24px;
     }
 
     .report-toolbar {
       align-items: center;
-      background: white;
-      border: 1px solid #dbe4ea;
-      border-radius: 8px;
+      background: #FBFAF6;
+      border: 1px solid var(--brochure-line);
+      border-radius: 0;
       display: flex;
       justify-content: space-between;
       margin: 0 auto 18px;
@@ -443,7 +443,7 @@ const ReportStyles = () => (
     .report-toolbar button {
       background: var(--brochure-ink);
       border: 0;
-      border-radius: 6px;
+      border-radius: 0;
       color: white;
       cursor: pointer;
       font-weight: 800;
@@ -460,7 +460,7 @@ const ReportStyles = () => (
 
     .report-page {
       background: var(--brochure-paper);
-      box-shadow: 0 18px 46px rgba(25, 49, 75, .16);
+      box-shadow: 0 18px 42px rgba(27, 27, 26, .14);
       height: 297mm;
       overflow: hidden;
       page-break-after: always;
@@ -482,12 +482,13 @@ const ReportStyles = () => (
       padding: 14mm 16mm 13mm;
     }
 
+    .research-report,
     .modern-education-brochure {
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", serif;
     }
 
     .cover-modern {
-      background: #fbf7ef;
+      background: #FBFAF6;
     }
 
     .cover-modern::before {
@@ -501,7 +502,7 @@ const ReportStyles = () => (
     }
 
     .cover-modern::after {
-      background: rgba(242, 160, 93, .9);
+      background: rgba(166, 48, 14, .9);
       content: "";
       height: 1.6mm;
       left: 18mm;
@@ -524,7 +525,7 @@ const ReportStyles = () => (
 
     .cover-top {
       align-items: center;
-      border-bottom: 1px solid rgba(23, 50, 77, .16);
+      border-bottom: 1px solid var(--brochure-line);
       padding-bottom: 11px;
     }
 
@@ -560,7 +561,7 @@ const ReportStyles = () => (
     }
 
     .cover-title p {
-      color: #263d55;
+      color: var(--brochure-blue);
       font-size: 17px;
       font-weight: 800;
       line-height: 1.8;
@@ -571,10 +572,12 @@ const ReportStyles = () => (
 
     .campus-window {
       background:
-        linear-gradient(90deg, rgba(47, 120, 183, .10), rgba(47, 120, 183, .03)),
-        #ffffff;
-      border: 1px solid #d8e5ec;
-      border-radius: 2px;
+        linear-gradient(90deg, rgba(27, 27, 26, .06) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(27, 27, 26, .05) 1px, transparent 1px),
+        #F1ECDE;
+      background-size: 12px 12px;
+      border: 1px solid var(--brochure-line);
+      border-radius: 0;
       display: grid;
       grid-template-columns: 30mm 1fr;
       margin-top: 28px;
@@ -586,7 +589,7 @@ const ReportStyles = () => (
     }
 
     .campus-window::before {
-      background: linear-gradient(90deg, transparent, rgba(242, 160, 93, .14));
+      background: linear-gradient(90deg, transparent, rgba(166, 48, 14, .12));
       content: "";
       inset: 0;
       opacity: 1;
@@ -623,7 +626,7 @@ const ReportStyles = () => (
     .cover-decision-metric {
       background: rgba(255,255,255,.96);
       border: 1px solid var(--brochure-line);
-      border-radius: 3px;
+      border-radius: 0;
       box-sizing: border-box;
     }
 
@@ -653,7 +656,7 @@ const ReportStyles = () => (
     }
 
     .cover-decision-main p {
-      color: #4d6072;
+      color: var(--brochure-blue);
       font-size: 13px;
       font-weight: 700;
       line-height: 1.65;
@@ -681,8 +684,8 @@ const ReportStyles = () => (
     }
 
     .cover-roadmap {
-      border-bottom: 1px solid rgba(23, 50, 77, .18);
-      border-top: 1px solid rgba(23, 50, 77, .18);
+      border-bottom: 1px solid var(--brochure-line);
+      border-top: 1px solid var(--brochure-line);
       display: grid;
       gap: 0;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -691,7 +694,7 @@ const ReportStyles = () => (
     }
 
     .cover-roadmap article {
-      border-right: 1px solid rgba(23, 50, 77, .14);
+      border-right: 1px solid var(--brochure-line);
       min-height: 84px;
       padding: 13px 13px 12px;
     }
@@ -717,7 +720,7 @@ const ReportStyles = () => (
     }
 
     .cover-roadmap p {
-      color: #4d6072;
+      color: var(--brochure-blue);
       font-size: 11px;
       font-weight: 700;
       line-height: 1.45;
@@ -727,7 +730,7 @@ const ReportStyles = () => (
 
     .cover-volunteer-sample {
       align-items: center;
-      background: var(--brochure-ink);
+      background: #0A0E1A;
       color: white;
       display: grid;
       gap: 10px;
@@ -828,7 +831,7 @@ const ReportStyles = () => (
       align-items: stretch;
       background: white;
       border: 1px solid var(--brochure-line);
-      border-radius: 8px;
+      border-radius: 0;
       box-shadow: 0 16px 34px rgba(31, 68, 103, .09);
       gap: 18px;
       padding: 18px;
@@ -836,7 +839,7 @@ const ReportStyles = () => (
 
     .score-main {
       background: var(--brochure-ink);
-      border-radius: 8px;
+      border-radius: 0;
       color: white;
       flex: 0 0 66mm;
       padding: 20px;
@@ -886,7 +889,7 @@ const ReportStyles = () => (
     .metric {
       background: #f8fbfc;
       border: 1px solid #dce6ec;
-      border-radius: 8px;
+      border-radius: 0;
       padding: 13px;
     }
 
@@ -920,7 +923,7 @@ const ReportStyles = () => (
     .advisor-note,
     .emotion-value-strip,
     .data-boundary {
-      border-radius: 8px;
+      border-radius: 0;
       margin-top: 14px;
       padding: 16px 18px;
     }
@@ -956,7 +959,7 @@ const ReportStyles = () => (
     .evidence-grid article {
       background: white;
       border: 1px solid var(--brochure-line);
-      border-radius: 8px;
+      border-radius: 0;
       padding: 16px;
     }
 
@@ -988,7 +991,7 @@ const ReportStyles = () => (
     .volunteer-card {
       background: white;
       border: 1px solid #d8e3eb;
-      border-radius: 8px;
+      border-radius: 0;
       box-shadow: 0 10px 24px rgba(31, 68, 103, .07);
       padding: 14px 16px;
     }
@@ -1000,7 +1003,7 @@ const ReportStyles = () => (
 
     .volunteer-card__index {
       background: var(--brochure-ink);
-      border-radius: 7px;
+      border-radius: 0;
       color: white;
       flex: 0 0 38px;
       font-size: 18px;
@@ -1031,7 +1034,7 @@ const ReportStyles = () => (
     }
 
     .strategy {
-      border-radius: 999px;
+      border-radius: 0;
       display: inline-block;
       font-size: 13px;
       font-weight: 900;
@@ -1066,7 +1069,7 @@ const ReportStyles = () => (
     .pill-row span {
       background: #f4f7f9;
       border: 1px solid #dde8ee;
-      border-radius: 999px;
+      border-radius: 0;
       color: #40566e;
       font-size: 12px;
       font-weight: 800;
@@ -1097,7 +1100,7 @@ const ReportStyles = () => (
       align-items: center;
       background: white;
       border: 1px solid var(--brochure-line);
-      border-radius: 8px;
+      border-radius: 0;
       gap: 14px;
       padding: 14px;
     }
@@ -1108,7 +1111,7 @@ const ReportStyles = () => (
     }
 
     .risk {
-      border-radius: 999px;
+      border-radius: 0;
       flex: 0 0 36px;
       font-size: 13px;
       font-weight: 900;
@@ -1177,7 +1180,7 @@ const ReportStyles = () => (
 
 const PageFooter = ({ page }: { page: string }) => (
   <footer className="page-footer">
-    <span>升学规划定制报告 · 现代中文画册试样</span>
+    <span>Research Report · Evidence-bound delivery</span>
     <span>{page}</span>
   </footer>
 );
@@ -1270,17 +1273,17 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
   const primaryCards = reportData.cards.slice(0, 3);
   const secondaryCards = reportData.cards.slice(3);
   return (
-    <div className="report-document modern-education-brochure ChineseFirstReport sample-student-29 subject-combo-wuhuasheng mbti-intj">
+    <div className="report-document research-report ChineseFirstReport sample-student-29 subject-combo-wuhuasheng mbti-intj">
       <section className="report-page cover-modern canva-editorial-cover">
         <div className="report-page__inner">
           <div className="cover-top">
-            <strong>升学规划</strong>
-            <span>定制报告样本 · 家庭决策版</span>
+            <strong>PathFinder</strong>
+            <span>Research Report · 家庭决策版</span>
           </div>
           <div className="cover-visual">
             <div className="cover-title">
-              <p className="cover-kicker report-kicker-en">示例29 · 物化生 · 672分 · 3184位</p>
-              <h1 className="report-title-cn">升学规划定制报告</h1>
+              <p className="cover-kicker report-kicker-en">Evidence Workbench · 示例29 · 物化生 · 672分 · 3184位</p>
+              <h1 className="report-title-cn">升学规划研究报告</h1>
               <p>{reportData.comfortLine}</p>
             </div>
             <div className="campus-window">
@@ -1308,7 +1311,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
                 </div>
                 <div className="cover-decision-metric">
                   <span>复核重点</span>
-                  <b>调剂风险</b>
+                  <b>Counselor signoff</b>
                 </div>
               </div>
             </div>
@@ -1348,7 +1351,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="01" title="先看结论" subtitle="给家长的第一屏，不堆满文字，先建立安全感" />
+          <SectionTitle index="01" title="Executive decision summary" subtitle="先看志愿表体检结论，再看证据账本和交付边界" />
           <div className="score-panel">
             <div className="score-main">
               <span>当前样例分数</span>
@@ -1374,7 +1377,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="02" title="关键志愿卡片" subtitle="把高考系统序号和学校代码放在最醒目的位置" />
+          <SectionTitle index="02" title="Volunteer slate overview" subtitle="把高考系统序号、学校代码、策略位置和风险放在同一张卡里" />
           <VolunteerCardDeck cards={primaryCards} />
           <section className="emotion-value-strip">
             <strong>不是简单排名<br />而是承接关系</strong>
@@ -1386,7 +1389,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="03" title="稳妥承接与保底" subtitle="降低焦虑感，但不把保底说成同等推荐" />
+          <SectionTitle index="03" title="Risk buffer and delivery boundary" subtitle="降低焦虑感，但不把保底说成同等推荐" />
           <VolunteerCardDeck cards={secondaryCards.length ? secondaryCards : reportData.cards.slice(2, 5)} />
           <DataBoundary text={reportData.dataBoundaryText} />
           <PageFooter page="04" />
@@ -1395,7 +1398,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="04" title="专业方向解释" subtitle="从孩子适配度出发，而不是只看学校名气" />
+          <SectionTitle index="04" title="Hidden opportunity radar" subtitle="Trend analysis 必须带置信度、反证条件和顾问复核动作" />
           <div className="path-grid">
             <article className="path-card">
               <strong>01</strong>
@@ -1424,7 +1427,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="05" title="风险与复核动作" subtitle="让家长知道风险在哪里，也知道下一步该做什么" />
+          <SectionTitle index="05" title="Risk ledger and evidence ledger" subtitle="让家长知道风险在哪里，也知道下一步该做什么" />
           <RiskLedger items={reportData.risks} />
           <EvidenceLedger items={reportData.evidence} />
           <DataBoundary text={`交付准备度：${reportData.deliveryReadiness.score}。${reportData.deliveryReadiness.nextAction}`} />
@@ -1445,7 +1448,7 @@ export function InvestmentResearchReportPreview() {
     <main className="report-preview-shell">
       <ReportStyles />
       <div className="report-toolbar">
-        <p>现代中文升学画册试样 · A4 可打印 · 志愿卡片版</p>
+        <p>Research Report · A4 printable · 志愿表体检 / 趋势机会 / 证据账本 / 交付边界</p>
         <button type="button" onClick={() => window.print()}>打印 / 导出 PDF</button>
       </div>
       <PathFinderReportTemplate payload={payload} />
