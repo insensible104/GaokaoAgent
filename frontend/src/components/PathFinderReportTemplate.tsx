@@ -899,6 +899,24 @@ const ReportStyles = () => (
       writing-mode: vertical-rl;
     }
 
+    .cover-title {
+      position: relative;
+    }
+
+    .cover-title::after {
+      border: 1px solid rgba(31, 94, 153, .2);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 7px rgba(31, 94, 153, .035),
+        inset 0 0 0 10px rgba(31, 94, 153, .025);
+      content: "";
+      height: 24mm;
+      left: 40mm;
+      position: absolute;
+      top: 18mm;
+      width: 24mm;
+    }
+
     .cover-title p {
       color: var(--brochure-blue);
       font-size: 17px;
@@ -909,39 +927,6 @@ const ReportStyles = () => (
       text-wrap: pretty;
     }
 
-    .cover-scope-list {
-      border-bottom: 1px solid rgba(31, 94, 153, .18);
-      border-top: 1px solid rgba(31, 94, 153, .18);
-      display: grid;
-      gap: 7px 18px;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      list-style: none;
-      margin: 18px 0 0;
-      max-width: 100mm;
-      padding: 12px 0;
-    }
-
-    .cover-scope-list li {
-      color: #224D75;
-      font-size: 13px;
-      font-weight: 900;
-      letter-spacing: .02em;
-      line-height: 1.25;
-      padding-left: 12px;
-      position: relative;
-      white-space: nowrap;
-    }
-
-    .cover-scope-list li::before {
-      background: #1F5E99;
-      content: "";
-      height: 4px;
-      left: 0;
-      position: absolute;
-      top: 7px;
-      width: 4px;
-    }
-
     .cover-focus-summary {
       background: rgba(255,255,255,.97);
       border: 1px solid var(--brochure-line);
@@ -950,6 +935,18 @@ const ReportStyles = () => (
       margin-top: 30px;
       max-width: 100mm;
       padding: 17px 19px 16px;
+      position: relative;
+    }
+
+    .cover-focus-summary::after {
+      border-right: 1px solid rgba(31, 94, 153, .22);
+      border-top: 1px solid rgba(31, 94, 153, .22);
+      content: "";
+      height: 10mm;
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 10mm;
     }
 
     .cover-focus-summary span {
@@ -983,8 +980,8 @@ const ReportStyles = () => (
 
     .cover-detail-route {
       border-top: 1px solid var(--brochure-line);
-      margin-top: 22px;
-      padding-top: 14px;
+      margin-top: 18px;
+      padding-top: 12px;
     }
 
     .cover-meta-line {
@@ -1955,14 +1952,6 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
                 <p className="cover-kicker report-kicker-en">证据工作台 · 示例29 · 物化生 · 672分 · 3184位</p>
                 <h1 className="report-title-cn">升学质量报告</h1>
                 <p>{reportData.comfortLine}</p>
-                <ul className="cover-scope-list" aria-label="报告覆盖范围">
-                  <li>志愿总览</li>
-                  <li>院校清单</li>
-                  <li>专业精选</li>
-                  <li>就业导向</li>
-                  <li>趋势研判</li>
-                  <li>证据账本</li>
-                </ul>
               </div>
               <section className="cover-focus-summary">
                 <span>顾问判断</span>
