@@ -699,7 +699,7 @@ const ReportStyles = () => (
 
     .report-page::after {
       background:
-        linear-gradient(180deg, transparent 0, rgba(31, 94, 153, .04) 58%, rgba(31, 94, 153, .1) 100%);
+        linear-gradient(180deg, transparent 0, rgba(31, 94, 153, .025) 58%, rgba(31, 94, 153, .06) 100%);
       bottom: 0;
       content: "";
       height: 64mm;
@@ -724,14 +724,14 @@ const ReportStyles = () => (
     }
 
     .report-page--dense::before {
-      color: rgba(31, 94, 153, .05);
+      color: rgba(31, 94, 153, .032);
       content: "PATHFINDER";
       font-family: Georgia, "Times New Roman", serif;
-      font-size: 70px;
+      font-size: 56px;
       font-weight: 900;
       letter-spacing: .05em;
       position: absolute;
-      right: -12mm;
+      right: -9mm;
       top: 14mm;
       transform: rotate(90deg);
       transform-origin: right top;
@@ -745,8 +745,8 @@ const ReportStyles = () => (
 
     .cover-modern {
       background:
-        linear-gradient(160deg, rgba(255,255,255,.05) 0 47%, rgba(31,94,153,.12) 47% 48%, rgba(255,255,255,0) 48%),
-        linear-gradient(180deg, #F8FBFF 0%, #EAF4FF 55%, #FFFFFF 100%);
+        linear-gradient(158deg, rgba(255,255,255,0) 0 46%, rgba(31,94,153,.08) 46% 46.8%, rgba(255,255,255,0) 46.8%),
+        linear-gradient(180deg, #F9FCFF 0%, #EEF7FF 50%, #FFFFFF 100%);
     }
 
     .cover-modern::before {
@@ -760,7 +760,9 @@ const ReportStyles = () => (
     }
 
     .cover-modern::after {
-      background: linear-gradient(90deg, rgba(31, 94, 153, .12), rgba(255,255,255,0));
+      background:
+        radial-gradient(circle at 78% 18%, rgba(31, 94, 153, .12), transparent 18%),
+        linear-gradient(90deg, rgba(31, 94, 153, .06), rgba(255,255,255,0));
       content: "";
       height: 96mm;
       left: 0;
@@ -804,8 +806,8 @@ const ReportStyles = () => (
 
     .cover-visual {
       display: grid;
-      gap: 12mm;
-      grid-template-columns: minmax(0, 96mm) 50mm;
+      gap: 10mm;
+      grid-template-columns: minmax(0, 108mm) 42mm;
       margin-top: 20mm;
       max-width: 162mm;
     }
@@ -813,33 +815,34 @@ const ReportStyles = () => (
     .cover-hero-plate {
       align-self: stretch;
       background:
-        linear-gradient(180deg, rgba(18, 62, 104, .92), rgba(31, 94, 153, .72)),
-        linear-gradient(135deg, transparent 0 49%, rgba(255,255,255,.24) 49% 51%, transparent 51%);
-      border: 1px solid rgba(18, 62, 104, .18);
-      color: white;
-      min-height: 130mm;
+        linear-gradient(180deg, rgba(255,255,255,.78), rgba(235,246,255,.82)),
+        linear-gradient(135deg, transparent 0 49%, rgba(31,94,153,.12) 49% 50%, transparent 50%);
+      border: 1px solid rgba(31, 94, 153, .18);
+      box-shadow: inset 0 0 0 7mm rgba(255,255,255,.28);
+      color: #123E68;
+      min-height: 122mm;
       overflow: hidden;
-      padding: 14mm 8mm;
+      padding: 11mm 7mm;
       position: relative;
     }
 
     .cover-hero-plate::before {
-      border: 1px solid rgba(255,255,255,.28);
+      border: 1px solid rgba(31, 94, 153, .14);
       content: "";
-      inset: 8mm;
+      inset: 7mm;
       position: absolute;
     }
 
     .cover-hero-plate::after {
       background:
-        linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(255,255,255,.18) 1px, transparent 1px);
+        linear-gradient(90deg, rgba(31,94,153,.13) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(31,94,153,.1) 1px, transparent 1px);
       background-size: 11mm 11mm;
       bottom: -6mm;
       content: "";
       height: 65mm;
       left: -8mm;
-      opacity: .42;
+      opacity: .34;
       position: absolute;
       transform: skewY(-8deg);
       width: 78mm;
@@ -848,7 +851,7 @@ const ReportStyles = () => (
     .cover-hero-plate strong {
       display: block;
       font-family: Georgia, "Times New Roman", serif;
-      font-size: 54px;
+      font-size: 36px;
       line-height: .9;
       position: relative;
       z-index: 1;
@@ -856,11 +859,12 @@ const ReportStyles = () => (
 
     .cover-hero-plate span {
       display: block;
+      color: #2E638E;
       font-size: 13px;
       font-weight: 900;
-      letter-spacing: .06em;
-      line-height: 1.7;
-      margin-top: 10px;
+      letter-spacing: .04em;
+      line-height: 1.9;
+      margin-top: 12px;
       position: relative;
       z-index: 1;
     }
@@ -876,8 +880,8 @@ const ReportStyles = () => (
     }
 
     .cover-system-tags b {
-      border-top: 1px solid rgba(255,255,255,.32);
-      color: rgba(255,255,255,.86);
+      border-top: 1px solid rgba(31, 94, 153, .16);
+      color: #315F88;
       font-size: 11px;
       font-weight: 900;
       padding-top: 7px;
@@ -886,12 +890,13 @@ const ReportStyles = () => (
     .cover-title h1,
     .report-title-cn {
       color: var(--brochure-ink);
-      font-size: 46px;
+      font-size: 48px;
       letter-spacing: 0;
       line-height: 1.08;
       margin: 10px 0 18px;
-      max-width: 96mm;
-      white-space: normal;
+      text-orientation: upright;
+      white-space: nowrap;
+      writing-mode: vertical-rl;
     }
 
     .cover-title p {
@@ -900,17 +905,51 @@ const ReportStyles = () => (
       font-weight: 800;
       line-height: 1.8;
       margin: 0;
-      max-width: 94mm;
+      max-width: 104mm;
       text-wrap: pretty;
+    }
+
+    .cover-scope-list {
+      border-bottom: 1px solid rgba(31, 94, 153, .18);
+      border-top: 1px solid rgba(31, 94, 153, .18);
+      display: grid;
+      gap: 7px 18px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      list-style: none;
+      margin: 18px 0 0;
+      max-width: 100mm;
+      padding: 12px 0;
+    }
+
+    .cover-scope-list li {
+      color: #224D75;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .02em;
+      line-height: 1.25;
+      padding-left: 12px;
+      position: relative;
+      white-space: nowrap;
+    }
+
+    .cover-scope-list li::before {
+      background: #1F5E99;
+      content: "";
+      height: 4px;
+      left: 0;
+      position: absolute;
+      top: 7px;
+      width: 4px;
     }
 
     .cover-focus-summary {
       background: rgba(255,255,255,.97);
       border: 1px solid var(--brochure-line);
-      border-left: 5px solid var(--brochure-blue);
-      margin-top: 34px;
-      max-width: 92mm;
-      padding: 18px 20px 17px;
+      border-left: 3px solid var(--brochure-blue);
+      box-shadow: 0 10px 28px rgba(31, 94, 153, .06);
+      margin-top: 30px;
+      max-width: 100mm;
+      padding: 17px 19px 16px;
     }
 
     .cover-focus-summary span {
@@ -938,7 +977,7 @@ const ReportStyles = () => (
       font-weight: 700;
       line-height: 1.72;
       margin: 0;
-      max-width: 92mm;
+      max-width: 100mm;
       text-wrap: pretty;
     }
 
@@ -1304,25 +1343,25 @@ const ReportStyles = () => (
     .contents-layout {
       display: grid;
       flex: 1;
-      gap: 18mm;
-      grid-template-columns: 42mm minmax(0, 1fr);
+      gap: 16mm;
+      grid-template-columns: 30mm minmax(0, 1fr);
       min-height: 0;
     }
 
     .contents-rail {
-      background: linear-gradient(180deg, #E6F2FF, #FFFFFF);
+      background: linear-gradient(180deg, #F0F8FF, #FFFFFF);
       border-right: 1px solid #BFD4EA;
       color: #1F5E99;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       margin: -14mm 0 -13mm -16mm;
-      padding: 18mm 8mm 16mm 12mm;
+      padding: 18mm 5mm 16mm 10mm;
     }
 
     .contents-rail strong {
       font-family: Georgia, "Times New Roman", serif;
-      font-size: 62px;
+      font-size: 44px;
       line-height: .82;
     }
 
@@ -1335,7 +1374,7 @@ const ReportStyles = () => (
 
     .contents-main h2 {
       color: var(--brochure-ink);
-      font-size: 38px;
+      font-size: 36px;
       line-height: 1;
       margin: 0 0 6px;
     }
@@ -1907,15 +1946,23 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
       <section className="report-page cover-modern canva-editorial-cover">
         <div className="report-page__inner">
           <div className="cover-top">
-            <strong>PathFinder</strong>
+            <strong>寻径升学</strong>
             <span>研究报告 · 家庭决策版</span>
           </div>
           <div className="cover-visual cover-visual--focused">
             <div>
               <div className="cover-title">
                 <p className="cover-kicker report-kicker-en">证据工作台 · 示例29 · 物化生 · 672分 · 3184位</p>
-                <h1 className="report-title-cn">升学规划研究报告</h1>
+                <h1 className="report-title-cn">升学质量报告</h1>
                 <p>{reportData.comfortLine}</p>
+                <ul className="cover-scope-list" aria-label="报告覆盖范围">
+                  <li>志愿总览</li>
+                  <li>院校清单</li>
+                  <li>专业精选</li>
+                  <li>就业导向</li>
+                  <li>趋势研判</li>
+                  <li>证据账本</li>
+                </ul>
               </div>
               <section className="cover-focus-summary">
                 <span>顾问判断</span>
@@ -1926,9 +1973,9 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
                 正文展开组合诊断、行级评估矩阵、趋势反证、风险账本和证据账本；封面只负责让家庭先抓住结论。
               </p>
             </div>
-            <aside className="cover-hero-plate" aria-label="PathFinder report visual mark">
-              <strong>PF</strong>
-              <span>Quantitative<br />Research<br />Report</span>
+            <aside className="cover-hero-plate" aria-label="升学质量报告视觉标识">
+              <strong>复核</strong>
+              <span>志愿体检<br />趋势研判<br />证据账本</span>
               <div className="cover-system-tags">
                 <b>志愿表体检</b>
                 <b>趋势机会</b>
