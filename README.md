@@ -59,7 +59,7 @@ Configure the backend CORS allowlist with the Pages origin:
 
 ```env
 ENVIRONMENT=production
-FRONTEND_URL=https://insensible104.github.io/GaokaoAgent
+FRONTEND_URL=https://insensible104.github.io
 LLM_PROVIDER=deepseek
 DEEPSEEK_API_KEY=...
 ```

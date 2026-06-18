@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from dotenv import load_dotenv
@@ -101,11 +102,11 @@ allowed_origins = [
 ]
 
 if IS_PRODUCTION:
-    production_origins = [
-        origin.strip().rstrip("/")
-        for origin in os.getenv("FRONTEND_URL", "").split(",")
-        if origin.strip()
-    ]
+    production_origins = []
+    for raw_origin in os.getenv("FRONTEND_URL", "").split(","):
+        parsed = urlsplit(raw_origin.strip())
+        if parsed.scheme and parsed.netloc:
+            production_origins.append(f"{parsed.scheme}://{parsed.netloc}")
     allowed_origins.extend(production_origins)
 
 app.add_middleware(
