@@ -482,7 +482,7 @@ function AppContent() {
 
   if (window.location.pathname.includes("report-template-preview")) {
     return (
-      <Suspense fallback={<div className="p-8 text-center text-slate-600">Loading report template...</div>}>
+      <Suspense fallback={<div className="p-8 text-center text-slate-600">正在载入研究报告模板...</div>}>
         <InvestmentResearchReportPreview />
       </Suspense>
     );
@@ -494,7 +494,7 @@ function AppContent() {
     return (
       <div className={publicShellClass}>
         <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-          <Suspense fallback={<div className="text-center py-4">Loading external plan audit demo...</div>}>
+          <Suspense fallback={<div className="text-center py-4">正在载入外部方案审计演示...</div>}>
             <ExternalPlanAuditDemoPanel />
           </Suspense>
         </main>
@@ -506,7 +506,7 @@ function AppContent() {
     return (
       <div className={publicShellClass}>
         <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-          <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
+          <Suspense fallback={<div className="text-center py-4">正在载入趋势机会研究演示...</div>}>
             <AdmissionsOpportunityDemoCasePanel />
           </Suspense>
         </main>
@@ -517,35 +517,108 @@ function AppContent() {
   return (
     <div className={publicShellClass}>
       <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-        <header className="mb-8 border-b border-[#D8D2C2] pb-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-4xl">
-              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#A6300E]">
-                Evidence Workbench / Public Preview
-              </p>
-              <h1 className="mt-3 max-w-4xl text-4xl font-semibold leading-tight tracking-normal text-[#1B1B1A] sm:text-5xl">
-                GaokaoAgent
-              </h1>
-              <p className="mt-4 max-w-3xl text-base leading-7 text-[#3E4A5C]">
-                志愿表体检、趋势机会、证据账本、交付边界。我们不把大模型回答直接包装成建议，而是把量化结果、深度调研和人工复核边界放在同一个工作台里。
-              </p>
+        <header className="flagship-hero mb-8 overflow-hidden border border-[#1B1B1A] bg-[#0A0E1A] text-white">
+          <div className="grid min-h-[520px] grid-cols-1 lg:grid-cols-[0.92fr_1.08fr]">
+            <div className="flex flex-col justify-between border-b border-[#2A3050] p-6 lg:border-b-0 lg:border-r lg:p-8">
+              <div>
+                <p className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-[#FFA02F]">
+                  高考志愿 Agent / 公开演示
+                </p>
+                <h1 className="mt-5 max-w-2xl text-5xl font-semibold leading-[1.05] tracking-normal sm:text-6xl">
+                  先体检志愿表，再判断趋势机会。
+                </h1>
+                <p className="mt-6 max-w-xl text-base leading-7 text-[#C9D2E3]">
+                  GaokaoAgent 把量化位次、深度调研、公众号舆情线索和顾问复核边界放到同一个证据工作台里。它不是把大模型回答包装成建议，而是把每个结论拆回可检查的证据。
+                </p>
+              </div>
+              <div className="mt-8 grid grid-cols-2 border border-[#2A3050] bg-[#11172A] text-sm">
+                <div className="border-b border-r border-[#2A3050] p-4">
+                  <span className="block font-mono text-[11px] uppercase tracking-[0.14em] text-[#5E6680]">模型</span>
+                  <b>DeepSeek API</b>
+                </div>
+                <div className="border-b border-[#2A3050] p-4">
+                  <span className="block font-mono text-[11px] uppercase tracking-[0.14em] text-[#5E6680]">部署</span>
+                  <b>GitHub Pages</b>
+                </div>
+                <div className="border-r border-[#2A3050] p-4">
+                  <span className="block font-mono text-[11px] uppercase tracking-[0.14em] text-[#5E6680]">公开演示</span>
+                  <b>2 个可直接打开</b>
+                </div>
+                <div className="p-4">
+                  <span className="block font-mono text-[11px] uppercase tracking-[0.14em] text-[#5E6680]">交付边界</span>
+                    <b>顾问复核签字</b>
+                </div>
+              </div>
             </div>
-            <div className="grid min-w-[280px] grid-cols-2 border border-[#D8D2C2] bg-[#F1ECDE] text-sm">
-              <div className="border-b border-r border-[#D8D2C2] p-3">
-                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Engine</span>
-                <b>DeepSeek API</b>
-              </div>
-              <div className="border-b border-[#D8D2C2] p-3">
-                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Deploy</span>
-                <b>GitHub Pages</b>
-              </div>
-              <div className="border-r border-[#D8D2C2] p-3">
-                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Demos</span>
-                <b>2 public</b>
-              </div>
-              <div className="p-3">
-                <span className="block font-mono text-[11px] uppercase text-[#736D5A]">Claim</span>
-                <b>Evidence-bound</b>
+
+            <div className="case-artifact relative bg-[#FBFAF6] p-5 text-[#1B1B1A] lg:p-8">
+              <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+                <section className="border border-[#D8D2C2] bg-white p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">
+                        志愿体检结果预览
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold">这张表还不能直接交付</h2>
+                    </div>
+                    <div className="border border-[#A6300E] px-3 py-2 text-right">
+                      <span className="block font-mono text-[11px] text-[#736D5A]">审计状态</span>
+                      <b className="text-[#A6300E]">需复核</b>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid grid-cols-3 gap-2 text-sm">
+                    <div className="bg-[#F1ECDE] p-3"><span className="block text-xs text-[#736D5A]">冲刺</span><b>2 行</b></div>
+                    <div className="bg-[#F1ECDE] p-3"><span className="block text-xs text-[#736D5A]">稳健</span><b>2 行</b></div>
+                    <div className="bg-[#F1ECDE] p-3"><span className="block text-xs text-[#736D5A]">保底</span><b>1 行</b></div>
+                  </div>
+                  <div className="mt-5 space-y-2 font-mono text-xs">
+                    {[
+                      ["01", "SouthChinaTech 202", "冲", "专业组尾部风险待确认"],
+                      ["02", "GuangdongIndustry 205", "稳", "证据完整，可进入报告"],
+                      ["03", "UnknownSafeCollege 901", "保", "外部方案未匹配，禁止交付"],
+                    ].map(([index, school, tag, note]) => (
+                      <div className="grid grid-cols-[36px_minmax(0,1fr)_42px_minmax(0,1.3fr)] border border-[#D8D2C2]" key={index}>
+                        <span className="border-r border-[#D8D2C2] p-2 text-[#736D5A]">{index}</span>
+                        <b className="border-r border-[#D8D2C2] p-2">{school}</b>
+                        <span className="border-r border-[#D8D2C2] p-2 text-center text-[#A6300E]">{tag}</span>
+                        <span className="p-2 text-[#3E4A5C]">{note}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <aside className="grid gap-4">
+                  <section className="border border-[#D8D2C2] bg-[#F1ECDE] p-4">
+                    <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0D8A5A]">
+                      趋势机会雷达
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <div className="flex justify-between text-xs"><span>计划变化</span><b>强</b></div>
+                        <div className="mt-1 h-2 bg-white"><div className="h-2 w-[82%] bg-[#0D8A5A]" /></div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-xs"><span>公众号舆情</span><b>中</b></div>
+                        <div className="mt-1 h-2 bg-white"><div className="h-2 w-[58%] bg-[#B86B16]" /></div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-xs"><span>反证缺口</span><b>待补</b></div>
+                        <div className="mt-1 h-2 bg-white"><div className="h-2 w-[36%] bg-[#A6300E]" /></div>
+                      </div>
+                    </div>
+                  </section>
+                  <section className="border border-[#D8D2C2] bg-white p-4">
+                    <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">
+                      报告成品预览
+                    </p>
+                    <div className="mt-3 border-l-4 border-[#1B1B1A] pl-3">
+                      <h3 className="text-xl font-semibold">升学规划研究报告</h3>
+                      <p className="mt-2 text-sm leading-6 text-[#3E4A5C]">
+                        家庭可读，顾问可审计，所有趋势判断保留证据账本和交付边界。
+                      </p>
+                    </div>
+                  </section>
+                </aside>
               </div>
             </div>
           </div>
@@ -558,7 +631,7 @@ function AppContent() {
               <section className="grid grid-cols-1 gap-0 border border-[#D8D2C2] bg-[#FBFAF6] lg:grid-cols-[1.25fr_1fr_1fr]">
                 <div className="border-b border-[#D8D2C2] p-5 lg:border-b-0 lg:border-r">
                   <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">
-                    Why this exists
+                    核心差异
                   </p>
                   <h2 className="mt-3 text-2xl font-semibold leading-snug text-[#1B1B1A]">
                     先审计一张志愿表，再讨论能不能冲。
@@ -571,8 +644,8 @@ function AppContent() {
                   href="/app/external-plan-audit-demo"
                   className="border-b border-[#D8D2C2] p-5 transition hover:bg-[#F1ECDE] lg:border-b-0 lg:border-r"
                 >
-                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0D8A5A]">Public demo 01</p>
-                  <h2 className="mt-2 text-xl font-semibold text-[#1B1B1A]">External plan audit</h2>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0D8A5A]">公开演示 01</p>
+                  <h2 className="mt-2 text-xl font-semibold text-[#1B1B1A]">外部方案审计</h2>
                   <p className="mt-2 text-sm leading-6 text-[#3E4A5C]">
                     把 Qwen、家长、老师或同学给出的方案拆成可检查的行，标出缺失保底、重复风险和不能对家长说出口的结论。
                   </p>
@@ -581,8 +654,8 @@ function AppContent() {
                   href="/app/admissions-opportunity-demo"
                   className="p-5 transition hover:bg-[#F1ECDE]"
                 >
-                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">Public demo 02</p>
-                  <h2 className="mt-2 text-xl font-semibold text-[#1B1B1A]">Opportunity research workflow</h2>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">公开演示 02</p>
+                  <h2 className="mt-2 text-xl font-semibold text-[#1B1B1A]">趋势机会研究流</h2>
                   <p className="mt-2 text-sm leading-6 text-[#3E4A5C]">
                     看计划变化、公众号舆情、公开证据和顾问复核如何进入同一个证据账本，而不是混成一句“趋势不错”。
                   </p>
@@ -593,7 +666,7 @@ function AppContent() {
                   <GaokaoAgentForm onSubmit={handleSubmit} />
                 </div>
                 <aside className="border border-[#D8D2C2] bg-[#F1ECDE] p-5">
-                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#736D5A]">Research taste check</p>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#736D5A]">研究品味校准</p>
                   <h3 className="mt-3 text-xl font-semibold text-[#1B1B1A]">公开演示先证明两件事</h3>
                   <ol className="mt-4 space-y-3 text-sm leading-6 text-[#3E4A5C]">
                     <li><b>1.</b> 看得全面且准确：每个结论都能回到证据、数据边界和复核动作。</li>
@@ -602,11 +675,11 @@ function AppContent() {
                 </aside>
               </section>
               {showAdmissionsOpportunityDemo && (
-                <Suspense fallback={<div className="text-center py-4">Loading admissions opportunity demo...</div>}>
+                <Suspense fallback={<div className="text-center py-4">正在载入趋势机会研究演示...</div>}>
                   <section className="border border-[#D8D2C2] bg-white p-4">
                     <div className="mb-4">
-                      <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">Internal evidence demo</p>
-                      <h2 className="text-xl font-semibold text-[#1B1B1A]">Admissions opportunity demo case</h2>
+                      <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#A6300E]">内部证据演示</p>
+                      <h2 className="text-xl font-semibold text-[#1B1B1A]">趋势机会研究演示案例</h2>
                     </div>
                     <AdmissionsOpportunityDemoCasePanel />
                   </section>
@@ -702,7 +775,7 @@ function AppContent() {
         <footer className="mt-16 border-t border-[#D8D2C2] pt-6 text-center text-sm text-[#3E4A5C]">
           <p>
             GaokaoAgent · Powered by LangGraph & Ollama ·{" "}
-            <span className="font-semibold text-[#A6300E]">Evidence Workbench</span>
+            <span className="font-semibold text-[#A6300E]">证据工作台</span>
           </p>
         </footer>
       </div>

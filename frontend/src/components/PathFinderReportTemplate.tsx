@@ -1180,7 +1180,7 @@ const ReportStyles = () => (
 
 const PageFooter = ({ page }: { page: string }) => (
   <footer className="page-footer">
-    <span>Research Report · Evidence-bound delivery</span>
+    <span>研究报告 · 证据化交付</span>
     <span>{page}</span>
   </footer>
 );
@@ -1278,11 +1278,11 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
         <div className="report-page__inner">
           <div className="cover-top">
             <strong>PathFinder</strong>
-            <span>Research Report · 家庭决策版</span>
+            <span>研究报告 · 家庭决策版</span>
           </div>
           <div className="cover-visual">
             <div className="cover-title">
-              <p className="cover-kicker report-kicker-en">Evidence Workbench · 示例29 · 物化生 · 672分 · 3184位</p>
+              <p className="cover-kicker report-kicker-en">证据工作台 · 示例29 · 物化生 · 672分 · 3184位</p>
               <h1 className="report-title-cn">升学规划研究报告</h1>
               <p>{reportData.comfortLine}</p>
             </div>
@@ -1311,7 +1311,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
                 </div>
                 <div className="cover-decision-metric">
                   <span>复核重点</span>
-                  <b>Counselor signoff</b>
+                  <b>顾问复核签字</b>
                 </div>
               </div>
             </div>
@@ -1351,7 +1351,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="01" title="Executive decision summary" subtitle="先看志愿表体检结论，再看证据账本和交付边界" />
+          <SectionTitle index="01" title="决策摘要" subtitle="先看志愿表体检结论，再看证据账本和交付边界" />
           <div className="score-panel">
             <div className="score-main">
               <span>当前样例分数</span>
@@ -1377,7 +1377,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="02" title="Volunteer slate overview" subtitle="把高考系统序号、学校代码、策略位置和风险放在同一张卡里" />
+          <SectionTitle index="02" title="志愿表总览" subtitle="把高考系统序号、学校代码、策略位置和风险放在同一张卡里" />
           <VolunteerCardDeck cards={primaryCards} />
           <section className="emotion-value-strip">
             <strong>不是简单排名<br />而是承接关系</strong>
@@ -1389,7 +1389,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="03" title="Risk buffer and delivery boundary" subtitle="降低焦虑感，但不把保底说成同等推荐" />
+          <SectionTitle index="03" title="风险缓冲与交付边界" subtitle="降低焦虑感，但不把保底说成同等推荐" />
           <VolunteerCardDeck cards={secondaryCards.length ? secondaryCards : reportData.cards.slice(2, 5)} />
           <DataBoundary text={reportData.dataBoundaryText} />
           <PageFooter page="04" />
@@ -1398,7 +1398,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="04" title="Hidden opportunity radar" subtitle="Trend analysis 必须带置信度、反证条件和顾问复核动作" />
+          <SectionTitle index="04" title="趋势机会雷达" subtitle="趋势分析必须带置信度、反证条件和顾问复核动作" />
           <div className="path-grid">
             <article className="path-card">
               <strong>01</strong>
@@ -1427,7 +1427,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="05" title="Risk ledger and evidence ledger" subtitle="让家长知道风险在哪里，也知道下一步该做什么" />
+          <SectionTitle index="05" title="风险账本与证据账本" subtitle="让家长知道风险在哪里，也知道下一步该做什么" />
           <RiskLedger items={reportData.risks} />
           <EvidenceLedger items={reportData.evidence} />
           <DataBoundary text={`交付准备度：${reportData.deliveryReadiness.score}。${reportData.deliveryReadiness.nextAction}`} />
@@ -1448,7 +1448,7 @@ export function InvestmentResearchReportPreview() {
     <main className="report-preview-shell">
       <ReportStyles />
       <div className="report-toolbar">
-        <p>Research Report · A4 printable · 志愿表体检 / 趋势机会 / 证据账本 / 交付边界</p>
+        <p>研究报告 · A4 可打印 · 志愿表体检 / 趋势机会 / 证据账本 / 交付边界</p>
         <button type="button" onClick={() => window.print()}>打印 / 导出 PDF</button>
       </div>
       <PathFinderReportTemplate payload={payload} />

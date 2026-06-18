@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="GaokaoAgent">
+  <rect width="64" height="64" rx="12" fill="#090d17"/>
+  <path d="M16 45V19h10.8c8.8 0 14.7 5.2 14.7 13s-5.9 13-14.7 13H16Zm7.2-6.3h3.2c4.8 0 7.8-2.4 7.8-6.7s-3-6.7-7.8-6.7h-3.2v13.4Z" fill="#f8f3e8"/>
+  <path d="M42.5 18.5H50v27h-7.5v-27Z" fill="#c1461f"/>
+</svg>

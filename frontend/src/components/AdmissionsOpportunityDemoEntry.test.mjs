@@ -13,7 +13,7 @@ assert.match(appSource, /VITE_SHOW_ADMISSIONS_DEMO/);
 assert.match(appSource, /admissionsOpportunityDemoRequested/);
 assert.match(appSource, /admissions-opportunity-demo/);
 assert.match(appSource, /demo"\) === "admissions-opportunity"/);
-assert.match(appSource, /Admissions opportunity demo case/);
+assert.match(appSource, /趋势机会研究演示案例/);
 assert.match(appSource, /<AdmissionsOpportunityDemoCasePanel \/>/);
 
 console.log("Admissions opportunity demo entry smoke test passed");

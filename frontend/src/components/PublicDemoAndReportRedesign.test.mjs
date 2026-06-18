@@ -19,20 +19,23 @@ const combinedPublicSource = [
 ].join("\n");
 
 for (const token of [
-  "Evidence Workbench",
   "志愿表体检",
   "趋势机会",
   "证据账本",
   "交付边界",
+  "flagship-hero",
+  "志愿体检结果预览",
+  "报告成品预览",
+  "趋势机会雷达",
+  "证据工作台",
+  "顾问复核签字",
+  "case-artifact",
   "public-shell",
   "workbench-grid",
   "workbench-rail",
   "workbench-main",
   "workbench-decision",
   "research-report",
-  "Hidden opportunity radar",
-  "Trend analysis",
-  "Counselor signoff",
 ]) {
   assert(
     combinedPublicSource.includes(token),
