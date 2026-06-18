@@ -16,6 +16,7 @@ Then open:
 - Status: http://localhost:8000/api/status
 - External plan audit demo: http://localhost:8000/app/external-plan-audit-demo
 - Admissions opportunity evidence demo: http://localhost:8000/app/admissions-opportunity-demo
+- Report template preview: http://localhost:8000/app/report-template-preview
 
 On Windows you can also run:
 

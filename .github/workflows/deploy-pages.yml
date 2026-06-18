@@ -44,9 +44,10 @@ jobs:
       - name: Add GitHub Pages SPA fallback
         run: |
           cp frontend/dist/index.html frontend/dist/404.html
-          mkdir -p frontend/dist/admissions-opportunity-demo frontend/dist/external-plan-audit-demo
+          mkdir -p frontend/dist/admissions-opportunity-demo frontend/dist/external-plan-audit-demo frontend/dist/report-template-preview
           cp frontend/dist/index.html frontend/dist/admissions-opportunity-demo/index.html
           cp frontend/dist/index.html frontend/dist/external-plan-audit-demo/index.html
+          cp frontend/dist/index.html frontend/dist/report-template-preview/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

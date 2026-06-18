@@ -24,6 +24,7 @@ const viteConfig = read("frontend/vite.config.ts");
 assert.match(appSource, /ExternalPlanAuditDemoPanel/);
 assert.match(appSource, /external-plan-audit-demo/);
 assert.match(appSource, /admissions-opportunity-demo/);
+assert.match(appSource, /report-template-preview/);
 assert.doesNotMatch(
   appSource,
   /showDedicatedAdmissionsOpportunityDemo\s*=\s*showAdmissionsOpportunityDemo && admissionsOpportunityDemoRequested/,
@@ -50,6 +51,7 @@ assert.match(readme, /docker compose up --build/);
 assert.match(readme, /http:\/\/localhost:8000\/app/);
 assert.match(readme, /external-plan-audit-demo/);
 assert.match(readme, /admissions-opportunity-demo/);
+assert.match(readme, /report-template-preview/);
 
 assert.match(viteConfig, /VITE_BASE_PATH/);
 assert.match(viteConfig, /VITE_DEV_API_PROXY/);
@@ -60,5 +62,6 @@ assert.match(pagesWorkflow, /VITE_API_URL: \$\{\{ vars\.PUBLIC_API_URL \}\}/);
 assert.match(pagesWorkflow, /cp frontend\/dist\/index\.html frontend\/dist\/404\.html/);
 assert.match(pagesWorkflow, /frontend\/dist\/admissions-opportunity-demo/);
 assert.match(pagesWorkflow, /frontend\/dist\/external-plan-audit-demo/);
+assert.match(pagesWorkflow, /frontend\/dist\/report-template-preview/);
 
 console.log("public launch readiness smoke test passed");
