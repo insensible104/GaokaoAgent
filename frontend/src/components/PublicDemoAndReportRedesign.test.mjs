@@ -19,6 +19,13 @@ const combinedPublicSource = [
 ].join("\n");
 
 for (const token of [
+  "#F8FBFF",
+  "#EAF3FF",
+  "#C8D8EA",
+  "#1F5E99",
+  "#0F766E",
+  "#B7791F",
+  "#C14E2A",
   "志愿表体检",
   "趋势机会",
   "证据账本",
@@ -44,6 +51,9 @@ for (const token of [
 }
 
 for (const badToken of [
+  "#FBFAF6",
+  "#F1ECDE",
+  "#D8D2C2",
   "bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50",
   "bg-gradient-to-br from-white to-sky-50",
   "bg-gradient-to-r from-sky-500",

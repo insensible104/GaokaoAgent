@@ -20,33 +20,33 @@ export function AdmissionsOpportunityDemoCasePanel() {
 
   return (
     <section className="space-y-5" data-protocol={demo.protocol}>
-      <header className="border border-[#D8D2C2] bg-[#F1ECDE] p-5">
-        <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#A6300E]">
+      <header className="border border-[#C8D8EA] bg-[#EAF3FF] p-5">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#C14E2A]">
           证据工作台 / 趋势机会研究
         </p>
         <div className="mt-4 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <h1 className="text-3xl font-semibold leading-tight text-[#1B1B1A]">趋势机会研究流</h1>
-            <p className="mt-3 max-w-4xl text-sm leading-6 text-[#3E4A5C]">
+            <h1 className="text-3xl font-semibold leading-tight text-[#102033]">趋势机会研究流</h1>
+            <p className="mt-3 max-w-4xl text-sm leading-6 text-[#35506B]">
               从招生计划变化、公开舆情、网页证据到顾问复核，逐层判断一个“趋势机会”能不能进入家庭表达。
               这里的核心不是生成一段漂亮话，而是让每个趋势判断都有证据账本和反证要求。
             </p>
           </div>
-          <div className="grid grid-cols-2 border border-[#D8D2C2] bg-[#FBFAF6] text-sm">
-            <div className="border-b border-r border-[#D8D2C2] p-3">
-              <span className="block font-mono text-[11px] uppercase text-[#736D5A]">学生</span>
+          <div className="grid grid-cols-2 border border-[#C8D8EA] bg-[#F8FBFF] text-sm">
+            <div className="border-b border-r border-[#C8D8EA] p-3">
+              <span className="block font-mono text-[11px] uppercase text-[#64748B]">学生</span>
               <b>{demo.studentName}</b>
             </div>
-            <div className="border-b border-[#D8D2C2] p-3">
-              <span className="block font-mono text-[11px] uppercase text-[#736D5A]">证据任务</span>
+            <div className="border-b border-[#C8D8EA] p-3">
+              <span className="block font-mono text-[11px] uppercase text-[#64748B]">证据任务</span>
               <b>{readyCoverage.completedBlockingTasks} / {readyCoverage.blockingTasks}</b>
             </div>
-            <div className="border-r border-[#D8D2C2] p-3">
-              <span className="block font-mono text-[11px] uppercase text-[#736D5A]">趋势门禁</span>
+            <div className="border-r border-[#C8D8EA] p-3">
+              <span className="block font-mono text-[11px] uppercase text-[#64748B]">趋势门禁</span>
               <b>{trendLanguageGate?.status ?? "review"}</b>
             </div>
             <div className="p-3">
-              <span className="block font-mono text-[11px] uppercase text-[#736D5A]">边界</span>
+              <span className="block font-mono text-[11px] uppercase text-[#64748B]">边界</span>
               <b>顾问复核签字</b>
             </div>
           </div>
@@ -54,10 +54,10 @@ export function AdmissionsOpportunityDemoCasePanel() {
       </header>
 
       <div className="workbench-grid grid grid-cols-1 gap-5 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
-        <aside className="workbench-rail border border-[#D8D2C2] bg-white p-4">
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0D8A5A]">案例输入</p>
-          <h2 className="mt-3 text-xl font-semibold text-[#1B1B1A]">从“可能有机会”到“能不能说”</h2>
-          <ul className="mt-4 space-y-3 text-sm leading-6 text-[#3E4A5C]">
+        <aside className="workbench-rail border border-[#C8D8EA] bg-white p-4">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0F766E]">案例输入</p>
+          <h2 className="mt-3 text-xl font-semibold text-[#102033]">从“可能有机会”到“能不能说”</h2>
+          <ul className="mt-4 space-y-3 text-sm leading-6 text-[#35506B]">
             <li>计划变化先作为信号，不直接写成确定机会。</li>
             <li>公众号和公开讨论只能做舆情线索，必须再找权威或多源证据。</li>
             <li>家庭表达前要经过趋势措辞门禁和顾问复核。</li>
@@ -65,7 +65,7 @@ export function AdmissionsOpportunityDemoCasePanel() {
         </aside>
 
         <main className="workbench-main min-w-0">
-      <div className="border border-[#D8D2C2] bg-white p-5">
+      <div className="border border-[#C8D8EA] bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="text-xl font-bold text-gray-900">趋势机会研究演示案例</h3>
@@ -642,21 +642,21 @@ export function AdmissionsOpportunityDemoCasePanel() {
 
         </main>
 
-        <aside className="workbench-decision border border-[#D8D2C2] bg-[#0A0E1A] p-4 text-[#E8ECF4]">
+        <aside className="workbench-decision border border-[#C8D8EA] bg-[#1F5E99] p-4 text-[#F8FBFF]">
           <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#FFA02F]">判断输出</p>
           <h2 className="mt-3 text-xl font-semibold">趋势机会必须带反证条件</h2>
-          <ul className="mt-4 space-y-3 text-sm leading-6 text-[#C9D2E3]">
+          <ul className="mt-4 space-y-3 text-sm leading-6 text-[#EAF3FF]">
             <li>Hidden opportunity 只能在门禁允许后进入家庭话术。</li>
             <li>就业、考研保研、考公方向需要真实证据，不允许泛泛而谈。</li>
             <li>未完成证据缺口时，只能写成 hypothesis-only。</li>
           </ul>
-          <div className="mt-5 border border-[#2A3050] p-3 font-mono text-xs text-[#FFA02F]">
+          <div className="mt-5 border border-[#78A7D8] p-3 font-mono text-xs text-[#FFA02F]">
             趋势分析必须包含证据账本、反证检查和顾问复核签字。
           </div>
         </aside>
       </div>
 
-      <div className="border border-[#D8D2C2] bg-white p-4">
+      <div className="border border-[#C8D8EA] bg-white p-4">
         <EvidenceCollectionWorkspacePanel workspace={demo.readyWorkspace} />
       </div>
     </section>

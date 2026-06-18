@@ -405,26 +405,26 @@ const ReportStyles = () => (
     }
 
     :root {
-      --brochure-ink: #1B1B1A;
-      --brochure-blue: #3E4A5C;
-      --brochure-sky: #EFE8D8;
-      --brochure-mint: #E6EFE8;
-      --brochure-orange: #A6300E;
-      --brochure-paper: #FBFAF6;
-      --brochure-soft: #F1ECDE;
-      --brochure-line: #D8D2C2;
-      --brochure-muted: #736D5A;
+      --brochure-ink: #102033;
+      --brochure-blue: #35506B;
+      --brochure-sky: #E7F1FF;
+      --brochure-mint: #E7F7F2;
+      --brochure-orange: #C14E2A;
+      --brochure-paper: #F8FBFF;
+      --brochure-soft: #EAF3FF;
+      --brochure-line: #C8D8EA;
+      --brochure-muted: #64748B;
     }
 
     .report-preview-shell {
-      background: #E7E0D0;
+      background: #EDF5FF;
       min-height: 100vh;
       padding: 24px;
     }
 
     .report-toolbar {
       align-items: center;
-      background: #FBFAF6;
+      background: #F8FBFF;
       border: 1px solid var(--brochure-line);
       border-radius: 0;
       display: flex;
@@ -488,7 +488,7 @@ const ReportStyles = () => (
     }
 
     .cover-modern {
-      background: #FBFAF6;
+      background: #F8FBFF;
     }
 
     .cover-modern::before {
@@ -574,7 +574,7 @@ const ReportStyles = () => (
       background:
         linear-gradient(90deg, rgba(27, 27, 26, .06) 1px, transparent 1px),
         linear-gradient(0deg, rgba(27, 27, 26, .05) 1px, transparent 1px),
-        #F1ECDE;
+        #EAF3FF;
       background-size: 12px 12px;
       border: 1px solid var(--brochure-line);
       border-radius: 0;
@@ -730,7 +730,7 @@ const ReportStyles = () => (
 
     .cover-volunteer-sample {
       align-items: center;
-      background: #0A0E1A;
+      background: #1F5E99;
       color: white;
       display: grid;
       gap: 10px;
@@ -1129,8 +1129,8 @@ const ReportStyles = () => (
     }
 
     .data-boundary {
-      background: #f6f2e9;
-      border: 1px solid #dfd3bd;
+      background: #F2F7FF;
+      border: 1px solid #C8D8EA;
     }
 
     .page-footer {
