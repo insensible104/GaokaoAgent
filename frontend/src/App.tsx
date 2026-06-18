@@ -22,6 +22,9 @@ import { buildApiUrl } from "@/lib/api";
 import { buildDeliveryReadinessSummary } from "@/lib/deliveryReadiness";
 import type { DeliveryManifest } from "@/components/InternalDeliveryReview";
 
+const appBasePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const buildAppPath = (path: string) => `${appBasePath}${path.startsWith("/") ? path : `/${path}`}`;
+
 interface AnalysisResult {
   success: boolean;
   message: string;
@@ -477,7 +480,7 @@ function AppContent() {
       generatedAt: new Date().toISOString(),
     };
     window.sessionStorage.setItem("pathfinder-report-preview", JSON.stringify(payload));
-    window.open("/app/report-template-preview", "_blank", "noopener,noreferrer");
+    window.open(buildAppPath("/report-template-preview"), "_blank", "noopener,noreferrer");
   }, [deliveryProfile, result]);
 
   if (window.location.pathname.includes("report-template-preview")) {
@@ -641,7 +644,7 @@ function AppContent() {
                   </p>
                 </div>
                 <a
-                  href="/app/external-plan-audit-demo"
+                  href={buildAppPath("/external-plan-audit-demo")}
                   className="border-b border-[#C8D8EA] p-5 transition hover:bg-[#EAF3FF] lg:border-b-0 lg:border-r"
                 >
                   <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#0F766E]">公开演示 01</p>
@@ -651,7 +654,7 @@ function AppContent() {
                   </p>
                 </a>
                 <a
-                  href="/app/admissions-opportunity-demo"
+                  href={buildAppPath("/admissions-opportunity-demo")}
                   className="p-5 transition hover:bg-[#EAF3FF]"
                 >
                   <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#C14E2A]">公开演示 02</p>

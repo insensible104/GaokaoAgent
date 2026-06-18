@@ -113,8 +113,13 @@ assert(
 );
 
 assert(
-  appSource.includes("/app/report-template-preview"),
-  "App should open the report preview under the Vite /app base path",
+  appSource.includes("buildAppPath(\"/report-template-preview\")"),
+  "App should open the report preview under the active Vite base path",
+);
+
+assert(
+  appSource.includes("import.meta.env.BASE_URL"),
+  "App should derive public demo links from the active Vite base path",
 );
 
 assert(
