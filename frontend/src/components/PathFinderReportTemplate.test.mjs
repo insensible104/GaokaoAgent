@@ -93,6 +93,8 @@ for (const badToken of [
   "identity-strip",
   "Quantitative",
   "Research<br />Report",
+  "稳住",
+  "这一版方案",
 ]) {
   assert(
     !source.includes(badToken),

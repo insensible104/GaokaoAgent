@@ -740,7 +740,7 @@ const ReportStyles = () => (
 
     .research-report,
     .modern-education-brochure {
-      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", serif;
+      font-family: "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", "PingFang SC", sans-serif;
     }
 
     .cover-modern {
@@ -1998,7 +1998,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
           <DecisionEvidenceCard data={reportData} />
           <PortfolioDiagnosisPanel diagnosis={reportData.portfolioDiagnosis} />
           <section className="emotion-value-strip">
-            <strong>这一版方案<br />先稳住家庭判断</strong>
+            <strong>复核重点<br />先明确判断边界</strong>
             <p>{reportData.comfortLine}</p>
           </section>
           <PageFooter page="03" />
