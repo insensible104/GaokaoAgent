@@ -686,13 +686,27 @@ const ReportStyles = () => (
     }
 
     .report-page {
-      background: var(--brochure-paper);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.92), rgba(246,250,255,.96)),
+        var(--brochure-paper);
       box-shadow: 0 18px 42px rgba(27, 27, 26, .14);
       height: 297mm;
       overflow: hidden;
       page-break-after: always;
       position: relative;
       width: 210mm;
+    }
+
+    .report-page::after {
+      background:
+        linear-gradient(180deg, transparent 0, rgba(31, 94, 153, .04) 58%, rgba(31, 94, 153, .1) 100%);
+      bottom: 0;
+      content: "";
+      height: 64mm;
+      left: 0;
+      pointer-events: none;
+      position: absolute;
+      width: 100%;
     }
 
     .report-page__inner {
@@ -709,19 +723,36 @@ const ReportStyles = () => (
       padding: 14mm 16mm 13mm;
     }
 
+    .report-page--dense::before {
+      color: rgba(31, 94, 153, .05);
+      content: "PATHFINDER";
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 70px;
+      font-weight: 900;
+      letter-spacing: .05em;
+      position: absolute;
+      right: -12mm;
+      top: 14mm;
+      transform: rotate(90deg);
+      transform-origin: right top;
+      white-space: nowrap;
+    }
+
     .research-report,
     .modern-education-brochure {
       font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", serif;
     }
 
     .cover-modern {
-      background: #F8FBFF;
+      background:
+        linear-gradient(160deg, rgba(255,255,255,.05) 0 47%, rgba(31,94,153,.12) 47% 48%, rgba(255,255,255,0) 48%),
+        linear-gradient(180deg, #F8FBFF 0%, #EAF4FF 55%, #FFFFFF 100%);
     }
 
     .cover-modern::before {
-      background: var(--brochure-ink);
+      background: #123E68;
       content: "";
-      height: 4mm;
+      height: 5mm;
       left: 0;
       position: absolute;
       top: 0;
@@ -729,13 +760,13 @@ const ReportStyles = () => (
     }
 
     .cover-modern::after {
-      background: rgba(166, 48, 14, .9);
+      background: linear-gradient(90deg, rgba(31, 94, 153, .12), rgba(255,255,255,0));
       content: "";
-      height: 1.6mm;
-      left: 18mm;
+      height: 96mm;
+      left: 0;
       position: absolute;
-      top: 147mm;
-      width: 44mm;
+      top: 0;
+      width: 100%;
     }
 
     .cover-top,
@@ -772,19 +803,95 @@ const ReportStyles = () => (
     }
 
     .cover-visual {
-      display: block;
-      margin-top: 24mm;
+      display: grid;
+      gap: 12mm;
+      grid-template-columns: minmax(0, 96mm) 50mm;
+      margin-top: 20mm;
       max-width: 162mm;
+    }
+
+    .cover-hero-plate {
+      align-self: stretch;
+      background:
+        linear-gradient(180deg, rgba(18, 62, 104, .92), rgba(31, 94, 153, .72)),
+        linear-gradient(135deg, transparent 0 49%, rgba(255,255,255,.24) 49% 51%, transparent 51%);
+      border: 1px solid rgba(18, 62, 104, .18);
+      color: white;
+      min-height: 130mm;
+      overflow: hidden;
+      padding: 14mm 8mm;
+      position: relative;
+    }
+
+    .cover-hero-plate::before {
+      border: 1px solid rgba(255,255,255,.28);
+      content: "";
+      inset: 8mm;
+      position: absolute;
+    }
+
+    .cover-hero-plate::after {
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,.18) 1px, transparent 1px);
+      background-size: 11mm 11mm;
+      bottom: -6mm;
+      content: "";
+      height: 65mm;
+      left: -8mm;
+      opacity: .42;
+      position: absolute;
+      transform: skewY(-8deg);
+      width: 78mm;
+    }
+
+    .cover-hero-plate strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 54px;
+      line-height: .9;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-hero-plate span {
+      display: block;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      line-height: 1.7;
+      margin-top: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-system-tags {
+      bottom: 15mm;
+      display: grid;
+      gap: 7px;
+      left: 8mm;
+      position: absolute;
+      right: 8mm;
+      z-index: 1;
+    }
+
+    .cover-system-tags b {
+      border-top: 1px solid rgba(255,255,255,.32);
+      color: rgba(255,255,255,.86);
+      font-size: 11px;
+      font-weight: 900;
+      padding-top: 7px;
     }
 
     .cover-title h1,
     .report-title-cn {
       color: var(--brochure-ink);
-      font-size: 54px;
+      font-size: 46px;
       letter-spacing: 0;
-      line-height: 1.04;
+      line-height: 1.08;
       margin: 10px 0 18px;
-      white-space: nowrap;
+      max-width: 96mm;
+      white-space: normal;
     }
 
     .cover-title p {
@@ -793,16 +900,16 @@ const ReportStyles = () => (
       font-weight: 800;
       line-height: 1.8;
       margin: 0;
-      max-width: 136mm;
+      max-width: 94mm;
       text-wrap: pretty;
     }
 
     .cover-focus-summary {
       background: rgba(255,255,255,.97);
       border: 1px solid var(--brochure-line);
-      border-left: 5px solid var(--brochure-orange);
+      border-left: 5px solid var(--brochure-blue);
       margin-top: 34px;
-      max-width: 146mm;
+      max-width: 92mm;
       padding: 18px 20px 17px;
     }
 
@@ -818,10 +925,10 @@ const ReportStyles = () => (
     .cover-focus-summary strong {
       color: var(--brochure-ink);
       display: block;
-      font-size: 28px;
+      font-size: 25px;
       line-height: 1.16;
       margin-bottom: 10px;
-      white-space: nowrap;
+      white-space: normal;
     }
 
     .cover-focus-summary p,
@@ -831,7 +938,7 @@ const ReportStyles = () => (
       font-weight: 700;
       line-height: 1.72;
       margin: 0;
-      max-width: 138mm;
+      max-width: 92mm;
       text-wrap: pretty;
     }
 
@@ -843,7 +950,7 @@ const ReportStyles = () => (
 
     .cover-meta-line {
       align-items: center;
-      border-top: 3px solid var(--brochure-orange);
+      border-top: 3px solid var(--brochure-blue);
       color: var(--brochure-ink);
       display: flex;
       flex-wrap: wrap;
@@ -1140,8 +1247,8 @@ const ReportStyles = () => (
     }
 
     .advisor-note {
-      background: #fff4e7;
-      border: 1px solid #f1d2aa;
+      background: #F2F7FF;
+      border: 1px solid #C8D8EA;
     }
 
     .emotion-value-strip {
@@ -1192,6 +1299,116 @@ const ReportStyles = () => (
       font-size: 13px;
       line-height: 1.65;
       margin: 0;
+    }
+
+    .contents-layout {
+      display: grid;
+      flex: 1;
+      gap: 18mm;
+      grid-template-columns: 42mm minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    .contents-rail {
+      background: linear-gradient(180deg, #E6F2FF, #FFFFFF);
+      border-right: 1px solid #BFD4EA;
+      color: #1F5E99;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: -14mm 0 -13mm -16mm;
+      padding: 18mm 8mm 16mm 12mm;
+    }
+
+    .contents-rail strong {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 62px;
+      line-height: .82;
+    }
+
+    .contents-rail span {
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      writing-mode: vertical-rl;
+    }
+
+    .contents-main h2 {
+      color: var(--brochure-ink);
+      font-size: 38px;
+      line-height: 1;
+      margin: 0 0 6px;
+    }
+
+    .contents-main > p {
+      color: var(--brochure-muted);
+      font-size: 14px;
+      font-weight: 800;
+      margin: 0 0 18px;
+    }
+
+    .contents-list {
+      display: grid;
+      gap: 9px;
+      margin-top: 10mm;
+    }
+
+    .contents-list article {
+      align-items: baseline;
+      border-bottom: 1px solid #DCE8F5;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 18mm minmax(0, 1fr) 14mm;
+      padding: 8px 0;
+    }
+
+    .contents-list b {
+      color: #1F5E99;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .contents-list h3 {
+      font-size: 18px;
+      margin: 0 0 4px;
+    }
+
+    .contents-list p {
+      color: #607083;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .contents-list span {
+      color: #1F5E99;
+      font-size: 14px;
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .report-boundary-panel {
+      background: #F8FBFF;
+      border: 1px solid #C8D8EA;
+      margin-top: 12mm;
+      padding: 14px 16px;
+    }
+
+    .report-boundary-panel strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .report-boundary-panel p {
+      color: #4d6072;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.68;
+      margin: 0;
+      text-wrap: pretty;
     }
 
     .volunteer-card-deck {
@@ -1612,6 +1829,75 @@ const DataBoundary = ({ text }: { text: string }) => (
   </section>
 );
 
+const ReportContentsPage = ({ data }: { data: ReportRenderData }) => {
+  const contents = [
+    {
+      index: "01",
+      title: "决策摘要",
+      note: "先判断这张志愿表能否进入家庭讨论，而不是先堆学校清单。",
+      page: "03",
+    },
+    {
+      index: "02",
+      title: "志愿表总览",
+      note: "逐行看学校代码、专业组、策略位置、概率区间和承接关系。",
+      page: "04",
+    },
+    {
+      index: "03",
+      title: "风险缓冲与交付边界",
+      note: "把兜底、调剂、计划变化和不接受方向放到可复核清单里。",
+      page: "05",
+    },
+    {
+      index: "04",
+      title: "趋势机会雷达",
+      note: "趋势只作为假设入口，必须接受官方数据和反证条件约束。",
+      page: "06",
+    },
+    {
+      index: "05",
+      title: "风险账本与证据账本",
+      note: "说明每个判断来自哪里、能支持什么、不能证明什么。",
+      page: "07",
+    },
+  ];
+
+  return (
+    <section className="report-page report-page--dense report-page--contents">
+      <div className="report-page__inner">
+        <div className="contents-layout">
+          <aside className="contents-rail">
+            <strong>00</strong>
+            <span>REPORT GUIDE</span>
+          </aside>
+          <main className="contents-main">
+            <h2>报告阅读顺序</h2>
+            <p>给家庭看的不是一组漂亮截图，而是一份能被逐项复核的选择之书。</p>
+            <div className="contents-list">
+              {contents.map((item) => (
+                <article key={item.index}>
+                  <b>{item.index}</b>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.note}</p>
+                  </div>
+                  <span>{item.page}</span>
+                </article>
+              ))}
+            </div>
+            <section className="report-boundary-panel">
+              <strong>本报告先给结论，再给证据边界。</strong>
+              <p>{data.dataBoundaryText}</p>
+            </section>
+          </main>
+        </div>
+        <PageFooter page="02" />
+      </div>
+    </section>
+  );
+};
+
 export function PathFinderReportTemplate({ payload }: { payload?: PathFinderReportPayload | null }) {
   const reportData = buildReportPayload(payload);
   const primaryCards = reportData.cards.slice(0, 3);
@@ -1625,19 +1911,31 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <span>研究报告 · 家庭决策版</span>
           </div>
           <div className="cover-visual cover-visual--focused">
-            <div className="cover-title">
-              <p className="cover-kicker report-kicker-en">证据工作台 · 示例29 · 物化生 · 672分 · 3184位</p>
-              <h1 className="report-title-cn">升学规划研究报告</h1>
-              <p>{reportData.comfortLine}</p>
+            <div>
+              <div className="cover-title">
+                <p className="cover-kicker report-kicker-en">证据工作台 · 示例29 · 物化生 · 672分 · 3184位</p>
+                <h1 className="report-title-cn">升学规划研究报告</h1>
+                <p>{reportData.comfortLine}</p>
+              </div>
+              <section className="cover-focus-summary">
+                <span>顾问判断</span>
+                <strong>先体检志愿表，再进入逐行评估。</strong>
+                <p>{reportData.advisorLine}</p>
+              </section>
+              <p className="cover-detail-route">
+                正文展开组合诊断、行级评估矩阵、趋势反证、风险账本和证据账本；封面只负责让家庭先抓住结论。
+              </p>
             </div>
-            <section className="cover-focus-summary">
-              <span>顾问判断</span>
-              <strong>先体检志愿表，再进入逐行评估。</strong>
-              <p>{reportData.advisorLine}</p>
-            </section>
-            <p className="cover-detail-route">
-              正文展开组合诊断、行级评估矩阵、趋势反证、风险账本和证据账本；封面只负责让家庭先抓住结论。
-            </p>
+            <aside className="cover-hero-plate" aria-label="PathFinder report visual mark">
+              <strong>PF</strong>
+              <span>Quantitative<br />Research<br />Report</span>
+              <div className="cover-system-tags">
+                <b>志愿表体检</b>
+                <b>趋势机会</b>
+                <b>证据账本</b>
+                <b>交付边界</b>
+              </div>
+            </aside>
           </div>
           <div className="cover-meta-line">
             <span>学生 <b>{reportData.studentLabel}</b></span>
@@ -1647,6 +1945,8 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
           </div>
         </div>
       </section>
+
+      <ReportContentsPage data={reportData} />
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
@@ -1665,7 +1965,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <strong>这一版方案<br />先稳住家庭判断</strong>
             <p>{reportData.comfortLine}</p>
           </section>
-          <PageFooter page="02" />
+          <PageFooter page="03" />
         </div>
       </section>
 
@@ -1678,7 +1978,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <strong>不是简单排名<br />而是承接关系</strong>
             <p>前序冲刺失败后，稳健段要能真实承接；如果某一行不会影响最终落点，就不应该在报告里被过度包装。</p>
           </section>
-          <PageFooter page="03" />
+          <PageFooter page="04" />
         </div>
       </section>
 
@@ -1687,7 +1987,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
           <SectionTitle index="03" title="风险缓冲与交付边界" subtitle="降低焦虑感，但不把保底说成同等推荐" />
           <VolunteerCardDeck cards={secondaryCards.length ? secondaryCards : reportData.cards.slice(2, 5)} />
           <DataBoundary text={reportData.dataBoundaryText} />
-          <PageFooter page="04" />
+          <PageFooter page="05" />
         </div>
       </section>
 
@@ -1717,7 +2017,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             </article>
           </div>
           <CounterEvidenceChecklist items={reportData.counterEvidence} />
-          <PageFooter page="05" />
+          <PageFooter page="06" />
         </div>
       </section>
 
@@ -1727,7 +2027,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
           <RiskLedger items={reportData.risks} />
           <EvidenceLedger items={reportData.evidence} />
           <DataBoundary text={`交付准备度：${reportData.deliveryReadiness.score}。${reportData.deliveryReadiness.nextAction}`} />
-          <PageFooter page="06" />
+          <PageFooter page="07" />
         </div>
       </section>
     </div>

@@ -33,6 +33,12 @@ for (const token of [
   "cover-modern",
   "cover-focus-summary",
   "cover-meta-line",
+  "cover-hero-plate",
+  "ReportContentsPage",
+  "contents-layout",
+  "contents-rail",
+  "contents-list",
+  "report-boundary-panel",
   "VolunteerCardDeck",
   "VolunteerMatrix",
   "EvidenceLedger",
@@ -64,6 +70,8 @@ for (const token of [
   "趋势机会",
   "证据账本",
   "交付边界",
+  "报告阅读顺序",
+  "选择之书",
 ]) {
   assert(
     source.includes(token),
