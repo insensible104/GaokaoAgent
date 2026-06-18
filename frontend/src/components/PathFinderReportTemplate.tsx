@@ -744,15 +744,13 @@ const ReportStyles = () => (
     }
 
     .cover-modern {
-      background:
-        linear-gradient(158deg, rgba(255,255,255,0) 0 46%, rgba(31,94,153,.08) 46% 46.8%, rgba(255,255,255,0) 46.8%),
-        linear-gradient(180deg, #F9FCFF 0%, #EEF7FF 50%, #FFFFFF 100%);
+      background: #F8FBFF;
     }
 
     .cover-modern::before {
       background: #123E68;
       content: "";
-      height: 5mm;
+      height: 4mm;
       left: 0;
       position: absolute;
       top: 0;
@@ -761,14 +759,18 @@ const ReportStyles = () => (
 
     .cover-modern::after {
       background:
-        radial-gradient(circle at 78% 18%, rgba(31, 94, 153, .12), transparent 18%),
-        linear-gradient(90deg, rgba(31, 94, 153, .06), rgba(255,255,255,0));
+        radial-gradient(circle at 86% 72%, rgba(31, 94, 153, .08), transparent 22%),
+        radial-gradient(circle at 14% 92%, rgba(15, 118, 110, .08), transparent 20%);
       content: "";
-      height: 96mm;
+      height: 118mm;
       left: 0;
       position: absolute;
-      top: 0;
+      bottom: 0;
       width: 100%;
+    }
+
+    .cover-modern .report-page__inner {
+      padding: 0;
     }
 
     .cover-top,
@@ -785,13 +787,19 @@ const ReportStyles = () => (
 
     .cover-top {
       align-items: center;
-      border-bottom: 1px solid var(--brochure-line);
-      padding-bottom: 11px;
+      border-bottom: 1px solid rgba(255, 255, 255, .38);
+      color: #FFFFFF;
+      left: 18mm;
+      padding-bottom: 10px;
+      position: absolute;
+      right: 18mm;
+      top: 15mm;
+      z-index: 3;
     }
 
     .cover-top strong {
       font-size: 20px;
-      letter-spacing: .04em;
+      letter-spacing: 0;
     }
 
     .cover-top span,
@@ -805,95 +813,140 @@ const ReportStyles = () => (
     }
 
     .cover-visual {
-      display: grid;
-      gap: 10mm;
-      grid-template-columns: minmax(0, 108mm) 42mm;
-      margin-top: 20mm;
-      max-width: 162mm;
+      margin: -24mm 18mm 0;
+      max-width: none;
+      position: relative;
+      z-index: 2;
     }
 
-    .cover-hero-plate {
-      align-self: stretch;
+    .cover-media {
       background:
-        linear-gradient(180deg, rgba(255,255,255,.78), rgba(235,246,255,.82)),
-        linear-gradient(135deg, transparent 0 49%, rgba(31,94,153,.12) 49% 50%, transparent 50%);
-      border: 1px solid rgba(31, 94, 153, .18);
-      box-shadow: inset 0 0 0 7mm rgba(255,255,255,.28);
-      color: #123E68;
-      min-height: 122mm;
+        linear-gradient(180deg, rgba(12, 47, 84, .34), rgba(12, 47, 84, .03) 46%, rgba(12, 47, 84, .12)),
+        url("/app/report-cover-campus.svg") center 68% / cover no-repeat;
+      height: 126mm;
       overflow: hidden;
-      padding: 11mm 7mm;
       position: relative;
     }
 
-    .cover-hero-plate::before {
-      border: 1px solid rgba(31, 94, 153, .14);
+    .cover-media::after {
+      background: #F8FBFF;
+      bottom: -1px;
+      clip-path: polygon(0 66%, 100% 22%, 100% 100%, 0 100%);
       content: "";
-      inset: 7mm;
+      height: 38mm;
+      left: 0;
+      position: absolute;
+      width: 100%;
+    }
+
+    .cover-media__seal {
+      border: 1px solid rgba(255, 255, 255, .72);
+      border-radius: 50%;
+      height: 28mm;
+      position: absolute;
+      right: 18mm;
+      top: 54mm;
+      width: 28mm;
+    }
+
+    .cover-media__seal::before,
+    .cover-media__seal::after {
+      border-radius: 50%;
+      content: "";
       position: absolute;
     }
 
-    .cover-hero-plate::after {
-      background:
-        linear-gradient(90deg, rgba(31,94,153,.13) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(31,94,153,.1) 1px, transparent 1px);
-      background-size: 11mm 11mm;
-      bottom: -6mm;
-      content: "";
-      height: 65mm;
-      left: -8mm;
-      opacity: .34;
-      position: absolute;
-      transform: skewY(-8deg);
-      width: 78mm;
+    .cover-media__seal::before {
+      border: 1px solid rgba(255, 255, 255, .52);
+      inset: 5mm;
     }
 
-    .cover-hero-plate strong {
-      display: block;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 36px;
-      line-height: .9;
-      position: relative;
-      z-index: 1;
+    .cover-media__seal::after {
+      background: rgba(255, 255, 255, .74);
+      height: 4mm;
+      left: 12mm;
+      top: 12mm;
+      width: 4mm;
     }
 
-    .cover-hero-plate span {
-      display: block;
-      color: #2E638E;
-      font-size: 13px;
-      font-weight: 900;
-      letter-spacing: .04em;
-      line-height: 1.9;
-      margin-top: 12px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .cover-system-tags {
-      bottom: 15mm;
+    .cover-title-card {
+      align-items: end;
+      background: rgba(255, 255, 255, .97);
+      border: 1px solid rgba(200, 216, 234, .9);
+      border-left: 5mm solid #1F5E99;
+      box-shadow: 0 18px 42px rgba(31, 94, 153, .13);
       display: grid;
-      gap: 7px;
-      left: 8mm;
+      gap: 14mm;
+      grid-template-columns: 34mm minmax(0, 1fr);
+      min-height: 82mm;
+      padding: 13mm 14mm 12mm;
+      position: relative;
+    }
+
+    .cover-title-card::after {
+      background:
+        linear-gradient(90deg, rgba(31, 94, 153, .12) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(31, 94, 153, .1) 1px, transparent 1px);
+      background-size: 8mm 8mm;
+      bottom: 8mm;
+      content: "";
+      height: 30mm;
+      opacity: .24;
       position: absolute;
-      right: 8mm;
+      right: 10mm;
+      width: 48mm;
+    }
+
+    .cover-title-card > * {
+      position: relative;
       z-index: 1;
     }
 
-    .cover-system-tags b {
-      border-top: 1px solid rgba(31, 94, 153, .16);
-      color: #315F88;
-      font-size: 11px;
+    .cover-lead {
+      color: var(--brochure-blue);
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.76;
+      margin: 0 0 1mm;
+      max-width: 106mm;
+      text-wrap: pretty;
+    }
+
+    .cover-card-label {
+      align-items: center;
+      color: #1F5E99;
+      display: flex;
+      font-size: 12px;
       font-weight: 900;
-      padding-top: 7px;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .cover-card-label::before {
+      background: #1F5E99;
+      content: "";
+      height: 2px;
+      width: 24px;
+    }
+
+    .cover-focus-summary {
+      border-bottom: 1px solid var(--brochure-line);
+      border-top: 1px solid var(--brochure-line);
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 24mm minmax(0, 1fr);
+      margin: 8mm 0 0;
+      padding: 6mm 7mm;
+      position: relative;
     }
 
     .cover-title h1,
     .report-title-cn {
       color: var(--brochure-ink);
-      font-size: 48px;
+      font-size: 52px;
       letter-spacing: 0;
       line-height: 1.08;
-      margin: 10px 0 18px;
+      margin: 8px 0 0;
       text-orientation: upright;
       white-space: nowrap;
       writing-mode: vertical-rl;
@@ -903,50 +956,14 @@ const ReportStyles = () => (
       position: relative;
     }
 
-    .cover-title::after {
-      border: 1px solid rgba(31, 94, 153, .2);
-      border-radius: 50%;
-      box-shadow:
-        0 0 0 7px rgba(31, 94, 153, .035),
-        inset 0 0 0 10px rgba(31, 94, 153, .025);
-      content: "";
-      height: 24mm;
-      left: 40mm;
-      position: absolute;
-      top: 18mm;
-      width: 24mm;
-    }
-
     .cover-title p {
       color: var(--brochure-blue);
-      font-size: 17px;
+      font-size: 12px;
       font-weight: 800;
-      line-height: 1.8;
+      line-height: 1.6;
       margin: 0;
-      max-width: 104mm;
+      max-width: 34mm;
       text-wrap: pretty;
-    }
-
-    .cover-focus-summary {
-      background: rgba(255,255,255,.97);
-      border: 1px solid var(--brochure-line);
-      border-left: 3px solid var(--brochure-blue);
-      box-shadow: 0 10px 28px rgba(31, 94, 153, .06);
-      margin-top: 30px;
-      max-width: 100mm;
-      padding: 17px 19px 16px;
-      position: relative;
-    }
-
-    .cover-focus-summary::after {
-      border-right: 1px solid rgba(31, 94, 153, .22);
-      border-top: 1px solid rgba(31, 94, 153, .22);
-      content: "";
-      height: 10mm;
-      position: absolute;
-      right: 8px;
-      top: 8px;
-      width: 10mm;
     }
 
     .cover-focus-summary span {
@@ -961,16 +978,15 @@ const ReportStyles = () => (
     .cover-focus-summary strong {
       color: var(--brochure-ink);
       display: block;
-      font-size: 25px;
-      line-height: 1.16;
+      font-size: 21px;
+      line-height: 1.22;
       margin-bottom: 10px;
       white-space: normal;
     }
 
-    .cover-focus-summary p,
-    .cover-detail-route {
+    .cover-focus-summary p {
       color: var(--brochure-blue);
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       line-height: 1.72;
       margin: 0;
@@ -978,33 +994,28 @@ const ReportStyles = () => (
       text-wrap: pretty;
     }
 
-    .cover-detail-route {
-      border-top: 1px solid var(--brochure-line);
-      margin-top: 18px;
-      padding-top: 12px;
-    }
-
     .cover-meta-line {
       align-items: center;
       border-top: 3px solid var(--brochure-blue);
+      box-sizing: border-box;
       color: var(--brochure-ink);
       display: flex;
       flex-wrap: wrap;
       gap: 12px 18px;
-      margin-top: auto;
-      padding-top: 18px;
+      margin: 6mm 18mm 0;
+      padding-top: 12px;
     }
 
     .cover-meta-line span {
       color: var(--brochure-blue);
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 900;
       white-space: nowrap;
     }
 
     .cover-meta-line b {
       color: var(--brochure-ink);
-      font-size: 15px;
+      font-size: 14px;
       margin-left: 4px;
     }
 
@@ -1942,36 +1953,31 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
     <div className="report-document research-report ChineseFirstReport sample-student-29 subject-combo-wuhuasheng mbti-intj">
       <section className="report-page cover-modern canva-editorial-cover">
         <div className="report-page__inner">
+          <div className="cover-media" aria-hidden="true">
+            <span className="cover-media__seal" />
+          </div>
           <div className="cover-top">
             <strong>寻径升学</strong>
             <span>研究报告 · 家庭决策版</span>
           </div>
           <div className="cover-visual cover-visual--focused">
-            <div>
+            <div className="cover-title-card">
               <div className="cover-title">
-                <p className="cover-kicker report-kicker-en">证据工作台 · 示例29 · 物化生 · 672分 · 3184位</p>
+                <p className="cover-kicker report-kicker-en">证据工作台</p>
                 <h1 className="report-title-cn">升学质量报告</h1>
-                <p>{reportData.comfortLine}</p>
               </div>
-              <section className="cover-focus-summary">
-                <span>顾问判断</span>
+              <div>
+                <p className="cover-card-label">示例29 · 物化生 · 672分 · 3184位</p>
+                <p className="cover-lead">{reportData.comfortLine}</p>
+              </div>
+            </div>
+            <section className="cover-focus-summary">
+              <span>顾问判断</span>
+              <div>
                 <strong>先体检志愿表，再进入逐行评估。</strong>
                 <p>{reportData.advisorLine}</p>
-              </section>
-              <p className="cover-detail-route">
-                正文展开组合诊断、行级评估矩阵、趋势反证、风险账本和证据账本；封面只负责让家庭先抓住结论。
-              </p>
-            </div>
-            <aside className="cover-hero-plate" aria-label="升学质量报告视觉标识">
-              <strong>复核</strong>
-              <span>志愿体检<br />趋势研判<br />证据账本</span>
-              <div className="cover-system-tags">
-                <b>志愿表体检</b>
-                <b>趋势机会</b>
-                <b>证据账本</b>
-                <b>交付边界</b>
               </div>
-            </aside>
+            </section>
           </div>
           <div className="cover-meta-line">
             <span>学生 <b>{reportData.studentLabel}</b></span>
