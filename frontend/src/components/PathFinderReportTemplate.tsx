@@ -624,6 +624,8 @@ export function buildReportPayload(payload?: PathFinderReportPayload | null): Re
   };
 }
 
+const reportCoverCampusUrl = `${import.meta.env.BASE_URL}report-cover-campus.svg`;
+
 const ReportStyles = () => (
   <style>{`
     @page {
@@ -822,7 +824,7 @@ const ReportStyles = () => (
     .cover-media {
       background:
         linear-gradient(180deg, rgba(12, 47, 84, .34), rgba(12, 47, 84, .03) 46%, rgba(12, 47, 84, .12)),
-        url("/app/report-cover-campus.svg") center 68% / cover no-repeat;
+        url("${reportCoverCampusUrl}") center 68% / cover no-repeat;
       height: 126mm;
       overflow: hidden;
       position: relative;
