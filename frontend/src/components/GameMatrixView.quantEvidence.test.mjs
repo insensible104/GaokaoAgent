@@ -50,6 +50,7 @@ for (const token of [
   "MBTI 仅用于沟通和自我描述",
   "career_values",
   "riasec_top_codes",
+  "CareerChoiceSimulator",
   "志愿表审计工作台",
   "方案对比",
   "auditItems",

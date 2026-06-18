@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { CompetitiveDifferentiationPanel } from "./CompetitiveDifferentiationPanel";
 import { CounselorDeliveryChecklist } from "./CounselorDeliveryChecklist";
+import { CareerChoiceSimulator } from "./CareerChoiceSimulator";
 import { DeliveryCaseStatusPanel } from "./DeliveryCaseStatusPanel";
 import { DeliveryReviewRecord } from "./DeliveryReviewRecord";
 import { ExternalPlanComparator } from "./ExternalPlanComparator";
@@ -553,6 +554,8 @@ const GameMatrixViewComponent: React.FC<GameMatrixViewProps> = ({ gameMatrix, us
           </dl>
         </section>
       )}
+
+      <CareerChoiceSimulator profile={userProfile} rows={dataSource} />
 
       {dataVintage && (
         <section

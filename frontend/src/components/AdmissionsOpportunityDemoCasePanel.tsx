@@ -1,5 +1,6 @@
 import React from "react";
 import { buildAdmissionsOpportunityDemoCase } from "../lib/admissionsOpportunityDemoCase";
+import { CareerChoiceSimulator } from "./CareerChoiceSimulator";
 import { EvidenceCollectionWorkspacePanel } from "./EvidenceCollectionWorkspacePanel";
 
 export function AdmissionsOpportunityDemoCasePanel() {
@@ -17,6 +18,21 @@ export function AdmissionsOpportunityDemoCasePanel() {
     }))
     .filter((item) => item.guard);
   const trendLanguageGate = demo.workflow.trendAnalysis?.trendLanguageGate;
+  const demoCareerProfile = {
+    preferred_majors: ["计算机科学", "软件工程"],
+    blacklist_majors: ["土木工程", "材料"],
+    riasec_top_codes: ["I", "R"],
+    career_values: ["growth"],
+    risk_tolerance: "balanced",
+  };
+  const demoCareerRows = [
+    {
+      school_name: "South China Tech",
+      major_group_code: "201",
+      major_list: ["计算机科学", "软件工程", "人工智能"],
+      suggested_major_choices: [{ major_name: "计算机科学" }, { major_name: "软件工程" }],
+    },
+  ];
 
   return (
     <section className="space-y-5" data-protocol={demo.protocol}>
@@ -52,6 +68,8 @@ export function AdmissionsOpportunityDemoCasePanel() {
           </div>
         </div>
       </header>
+
+      <CareerChoiceSimulator profile={demoCareerProfile} rows={demoCareerRows} />
 
       <div className="workbench-grid grid grid-cols-1 gap-5 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
         <aside className="workbench-rail border border-[#C8D8EA] bg-white p-4">

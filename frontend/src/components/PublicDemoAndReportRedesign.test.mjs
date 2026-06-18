@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const appSource = fs.readFileSync(path.join(here, "..", "App.tsx"), "utf8");
 const externalDemoSource = fs.readFileSync(path.join(here, "ExternalPlanAuditDemoPanel.tsx"), "utf8");
 const admissionsDemoSource = fs.readFileSync(path.join(here, "AdmissionsOpportunityDemoCasePanel.tsx"), "utf8");
+const careerSimulatorSource = fs.readFileSync(path.join(here, "CareerChoiceSimulator.tsx"), "utf8");
 const reportSource = fs.readFileSync(path.join(here, "PathFinderReportTemplate.tsx"), "utf8");
 const formSource = fs.readFileSync(path.join(here, "GaokaoAgentForm.tsx"), "utf8");
 
@@ -14,6 +15,7 @@ const combinedPublicSource = [
   appSource,
   externalDemoSource,
   admissionsDemoSource,
+  careerSimulatorSource,
   reportSource,
   formSource,
 ].join("\n");
@@ -42,6 +44,8 @@ for (const token of [
   "workbench-rail",
   "workbench-main",
   "workbench-decision",
+  "CareerChoiceSimulator",
+  "生涯选择模拟",
   "research-report",
 ]) {
   assert(
