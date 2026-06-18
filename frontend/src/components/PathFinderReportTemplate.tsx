@@ -797,233 +797,72 @@ const ReportStyles = () => (
       text-wrap: pretty;
     }
 
-    .campus-window {
-      background:
-        linear-gradient(90deg, rgba(27, 27, 26, .06) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(27, 27, 26, .05) 1px, transparent 1px),
-        #EAF3FF;
-      background-size: 12px 12px;
+    .cover-focus-summary {
+      background: rgba(255,255,255,.97);
       border: 1px solid var(--brochure-line);
-      border-radius: 0;
-      display: grid;
-      grid-template-columns: 30mm 1fr;
-      margin-top: 28px;
-      max-width: 152mm;
-      min-height: auto;
-      overflow: hidden;
-      padding: 13px 16px;
-      position: relative;
-    }
-
-    .campus-window::before {
-      background: linear-gradient(90deg, transparent, rgba(166, 48, 14, .12));
-      content: "";
-      inset: 0;
-      opacity: 1;
-      position: absolute;
-    }
-
-    .campus-window b {
-      color: var(--brochure-blue);
-      display: block;
-      font-size: 28px;
-      line-height: 1;
-      position: relative;
-      z-index: 1;
-    }
-
-    .campus-window span {
-      color: var(--brochure-ink);
-      font-size: 13px;
-      font-weight: 900;
-      line-height: 1.55;
-      position: relative;
-      z-index: 1;
-    }
-
-    .cover-decision-panel {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: 1fr;
-      margin-top: 18px;
-      max-width: 162mm;
-    }
-
-    .cover-decision-main,
-    .cover-decision-metric {
-      background: rgba(255,255,255,.96);
-      border: 1px solid var(--brochure-line);
-      border-radius: 0;
-      box-sizing: border-box;
-    }
-
-    .cover-decision-main {
       border-left: 5px solid var(--brochure-orange);
-      min-height: 96px;
-      padding: 15px 17px 14px;
+      margin-top: 34px;
+      max-width: 146mm;
+      padding: 18px 20px 17px;
     }
 
-    .cover-decision-main span,
-    .cover-decision-metric span {
+    .cover-focus-summary span {
       color: var(--brochure-muted);
       display: block;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 900;
       letter-spacing: .04em;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
     }
 
-    .cover-decision-main strong {
+    .cover-focus-summary strong {
       color: var(--brochure-ink);
       display: block;
-      font-size: 23px;
+      font-size: 28px;
       line-height: 1.16;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       white-space: nowrap;
     }
 
-    .cover-decision-main p {
+    .cover-focus-summary p,
+    .cover-detail-route {
       color: var(--brochure-blue);
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
-      line-height: 1.65;
+      line-height: 1.72;
       margin: 0;
+      max-width: 138mm;
       text-wrap: pretty;
     }
 
-    .cover-decision-metrics {
-      display: grid;
-      gap: 10px;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .cover-decision-metric {
-      min-height: 72px;
-      padding: 12px 12px 10px;
-    }
-
-    .cover-decision-metric b {
-      color: var(--brochure-ink);
-      display: block;
-      font-size: 16px;
-      line-height: 1.12;
-      white-space: nowrap;
-    }
-
-    .cover-roadmap {
-      border-bottom: 1px solid var(--brochure-line);
+    .cover-detail-route {
       border-top: 1px solid var(--brochure-line);
-      display: grid;
-      gap: 0;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      margin-top: 15px;
-      max-width: 162mm;
+      margin-top: 22px;
+      padding-top: 14px;
     }
 
-    .cover-roadmap article {
-      border-right: 1px solid var(--brochure-line);
-      min-height: 84px;
-      padding: 13px 13px 12px;
-    }
-
-    .cover-roadmap article:last-child {
-      border-right: 0;
-    }
-
-    .cover-roadmap span {
-      color: var(--brochure-orange);
-      display: block;
-      font-size: 15px;
-      font-weight: 900;
-      margin-bottom: 6px;
-    }
-
-    .cover-roadmap h3 {
-      color: var(--brochure-ink);
-      font-size: 16px;
-      line-height: 1.15;
-      margin: 0 0 6px;
-      white-space: nowrap;
-    }
-
-    .cover-roadmap p {
-      color: var(--brochure-blue);
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1.45;
-      margin: 0;
-      text-wrap: pretty;
-    }
-
-    .cover-volunteer-sample {
+    .cover-meta-line {
       align-items: center;
-      background: #1F5E99;
-      color: white;
-      display: grid;
-      gap: 10px;
-      grid-template-columns: 32mm 1fr;
-      margin-top: 13px;
-      max-width: 162mm;
-      min-height: 64px;
-      padding: 13px 16px;
-    }
-
-    .cover-volunteer-sample span {
-      color: rgba(255,255,255,.66);
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .cover-volunteer-sample strong {
-      display: block;
-      font-size: 24px;
-      line-height: 1.1;
-      margin-bottom: 5px;
-      white-space: nowrap;
-    }
-
-    .cover-volunteer-sample b {
-      color: rgba(255,255,255,.78);
-      display: block;
-      font-size: 13px;
-      line-height: 1.2;
-      white-space: nowrap;
-    }
-
-    .identity-strip {
-      background: rgba(255,255,255,.94);
-      border-top: 5px solid var(--brochure-orange);
-      box-shadow: 0 10px 24px rgba(31, 68, 103, .08);
-      display: grid;
-      gap: 0;
-      grid-template-columns: 1.16fr .82fr 1.38fr .66fr;
+      border-top: 3px solid var(--brochure-orange);
+      color: var(--brochure-ink);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
       margin-top: auto;
-      padding: 17px 0 13px;
+      padding-top: 18px;
     }
 
-    .identity-strip div {
-      border-right: 1px solid var(--brochure-line);
-      min-width: 0;
-      padding: 0 14px;
-    }
-
-    .identity-strip div:last-child {
-      border-right: 0;
-    }
-
-    .identity-strip span {
-      color: var(--brochure-muted);
-      display: block;
-      font-size: 12px;
+    .cover-meta-line span {
+      color: var(--brochure-blue);
+      font-size: 14px;
       font-weight: 900;
-      margin-bottom: 8px;
+      white-space: nowrap;
     }
 
-    .identity-strip b {
-      display: block;
-      font-size: 21px;
-      line-height: 1.15;
-      white-space: nowrap;
+    .cover-meta-line b {
+      color: var(--brochure-ink);
+      font-size: 15px;
+      margin-left: 4px;
     }
 
     .section-title {
@@ -1785,71 +1624,26 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
             <strong>PathFinder</strong>
             <span>研究报告 · 家庭决策版</span>
           </div>
-          <div className="cover-visual">
+          <div className="cover-visual cover-visual--focused">
             <div className="cover-title">
               <p className="cover-kicker report-kicker-en">证据工作台 · 示例29 · 物化生 · 672分 · 3184位</p>
               <h1 className="report-title-cn">升学规划研究报告</h1>
               <p>{reportData.comfortLine}</p>
             </div>
-            <div className="campus-window">
-              <b>2026</b>
-              <span>把分数、城市、专业和风险放在一张图里看清楚</span>
-            </div>
-            <div className="cover-decision-panel">
-              <div className="cover-decision-main">
-                <span>顾问判断</span>
-                <strong>先稳住家庭判断，再讨论冲高</strong>
-                <p>{reportData.advisorLine}</p>
-              </div>
-              <div className="cover-decision-metrics">
-                <div className="cover-decision-metric">
-                  <span>志愿结构</span>
-                  <b>冲2｜稳2｜保1</b>
-                </div>
-                <div className="cover-decision-metric">
-                  <span>专业主线</span>
-                  <b>电子信息</b>
-                </div>
-                <div className="cover-decision-metric">
-                  <span>城市半径</span>
-                  <b>北｜南｜成｜广</b>
-                </div>
-                <div className="cover-decision-metric">
-                  <span>复核重点</span>
-                  <b>顾问复核签字</b>
-                </div>
-              </div>
-            </div>
-            <div className="cover-roadmap">
-              <article>
-                <span>01</span>
-                <h3>先定安全边界</h3>
-                <p>看清楚哪些学校适合冲，哪些组合承担兜底。</p>
-              </article>
-              <article>
-                <span>02</span>
-                <h3>再看专业路径</h3>
-                <p>围绕电子信息、半导体、自动化展开，而不是只看校名。</p>
-              </article>
-              <article>
-                <span>03</span>
-                <h3>最后复核风险</h3>
-                <p>逐项检查调剂、分流、计划变化和身体条件限制。</p>
-              </article>
-            </div>
-            <div className="cover-volunteer-sample">
-              <span>样例志愿</span>
-              <div>
-                <strong>11845 广东工业大学</strong>
-                <b>206 专业组｜物理+化学｜计算机类 / 自动化类</b>
-              </div>
-            </div>
+            <section className="cover-focus-summary">
+              <span>顾问判断</span>
+              <strong>先体检志愿表，再进入逐行评估。</strong>
+              <p>{reportData.advisorLine}</p>
+            </section>
+            <p className="cover-detail-route">
+              正文展开组合诊断、行级评估矩阵、趋势反证、风险账本和证据账本；封面只负责让家庭先抓住结论。
+            </p>
           </div>
-          <div className="identity-strip">
-            <div><span>学生</span><b>{reportData.studentLabel}</b></div>
-            <div><span>选科</span><b>{reportData.subjectLabel}</b></div>
-            <div><span>分数 / 位次</span><b>{reportData.scoreRankLabel}</b></div>
-            <div><span>MBTI</span><b>{reportData.mbtiLabel}</b></div>
+          <div className="cover-meta-line">
+            <span>学生 <b>{reportData.studentLabel}</b></span>
+            <span>选科 <b>{reportData.subjectLabel}</b></span>
+            <span>分数 / 位次 <b>{reportData.scoreRankLabel}</b></span>
+            <span>MBTI <b>{reportData.mbtiLabel}</b></span>
           </div>
         </div>
       </section>
