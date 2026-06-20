@@ -2,6 +2,7 @@ import React from "react";
 import { buildAdmissionsOpportunityDemoCase } from "../lib/admissionsOpportunityDemoCase";
 import { CareerChoiceSimulator } from "./CareerChoiceSimulator";
 import { EvidenceCollectionWorkspacePanel } from "./EvidenceCollectionWorkspacePanel";
+import { JobEvidenceWorkbench } from "./JobEvidenceWorkbench";
 
 export function AdmissionsOpportunityDemoCasePanel() {
   const demo = buildAdmissionsOpportunityDemoCase();
@@ -70,6 +71,7 @@ export function AdmissionsOpportunityDemoCasePanel() {
       </header>
 
       <CareerChoiceSimulator profile={demoCareerProfile} rows={demoCareerRows} />
+      <JobEvidenceWorkbench />
 
       <div className="workbench-grid grid grid-cols-1 gap-5 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
         <aside className="workbench-rail border border-[#C8D8EA] bg-white p-4">
