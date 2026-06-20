@@ -46,6 +46,7 @@ for (const token of [
   "workbench-decision",
   "CareerChoiceSimulator",
   "生涯选择模拟",
+  "国内真实岗位锚点",
   "research-report",
 ]) {
   assert(

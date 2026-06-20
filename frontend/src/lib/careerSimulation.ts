@@ -15,6 +15,14 @@ export interface CareerSimulationMajorRow {
   suggested_major_choices?: Array<{ major_name?: string; career_fit_score?: number | null }>;
 }
 
+interface DomesticJobAnchor {
+  title: string;
+  hiringScenes: string[];
+  jdKeywords: string[];
+  marketReality: string;
+  evidenceToCollect: string;
+}
+
 interface CareerSeed {
   id: string;
   title: string;
@@ -42,6 +50,7 @@ export interface CareerSimulation {
   coreSkills: string[];
   skillSignals: string[];
   mismatchSignals: string[];
+  domesticJobAnchors: DomesticJobAnchor[];
   routesDetail: CareerSeed["routesDetail"];
   sourceRefs: string[];
 }
@@ -200,6 +209,105 @@ const routeWeight: Record<CareerRouteType, number> = {
   research: 2,
 };
 
+const domesticJobAnchorMap: Record<string, DomesticJobAnchor[]> = {
+  ai_product_engineer: [
+    {
+      title: "大模型应用工程师 / AI 应用开发",
+      hiringScenes: ["互联网产品线", "SaaS/企业服务", "制造业数字化部门"],
+      jdKeywords: ["Python", "RAG", "Agent", "LangChain", "向量数据库", "模型评测"],
+      marketReality: "国内岗位更常见的是把模型接进业务流程，不是从零训练基础模型。",
+      evidenceToCollect: "校招 JD、实习项目、开源仓库、模型评测报告",
+    },
+    {
+      title: "数据分析 / 增长策略 / 算法运营",
+      hiringScenes: ["内容平台", "电商", "本地生活", "金融科技"],
+      jdKeywords: ["SQL", "A/B 实验", "指标体系", "用户分层", "数据看板"],
+      marketReality: "很多本科入口在数据和策略岗，之后再向算法或产品算法协作迁移。",
+      evidenceToCollect: "岗位 JD、业务指标案例、实习转正路径",
+    },
+  ],
+  clinical_medicine: [
+    {
+      title: "住院医师 / 规培医师",
+      hiringScenes: ["三甲医院", "区域医疗中心", "专科医院"],
+      jdKeywords: ["执业医师资格", "规培", "病历书写", "值班", "临床路径"],
+      marketReality: "学历、规培基地和医院层级决定早期路径，本科直达优质岗位的空间有限。",
+      evidenceToCollect: "附属医院层级、规培基地、医院招聘学历要求",
+    },
+    {
+      title: "CRA / 医学信息沟通 / 临床项目助理",
+      hiringScenes: ["药企", "CRO", "医疗器械企业"],
+      jdKeywords: ["GCP", "临床试验", "医学沟通", "伦理资料", "项目跟进"],
+      marketReality: "医学背景也可能进入医药产业链，但工作内容和临床医生完全不同。",
+      evidenceToCollect: "CRO/药企 JD、校友去向、实习要求",
+    },
+  ],
+  civil_service_policy: [
+    {
+      title: "基层公务员 / 选调生",
+      hiringScenes: ["省考", "国考", "定向选调", "基层治理"],
+      jdKeywords: ["应届", "党员", "基层服务", "材料写作", "群众工作"],
+      marketReality: "真实门槛在职位表：专业代码、政治面貌、应届身份和地区限制。",
+      evidenceToCollect: "近三年职位表、选调公告、专业代码匹配",
+    },
+    {
+      title: "政策研究 / 国企综合管理",
+      hiringScenes: ["央国企总部", "智库", "产业园区", "事业单位"],
+      jdKeywords: ["政策分析", "公文写作", "项目申报", "产业研究", "汇报材料"],
+      marketReality: "稳定岗位不等于轻松岗位，材料、协调和流程压力很高。",
+      evidenceToCollect: "国企校招 JD、事业单位公告、岗位职责描述",
+    },
+  ],
+  finance_audit: [
+    {
+      title: "审计助理 / 税务助理",
+      hiringScenes: ["会计师事务所", "税务师事务所", "企业内审"],
+      jdKeywords: ["底稿", "函证", "盘点", "税务申报", "Excel"],
+      marketReality: "入口岗位多但旺季强度高，证书和项目经验影响后续分化。",
+      evidenceToCollect: "事务所校招 JD、CPA 要求、实习留用率",
+    },
+    {
+      title: "银行风控 / 财务分析",
+      hiringScenes: ["银行", "城商行", "消费金融", "企业财务部"],
+      jdKeywords: ["授信", "财报分析", "风险评级", "预算", "经营分析"],
+      marketReality: "金融不是单一路径，银行、券商、企业财务对学历和实习要求差异明显。",
+      evidenceToCollect: "银行校招岗位表、金融专硕去向、实习门槛",
+    },
+  ],
+  teacher_education: [
+    {
+      title: "中小学教师 / 学科教师",
+      hiringScenes: ["教师招聘", "校招", "编制考试", "民办学校"],
+      jdKeywords: ["教师资格证", "学科教学", "班主任", "教研", "课堂管理"],
+      marketReality: "稳定性取决于地区编制供给和学科缺口，不是所有师范专业都稳。",
+      evidenceToCollect: "各地教师招聘公告、学科需求、编制人数",
+    },
+    {
+      title: "教研 / 课程产品",
+      hiringScenes: ["教育科技公司", "出版社", "教研机构"],
+      jdKeywords: ["课程设计", "题库", "学情分析", "教材研发", "用户反馈"],
+      marketReality: "教育产业岗位更像内容产品和用户研究，不等同于课堂教师。",
+      evidenceToCollect: "课程产品 JD、内容研发样例、实习作品",
+    },
+  ],
+  intelligent_manufacturing: [
+    {
+      title: "工艺工程师 / 设备工程师",
+      hiringScenes: ["新能源车企", "电池厂", "半导体厂", "自动化产线"],
+      jdKeywords: ["良率", "SOP", "设备调试", "工艺参数", "现场改善"],
+      marketReality: "机会在产业链现场，工作地点、倒班、出差和产线压力必须提前确认。",
+      evidenceToCollect: "企业校招 JD、工作地点、轮岗和倒班安排",
+    },
+    {
+      title: "电气 / 自动化 / 嵌入式工程师",
+      hiringScenes: ["智能制造", "机器人", "储能", "工业控制"],
+      jdKeywords: ["PLC", "嵌入式", "电机控制", "传感器", "调试"],
+      marketReality: "工程岗位看项目和动手能力，学校专业名不如课程和项目证据具体。",
+      evidenceToCollect: "课程设计、竞赛项目、企业实习、实验室方向",
+    },
+  ],
+};
+
 function normalizeText(items?: Array<string | undefined>): string {
   return (items ?? []).filter(Boolean).join(" ").toLowerCase();
 }
@@ -282,6 +390,7 @@ export function buildCareerSimulations({
         coreSkills: seed.coreSkills,
         skillSignals: seed.skillSignals,
         mismatchSignals: seed.mismatchSignals,
+        domesticJobAnchors: domesticJobAnchorMap[seed.id] ?? [],
         routesDetail: seed.routesDetail,
         sourceRefs: seed.sourceRefs,
       };

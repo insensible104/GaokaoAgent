@@ -129,6 +129,36 @@ export function CareerChoiceSimulator({ profile, rows = [], compact = false }: C
 
           {!compact && (
             <section className="border-t border-[#C8D8EA] p-5">
+              <h4 className="font-semibold text-[#102033]">国内真实岗位锚点</h4>
+              <p className="mt-2 text-xs leading-5 text-[#64748B]">
+                先把职业想象落到招聘市场会出现的岗位名、用工场景和 JD 关键词，再回头判断专业选择是否值得。
+              </p>
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                {activeSimulation.domesticJobAnchors.map((anchor) => (
+                  <div key={anchor.title} className="border border-[#C8D8EA] bg-[#F8FBFF] p-3">
+                    <h5 className="font-semibold text-[#102033]">{anchor.title}</h5>
+                    <p className="mt-2 text-xs leading-5 text-[#35506B]">{anchor.marketReality}</p>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
+                      <div>
+                        <span className="text-xs font-semibold text-[#64748B]">招聘场景</span>
+                        <p className="mt-1 text-xs leading-5 text-[#35506B]">{anchor.hiringScenes.join("、")}</p>
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-[#64748B]">JD 关键词</span>
+                        <p className="mt-1 text-xs leading-5 text-[#35506B]">{anchor.jdKeywords.join("、")}</p>
+                      </div>
+                    </div>
+                    <p className="mt-3 border-t border-[#C8D8EA] pt-2 text-xs leading-5 text-[#64748B]">
+                      岗位证据：{anchor.evidenceToCollect}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {!compact && (
+            <section className="border-t border-[#C8D8EA] p-5">
               <h4 className="font-semibold text-[#102033]">升学、就业、考公的真实路径</h4>
               <div className="mt-4 grid gap-3 lg:grid-cols-3">
                 {activeSimulation.routesDetail.map((route) => (

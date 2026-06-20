@@ -19,6 +19,9 @@ for (const token of [
   "O*NET",
   "Lightcast Open Skills",
   "职业模拟，不替代访谈",
+  "国内真实岗位锚点",
+  "JD 关键词",
+  "岗位证据",
 ]) {
   assert(componentSource.includes(token), `CareerChoiceSimulator should include token: ${token}`);
 }
@@ -30,6 +33,9 @@ for (const token of [
   "clinical_medicine",
   "routesDetail",
   "sourceRefs",
+  "domesticJobAnchorMap",
+  "大模型应用工程师 / AI 应用开发",
+  "基层公务员 / 选调生",
 ]) {
   assert(libSource.includes(token), `careerSimulation should include token: ${token}`);
 }
@@ -67,5 +73,8 @@ assert(simulations[0].fitScore > simulations[1].fitScore);
 assert(simulations[0].routesDetail.some((route) => route.label.includes("考研")));
 assert(simulations[0].dayParts.length >= 4);
 assert(simulations[0].sourceRefs.some((source) => source.includes("O*NET")));
+assert(simulations[0].domesticJobAnchors.some((anchor) => anchor.title.includes("大模型应用工程师")));
+assert(simulations[0].domesticJobAnchors.some((anchor) => anchor.jdKeywords.includes("RAG")));
+assert(simulations[0].domesticJobAnchors.every((anchor) => anchor.evidenceToCollect.length > 0));
 
 console.log("CareerChoiceSimulator smoke and ranking test passed");
