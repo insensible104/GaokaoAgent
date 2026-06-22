@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { buildDeliveryReadinessSummary, type DeliveryReadinessSummary } from "@/lib/deliveryReadiness";
+import { buildDeepOpportunityCard, exampleDeepOpportunityInput } from "@/lib/deepOpportunityCard";
 
 type Metric = {
   label: string;
@@ -1947,6 +1948,59 @@ const ReportContentsPage = ({ data }: { data: ReportRenderData }) => {
   );
 };
 
+const DeepOpportunityReportPage = () => {
+  const card = buildDeepOpportunityCard(exampleDeepOpportunityInput);
+  const pillarByLabel = (label: string) => card.evidencePillars.find((item) => item.label === label);
+
+  return (
+    <section className="report-page report-page--dense DeepOpportunityReportPage">
+      <div className="report-page__inner">
+        <SectionTitle
+          index="05"
+          title="深度机会证据页"
+          subtitle="把机会判断拆成量化定位、科研资源、师资论文、本科可获得性、真实就业、升学路径、反证与降权"
+        />
+        <div className="path-grid">
+          {["量化定位", "科研资源", "本科生可获得性", "真实就业"].map((label) => {
+            const pillar = pillarByLabel(label);
+            if (!pillar) return null;
+            return (
+              <article className="path-card" key={label}>
+                <strong>{pillar.score}</strong>
+                <h3>{label}</h3>
+                <p>{pillar.interpretation}</p>
+              </article>
+            );
+          })}
+        </div>
+        <div className="counter-evidence">
+          <p className="small-label">科研视角</p>
+          <div className="counter-evidence__grid">
+            <article className="counter-evidence__item">
+              <div><strong>研究方向</strong><span>课题组</span></div>
+              <p>{card.researchSignals[0]}</p>
+            </article>
+            <article className="counter-evidence__item">
+              <div><strong>师资与论文</strong><span>导师</span></div>
+              <p>{card.researchSignals[2]}</p>
+            </article>
+            <article className="counter-evidence__item">
+              <div><strong>升学路径</strong><span>读研</span></div>
+              <p>{card.graduateSignals[0]}</p>
+            </article>
+            <article className="counter-evidence__item">
+              <div><strong>反证与降权</strong><span>先降权</span></div>
+              <p>{card.counterEvidenceChecks[0]}</p>
+            </article>
+          </div>
+        </div>
+        <DataBoundary text={`证据缺口：${card.evidenceGaps.join("；")} 下一步采集：${card.nextActions[0]}`} />
+        <PageFooter page="07" />
+      </div>
+    </section>
+  );
+};
+
 export function PathFinderReportTemplate({ payload }: { payload?: PathFinderReportPayload | null }) {
   const reportData = buildReportPayload(payload);
   const primaryCards = reportData.cards.slice(0, 3);
@@ -2065,13 +2119,15 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
         </div>
       </section>
 
+      <DeepOpportunityReportPage />
+
       <section className="report-page report-page--dense">
         <div className="report-page__inner">
-          <SectionTitle index="05" title="风险账本与证据账本" subtitle="让家长知道风险在哪里，也知道下一步该做什么" />
+          <SectionTitle index="06" title="风险账本与证据账本" subtitle="让家长知道风险在哪里，也知道下一步该做什么" />
           <RiskLedger items={reportData.risks} />
           <EvidenceLedger items={reportData.evidence} />
           <DataBoundary text={`交付准备度：${reportData.deliveryReadiness.score}。${reportData.deliveryReadiness.nextAction}`} />
-          <PageFooter page="07" />
+          <PageFooter page="08" />
         </div>
       </section>
     </div>

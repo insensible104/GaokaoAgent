@@ -6,7 +6,9 @@ import ts from "typescript";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const templatePath = path.join(here, "PathFinderReportTemplate.tsx");
-const source = fs.readFileSync(templatePath, "utf8");
+const source = fs
+  .readFileSync(templatePath, "utf8")
+  .replace(/import\.meta\.env\.BASE_URL/g, '"/app/"');
 const output = ts.transpileModule(source, {
   compilerOptions: {
     esModuleInterop: true,
@@ -34,6 +36,24 @@ const localRequire = (specifier) => {
         claimBoundary: "readiness boundary",
         nextAction: "review official data",
       }),
+    };
+  }
+  if (specifier === "@/lib/deepOpportunityCard") {
+    return {
+      buildDeepOpportunityCard: () => ({
+        evidencePillars: [
+          { label: "量化定位", score: 84, interpretation: "rank fit" },
+          { label: "科研资源", score: 88, interpretation: "research fit" },
+          { label: "本科生可获得性", score: 82, interpretation: "undergrad access" },
+          { label: "真实就业", score: 81, interpretation: "job fit" },
+        ],
+        researchSignals: ["research signal", "lab signal", "paper signal"],
+        graduateSignals: ["graduate signal"],
+        counterEvidenceChecks: ["counter evidence"],
+        evidenceGaps: ["gap"],
+        nextActions: ["next action"],
+      }),
+      exampleDeepOpportunityInput: {},
     };
   }
   throw new Error(`Unexpected require: ${specifier}`);
@@ -101,14 +121,19 @@ const reportData = module.exports.buildReportPayload({
   },
 });
 
-assert.equal(reportData.rows[0].school, "真实大学");
-assert.match(reportData.rows[0].evidence, /真实证据/);
+assert.equal(reportData.cards[0].school, "真实大学");
+assert.match(reportData.evaluations[0].evidence, /真实证据/);
 assert.match(reportData.profileLine, /广州/);
 assert.match(reportData.profileLine, /电子信息/);
-assert.match(reportData.strategyLine, /冲刺 1 \/ 稳健 1 \/ 保底 1/);
-assert.match(reportData.focusLine, /关键前缀 1/);
+assert.equal(reportData.metrics[0].value, "1");
+assert.equal(reportData.metrics[1].value, "1");
+assert.equal(reportData.metrics[2].value, "1");
+assert.equal(reportData.metrics[3].value, "1");
 assert.doesNotMatch(reportData.profileLine, /示例29|北京|南京|成都|大连/);
-assert.doesNotMatch(reportData.strategyLine, /985 院校 24|A\+ 学科 36/);
+assert.doesNotMatch(
+  reportData.metrics.map((item) => `${item.label} ${item.value}`).join(" "),
+  /985 院校 24|A\+ 学科 36/,
+);
 assert.doesNotMatch(reportData.studentLabel, /示例29/);
 
 console.log("PathFinder report template behavior test passed");
