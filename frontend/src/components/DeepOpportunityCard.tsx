@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { buildDeepOpportunityCard, exampleDeepOpportunityInput } from "../lib/deepOpportunityCard";
+import { DeepEvidenceCollectionPlan } from "./DeepEvidenceCollectionPlan";
 
 const statusTone = {
   strong: "border-[#0F766E] bg-[#E7F7F2] text-[#0F3F3B]",
@@ -140,6 +141,10 @@ export function DeepOpportunityCard() {
             </ol>
           </section>
         </aside>
+      </section>
+
+      <section className="mt-6">
+        <DeepEvidenceCollectionPlan />
       </section>
     </article>
   );
