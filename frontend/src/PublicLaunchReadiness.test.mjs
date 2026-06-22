@@ -22,8 +22,10 @@ const pagesWorkflow = read(".github/workflows/deploy-pages.yml");
 const viteConfig = read("frontend/vite.config.ts");
 
 assert.match(appSource, /ExternalPlanAuditDemoPanel/);
+assert.match(appSource, /DeepOpportunityCard/);
 assert.match(appSource, /external-plan-audit-demo/);
 assert.match(appSource, /admissions-opportunity-demo/);
+assert.match(appSource, /deep-opportunity-card/);
 assert.match(appSource, /report-template-preview/);
 assert.doesNotMatch(
   appSource,
@@ -51,6 +53,7 @@ assert.match(readme, /docker compose up --build/);
 assert.match(readme, /http:\/\/localhost:8000\/app/);
 assert.match(readme, /external-plan-audit-demo/);
 assert.match(readme, /admissions-opportunity-demo/);
+assert.match(readme, /deep-opportunity-card/);
 assert.match(readme, /report-template-preview/);
 
 assert.match(viteConfig, /VITE_BASE_PATH/);
@@ -61,6 +64,7 @@ assert.match(pagesWorkflow, /VITE_BASE_PATH: \/GaokaoAgent\//);
 assert.match(pagesWorkflow, /VITE_API_URL: \$\{\{ vars\.PUBLIC_API_URL \}\}/);
 assert.match(pagesWorkflow, /cp frontend\/dist\/index\.html frontend\/dist\/404\.html/);
 assert.match(pagesWorkflow, /frontend\/dist\/admissions-opportunity-demo/);
+assert.match(pagesWorkflow, /frontend\/dist\/deep-opportunity-card/);
 assert.match(pagesWorkflow, /frontend\/dist\/external-plan-audit-demo/);
 assert.match(pagesWorkflow, /frontend\/dist\/report-template-preview/);
 

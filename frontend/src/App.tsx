@@ -11,6 +11,7 @@ const InternalDeliveryReview = lazy(() => import("@/components/InternalDeliveryR
 const InvestmentResearchReportPreview = lazy(() => import("@/components/PathFinderReportTemplate").then(module => ({ default: module.InvestmentResearchReportPreview })));
 const DeliveryReadinessConsole = lazy(() => import("@/components/DeliveryReadinessConsole").then(module => ({ default: module.DeliveryReadinessConsole })));
 const AdmissionsOpportunityDemoCasePanel = lazy(() => import("@/components/AdmissionsOpportunityDemoCasePanel").then(module => ({ default: module.AdmissionsOpportunityDemoCasePanel })));
+const DeepOpportunityCard = lazy(() => import("@/components/DeepOpportunityCard").then(module => ({ default: module.DeepOpportunityCard })));
 const ExternalPlanAuditDemoPanel = lazy(() => import("@/components/ExternalPlanAuditDemoPanel").then(module => ({ default: module.ExternalPlanAuditDemoPanel })));
 const DeliveryPortfolioReview = lazy(() => import("@/components/DeliveryPortfolioReview").then(module => ({ default: module.DeliveryPortfolioReview })));
 
@@ -206,6 +207,9 @@ function AppContent() {
   const admissionsOpportunityDemoRequested =
     window.location.pathname.includes("admissions-opportunity-demo") ||
     new URLSearchParams(window.location.search).get("demo") === "admissions-opportunity";
+  const deepOpportunityCardRequested =
+    window.location.pathname.includes("deep-opportunity-card") ||
+    new URLSearchParams(window.location.search).get("demo") === "deep-opportunity-card";
   const externalPlanAuditDemoRequested =
     window.location.pathname.includes("external-plan-audit-demo") ||
     new URLSearchParams(window.location.search).get("demo") === "external-plan-audit";
@@ -505,6 +509,18 @@ function AppContent() {
     );
   }
 
+  if (deepOpportunityCardRequested) {
+    return (
+      <div className={publicShellClass}>
+        <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+          <Suspense fallback={<div className="text-center py-4">正在载入深度机会卡...</div>}>
+            <DeepOpportunityCard />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
   if (admissionsOpportunityDemoRequested) {
     return (
       <div className={publicShellClass}>
@@ -631,7 +647,7 @@ function AppContent() {
         <main>
           {!result && !isAnalyzing && !error && (
             <div className="space-y-6">
-              <section className="grid grid-cols-1 gap-0 border border-[#C8D8EA] bg-[#F8FBFF] lg:grid-cols-[1.25fr_1fr_1fr]">
+              <section className="grid grid-cols-1 gap-0 border border-[#C8D8EA] bg-[#F8FBFF] lg:grid-cols-[1.15fr_1fr_1fr_1fr]">
                 <div className="border-b border-[#C8D8EA] p-5 lg:border-b-0 lg:border-r">
                   <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#C14E2A]">
                     核心差异
@@ -655,12 +671,22 @@ function AppContent() {
                 </a>
                 <a
                   href={buildAppPath("/admissions-opportunity-demo")}
-                  className="p-5 transition hover:bg-[#EAF3FF]"
+                  className="border-b border-[#C8D8EA] p-5 transition hover:bg-[#EAF3FF] lg:border-b-0 lg:border-r"
                 >
                   <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#C14E2A]">公开演示 02</p>
                   <h2 className="mt-2 text-xl font-semibold text-[#102033]">趋势机会研究流</h2>
                   <p className="mt-2 text-sm leading-6 text-[#35506B]">
                     看计划变化、公众号舆情、公开证据和顾问复核如何进入同一个证据账本，而不是混成一句“趋势不错”。
+                  </p>
+                </a>
+                <a
+                  href={buildAppPath("/deep-opportunity-card")}
+                  className="p-5 transition hover:bg-[#EAF3FF]"
+                >
+                  <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#1F5E99]">公开演示 03</p>
+                  <h2 className="mt-2 text-xl font-semibold text-[#102033]">深度机会卡</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#35506B]">
+                    把量化定位、科研方向、师资与论文、本科生机会、真实就业和升学路径放到同一张可复核卡片里，同时保留反证与降权。
                   </p>
                 </a>
               </section>
