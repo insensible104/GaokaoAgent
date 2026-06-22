@@ -77,4 +77,9 @@ assert(simulations[0].domesticJobAnchors.some((anchor) => anchor.title.includes(
 assert(simulations[0].domesticJobAnchors.some((anchor) => anchor.jdKeywords.includes("RAG")));
 assert(simulations[0].domesticJobAnchors.every((anchor) => anchor.evidenceToCollect.length > 0));
 
+assert(simulations[0].matchReasons.some((reason) => reason.includes("\u6210\u957f\u7a7a\u95f4")));
+assert(simulations[0].matchReasons.some((reason) => reason.includes("\u98ce\u9669\u504f\u597d\uff1a\u5e73\u8861")));
+assert(!simulations[0].matchReasons.join("\n").includes("growth"));
+assert(!simulations[0].matchReasons.join("\n").includes("balanced"));
+
 console.log("CareerChoiceSimulator smoke and ranking test passed");

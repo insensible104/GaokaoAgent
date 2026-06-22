@@ -209,6 +209,30 @@ const routeWeight: Record<CareerRouteType, number> = {
   research: 2,
 };
 
+const careerValueLabel: Record<string, string> = {
+  growth: "成长空间",
+  income: "收入回报",
+  autonomy: "自主性",
+  stability: "稳定性",
+  social_impact: "社会影响",
+  leadership: "组织影响力",
+  work_life_balance: "工作生活平衡",
+};
+
+const riskToleranceLabel: Record<string, string> = {
+  conservative: "稳健",
+  balanced: "平衡",
+  aggressive: "进取",
+};
+
+function labelCareerValue(value: string): string {
+  return careerValueLabel[value] ?? value;
+}
+
+function labelRiskTolerance(value: string): string {
+  return riskToleranceLabel[value] ?? value;
+}
+
 const domesticJobAnchorMap: Record<string, DomesticJobAnchor[]> = {
   ai_product_engineer: [
     {
@@ -374,8 +398,8 @@ export function buildCareerSimulations({
       const reasons = [
         majorHits.length ? `专业关键词命中：${majorHits.slice(0, 3).join("、")}` : "",
         riasecHits.length ? `兴趣信号匹配：${riasecHits.join("、")}` : "",
-        valueHits.length ? `价值观匹配：${valueHits.join("、")}` : "",
-        riskTolerance ? `风险偏好：${riskTolerance}` : "",
+        valueHits.length ? `价值观匹配：${valueHits.map(labelCareerValue).join("、")}` : "",
+        riskTolerance ? `风险偏好：${labelRiskTolerance(riskTolerance)}` : "",
         blacklistHits.length ? `黑名单提醒：${blacklistHits.join("、")} 相关方向需复核` : "",
       ].filter(Boolean);
 
