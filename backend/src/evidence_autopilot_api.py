@@ -112,6 +112,7 @@ def build_evidence_autopilot_research_response(
         from official_source_provider import (
             ScutOfficialAdmissionPlanProvider,
             ScutOfficialAdmissionScoreProvider,
+            ScutOfficialMajorProfileProvider,
             capture_official_source_evidence,
         )
 
@@ -119,7 +120,8 @@ def build_evidence_autopilot_research_response(
         if providers is None:
             providers = [official_source_provider] if official_source_provider is not None else [
                 ScutOfficialAdmissionPlanProvider(),
-                ScutOfficialAdmissionScoreProvider()
+                ScutOfficialAdmissionScoreProvider(),
+                ScutOfficialMajorProfileProvider(),
             ]
         capture_result = capture_official_source_evidence(request, providers)
         captured_cards = capture_result.cards

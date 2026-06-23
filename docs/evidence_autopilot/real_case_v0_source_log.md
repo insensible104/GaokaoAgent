@@ -64,7 +64,7 @@ Manufacturing-data and intelligent-manufacturing evidence may reveal a different
 - Captured at: 2026-06-24
 - Source type: school
 - Claim task id: faculty-research-direction
-- Accepted excerpt: 核心课程包括人工智能技术及应用、工业大数据分析及应用、制造系统分析及应用。
+- Accepted excerpt: Major profile links AI, industrial big data, and manufacturing systems courses with cross-disciplinary faculty in AI, robotics, intelligent manufacturing, IoT, and control.
 - Confidence: high
 - Review action: Cross-check the current 2026 training plan if the case becomes a student-facing deliverable.
 - What this does not prove: It does not prove course quality, teaching availability in a specific year, student fit, or job-market outcomes.
@@ -76,7 +76,7 @@ Manufacturing-data and intelligent-manufacturing evidence may reveal a different
 - Captured at: 2026-06-24
 - Source type: school
 - Claim task id: undergrad-access
-- Accepted excerpt: 学院将科研平台全部面向本科生开放，通过强化科研渗透教学支撑人才培养。
+- Accepted excerpt: WUSIE states robotics, intelligent manufacturing, 3D printing and other labs support undergraduate practice, and research platforms are open to undergraduates.
 - Confidence: high
 - Review action: Verify current lab access rules, capacity, and student selection requirements before making a fit claim.
 - What this does not prove: It does not prove any individual undergraduate will enter a lab, publish, intern, or receive advisor support.
@@ -88,7 +88,7 @@ Manufacturing-data and intelligent-manufacturing evidence may reveal a different
 - Captured at: 2026-06-24
 - Source type: school
 - Claim task id: graduate-progression
-- Accepted excerpt: 可继续深造，攻读机器人工程、智能制造及相关学科研究生。
+- Accepted excerpt: WUSIE admissions page describes R&D or management paths and possible graduate study in robotics and intelligent manufacturing.
 - Confidence: medium
 - Review action: Treat this as school-described pathway evidence; require outcome data, alumni samples, or graduate-placement evidence for stronger claims.
 - What this does not prove: It does not prove actual graduate-school rate, employment rate, salary, civil-service suitability, or student-level career certainty.

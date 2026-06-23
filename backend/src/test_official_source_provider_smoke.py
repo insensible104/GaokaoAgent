@@ -10,6 +10,7 @@ from evidence_autopilot_api import (
 from official_source_provider import (
     ScutOfficialAdmissionPlanProvider,
     ScutOfficialAdmissionScoreProvider,
+    ScutOfficialMajorProfileProvider,
     capture_official_source_evidence,
     parse_scut_admission_score_rows,
 )
@@ -46,6 +47,25 @@ SCUT_CHARTER_HTML = """
 平行志愿批次普通类考生调档后，服从调剂且符合专业录取要求者不退档。
 学校按投档分数优先的原则从高到低进行专业录取，尊重考生所填的专业志愿顺序，
 不设置专业志愿级差。
+</body></html>
+"""
+
+SCUT_MAJOR_PROFILE_HTML = """
+<html><body>
+智能制造工程专业是人工智能与高端制造的强交叉学科。
+核心课程：人工智能技术及应用、工业大数据分析及应用、制造系统分析及应用、机电一体化。
+目前学院在师资建设方面发挥了学科交叉融合特色，已引进具有人工智能、机器人工程、
+智能制造、物联网、控制工程、柔性电子、计算机等不同研究领域的青年海外人才二十余人。
+学院建立了面向本科生创新创业实践的机器人实验室1间、智能制造实验室1间、3D打印实验室2间。
+学院将科研平台全部面向本科生开放，通过强化科研渗透教学，平台建设支撑人才培养。
+</body></html>
+"""
+
+SCUT_ADMISSIONS_PROFILE_HTML = """
+<html><body>
+智能制造工程专业是面向智能工程前沿高新技术及其应用的专业性本科专业。
+学生毕业后可到高校科研机构、相关企事业单位、政府机关等从事相关领域的研发、管理工作，
+也可以继续深造，攻读机器人工程、智能制造及相关学科的研究生。
 </body></html>
 """
 
@@ -116,6 +136,34 @@ def test_scut_plan_provider_builds_plan_and_charter_card() -> None:
     assert "does not prove admission probability" in card.reviewAction
 
 
+def test_scut_major_profile_provider_builds_training_access_and_progression_cards() -> None:
+    provider = ScutOfficialMajorProfileProvider(
+        fetch_major_html=lambda: SCUT_MAJOR_PROFILE_HTML,
+        fetch_admissions_html=lambda: SCUT_ADMISSIONS_PROFILE_HTML,
+    )
+    cards = provider.capture(
+        EvidenceAutopilotResearchRequest(
+            province="Guangdong",
+            schoolName="South China University of Technology",
+            majorName="intelligent manufacturing / data engineering opportunity path",
+            targetYear=2026,
+            enableOfficialSourceProvider=True,
+        )
+    )
+
+    cards_by_task = {card.taskId: card for card in cards}
+    assert set(cards_by_task) == {
+        "faculty-research-direction",
+        "undergrad-access",
+        "graduate-progression",
+    }
+    assert cards_by_task["faculty-research-direction"].sourceType == "school"
+    assert "AI, industrial big data, and manufacturing systems courses" in cards_by_task["faculty-research-direction"].excerpt
+    assert "research platforms are open to undergraduates" in cards_by_task["undergrad-access"].excerpt
+    assert "graduate study in robotics and intelligent manufacturing" in cards_by_task["graduate-progression"].excerpt
+    assert "does not prove graduate-school or employment outcomes" in cards_by_task["graduate-progression"].reviewAction
+
+
 def test_research_response_can_opt_into_official_source_provider() -> None:
     provider = ScutOfficialAdmissionScoreProvider(fetch_html=lambda: SCUT_SCORE_HTML)
     response = build_evidence_autopilot_research_response(
@@ -161,6 +209,40 @@ def test_research_response_merges_plan_and_score_official_providers() -> None:
     assert set(captured_by_task) == {"official-plan-charter", "rank-history-band"}
     assert "majors/groups are further optimized" in captured_by_task["official-plan-charter"].excerpt
     assert "highest 644, lowest 629, average 631.9" in captured_by_task["rank-history-band"].excerpt
+
+
+def test_research_response_merges_all_scut_live_school_and_official_providers() -> None:
+    response = build_evidence_autopilot_research_response(
+        EvidenceAutopilotResearchRequest(
+            province="Guangdong",
+            schoolName="South China University of Technology",
+            majorName="intelligent manufacturing / data engineering opportunity path",
+            targetYear=2026,
+            enableOfficialSourceProvider=True,
+        ),
+        official_source_providers=[
+            ScutOfficialAdmissionPlanProvider(
+                fetch_plan_html=lambda: SCUT_PLAN_HTML,
+                fetch_charter_html=lambda: SCUT_CHARTER_HTML,
+            ),
+            ScutOfficialAdmissionScoreProvider(fetch_html=lambda: SCUT_SCORE_HTML),
+            ScutOfficialMajorProfileProvider(
+                fetch_major_html=lambda: SCUT_MAJOR_PROFILE_HTML,
+                fetch_admissions_html=lambda: SCUT_ADMISSIONS_PROFILE_HTML,
+            ),
+        ],
+    )
+
+    captured_tasks = {
+        card.taskId for card in response.evidenceCards if card.status == "captured_candidate"
+    }
+    assert captured_tasks >= {
+        "official-plan-charter",
+        "rank-history-band",
+        "faculty-research-direction",
+        "undergrad-access",
+        "graduate-progression",
+    }
 
 
 class StaticOfficialProvider:

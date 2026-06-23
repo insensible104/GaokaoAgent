@@ -174,7 +174,7 @@ The first narrow live provider now exists on the backend:
 - Module: `backend/src/official_source_provider.py`
 - Test: `backend/src/test_official_source_provider_smoke.py`
 - API contract: `enableOfficialSourceProvider` opt-in on `EvidenceAutopilotResearchRequest`
-- Captured cards: `official-plan-charter`, `rank-history-band`
-- Current scope: SCUT 2026 admissions-plan/charter boundary plus the 2025 Guangdong physics ordinary-batch historical score row for `工科试验班(智能装备与先进制造)`
+- Captured cards: `official-plan-charter`, `rank-history-band`, `faculty-research-direction`, `undergrad-access`, `graduate-progression`
+- Current scope: SCUT 2026 admissions-plan/charter boundary, the 2025 Guangdong physics ordinary-batch historical score row for `工科试验班(智能装备与先进制造)`, and WUSIE school pages for curriculum/faculty, undergraduate platform access, and school-described progression paths
 
-This is intentionally not a general crawler. It proves that official SCUT pages can be parsed into `captured_candidate` cards with URL, excerpt, capture time, confidence, and review action. It also establishes a provider registry that can merge cards and warnings without letting a failed provider fabricate evidence or break task generation. It still does not prove 2026 admission probability, final Guangdong professional-group placement, or generalized source coverage.
+This is intentionally not a general crawler. It proves that official SCUT and school pages can be parsed into `captured_candidate` cards with URL, excerpt, capture time, confidence, and review action. It also establishes a provider registry that can merge cards and warnings without letting a failed provider fabricate evidence or break task generation. It still does not prove 2026 admission probability, final Guangdong professional-group placement, graduate-school outcomes, employment outcomes, or generalized source coverage.

@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 SCUT_SCORE_PARENT_URL = "https://admission.scut.edu.cn/30821/list.htm"
 SCUT_PLAN_URL = "https://admission.scut.edu.cn/30820/list.htm"
 SCUT_CHARTER_2026_URL = "https://xxgk.scut.edu.cn/2026/0528/c132a48854/page.htm"
+SCUT_MAJOR_PROFILE_URL = "https://www2.scut.edu.cn/wusie/2022/0907/c34046a488201/page.htm"
+SCUT_WUSIE_ADMISSIONS_URL = "https://www2.scut.edu.cn/wusie/34045/list.htm"
 SCUT_SCORE_QUERY_URL = (
     "https://admission.scut.edu.cn/_web/_apps/commonquery/commonquery/api/"
     "commonqueryCacheResult/16.rst?_p=YXM9MzQ4JnQ9MTcyMyZwPTEmbT1OJg__"
@@ -213,6 +215,115 @@ class ScutOfficialAdmissionPlanProvider:
 
     def _has_charter_markers(self, text: str) -> bool:
         return "按投档分数优先" in text and "不设置专业志愿级差" in text
+
+
+class ScutOfficialMajorProfileProvider:
+    """Capture SCUT school-source evidence for the intelligent manufacturing path."""
+
+    def __init__(
+        self,
+        fetch_major_html: Callable[[], str] | None = None,
+        fetch_admissions_html: Callable[[], str] | None = None,
+    ) -> None:
+        self._fetch_major_html = fetch_major_html or (
+            lambda: _fetch_url_text(SCUT_MAJOR_PROFILE_URL)
+        )
+        self._fetch_admissions_html = fetch_admissions_html or (
+            lambda: _fetch_url_text(SCUT_WUSIE_ADMISSIONS_URL)
+        )
+
+    def capture(
+        self,
+        request: "EvidenceAutopilotResearchRequest",
+    ) -> list["EvidenceAutopilotEvidenceCard"]:
+        """Return captured school-source evidence cards for SCUT WUSIE pages."""
+        if not self._supports(request):
+            return []
+
+        major_text = _plain_text_from_html(self._fetch_major_html())
+        admissions_text = _plain_text_from_html(self._fetch_admissions_html())
+        if not self._has_major_markers(major_text) or not self._has_progression_markers(admissions_text):
+            return []
+
+        from evidence_autopilot_api import EvidenceAutopilotEvidenceCard
+
+        today = date.today().isoformat()
+        return [
+            EvidenceAutopilotEvidenceCard(
+                taskId="faculty-research-direction",
+                claim="faculty_research",
+                status="captured_candidate",
+                sourceTitle="SCUT WUSIE intelligent manufacturing major profile",
+                sourceUrl=SCUT_MAJOR_PROFILE_URL,
+                sourceType="school",
+                excerpt=(
+                    "Major profile links AI, industrial big data, and manufacturing systems courses "
+                    "with cross-disciplinary faculty in AI, robotics, intelligent manufacturing, IoT, and control."
+                ),
+                capturedAt=today,
+                confidence="high",
+                reviewAction=(
+                    "Use as school-source training-path evidence only; verify current curriculum before delivery."
+                ),
+            ),
+            EvidenceAutopilotEvidenceCard(
+                taskId="undergrad-access",
+                claim="undergrad_access",
+                status="captured_candidate",
+                sourceTitle="SCUT WUSIE undergraduate lab and platform access",
+                sourceUrl=SCUT_MAJOR_PROFILE_URL,
+                sourceType="school",
+                excerpt=(
+                    "WUSIE states robotics, intelligent manufacturing, 3D printing and other labs support "
+                    "undergraduate practice, and research platforms are open to undergraduates."
+                ),
+                capturedAt=today,
+                confidence="high",
+                reviewAction=(
+                    "Use as access-path evidence only; it does not prove any individual student will enter a lab."
+                ),
+            ),
+            EvidenceAutopilotEvidenceCard(
+                taskId="graduate-progression",
+                claim="graduate_progression",
+                status="captured_candidate",
+                sourceTitle="SCUT WUSIE admissions page progression path",
+                sourceUrl=SCUT_WUSIE_ADMISSIONS_URL,
+                sourceType="school",
+                excerpt=(
+                    "WUSIE admissions page describes R&D or management paths and possible graduate study "
+                    "in robotics and intelligent manufacturing."
+                ),
+                capturedAt=today,
+                confidence="medium",
+                reviewAction=(
+                    "Use as school-described pathway evidence only; it does not prove graduate-school or employment outcomes."
+                ),
+            ),
+        ]
+
+    def _supports(self, request: "EvidenceAutopilotResearchRequest") -> bool:
+        school = request.schoolName.lower()
+        major = request.majorName.lower()
+        return (
+            "south china university of technology" in school
+            or "华南理工" in school
+        ) and (
+            "intelligent" in major
+            or "manufacturing" in major
+            or "智能" in major
+            or "制造" in major
+        )
+
+    def _has_major_markers(self, text: str) -> bool:
+        return (
+            "人工智能技术及应用" in text
+            and "工业大数据分析及应用" in text
+            and "科研平台全部面向本科生开放" in text
+        )
+
+    def _has_progression_markers(self, text: str) -> bool:
+        return "继续深造" in text and "机器人工程、智能制造" in text
 
 
 class ScutOfficialAdmissionScoreProvider:

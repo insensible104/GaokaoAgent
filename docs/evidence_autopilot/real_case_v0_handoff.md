@@ -9,11 +9,11 @@ Date: 2026-06-24
 - Added a fixture-backed provider that emits provider results only from captured cards with URL and excerpt.
 - Added `real_case_fixture` API state so the UI can distinguish reviewed fixture evidence from demo snapshot and backend fallback.
 - Routed captured evidence through Evidence Autopilot, Opportunity Radar, and the report output.
-- Added an opt-in backend official-source provider contract, with SCUT plan/charter evidence and historical admission score evidence as the first implementations.
+- Added an opt-in backend official-source provider contract, with SCUT plan/charter evidence, historical admission score evidence, and school-source major-profile evidence as the first implementations.
 
 ## What This Proves
 
-The system can carry one reviewed public evidence fixture through the opportunity-research loop. The backend can also run an opt-in official-source provider registry, isolate provider failures, and capture SCUT public official plan/charter evidence plus one public official score-history card when `enableOfficialSourceProvider` is explicitly enabled.
+The system can carry one reviewed public evidence fixture through the opportunity-research loop. The backend can also run an opt-in official-source provider registry, isolate provider failures, and capture SCUT public official plan/charter evidence, one public official score-history card, and three school-source major-profile cards when `enableOfficialSourceProvider` is explicitly enabled.
 
 ## What This Does Not Prove
 
@@ -58,12 +58,13 @@ git diff --check
 - Official-source provider smoke test passed: 3 passed, 1 existing Pydantic deprecation warning.
 - Manual live SCUT provider check captured `rank-history-band` with highest 644, lowest 629, average 631.9.
 - Manual live SCUT provider check captured `official-plan-charter` from the 2026 charter and admissions-plan page.
+- Manual live SCUT provider check captured `faculty-research-direction`, `undergrad-access`, and `graduate-progression` from WUSIE school pages.
 - Provider registry smoke test passed: provider cards and warnings merge without fabricating captured evidence.
 - `git diff --check` passed.
 
 ## Remaining Work
 
-- Add more official-source providers behind the existing provider registry, starting with final 2026 provincial professional-group tables and province-side plan data.
+- Add more official-source providers behind the existing provider registry, starting with final 2026 provincial professional-group tables, province-side plan data, and external outcome validation sources.
 - Add durable operator capture workflow for semi-closed sources.
 - Connect quant positioning and 2025 backtest signals to case selection.
 - Run outcome validation before making any effectiveness claim.
