@@ -89,12 +89,13 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Report template now carries a reviewed-evidence audit trail into the Deep Opportunity page, including case-scoped review IDs, source IDs/URLs, and `reviewAction` notes from captured Real Case v0 evidence.
 - Report payload can now accept live `reviewedEvidenceRecords` and convert captured case-scoped ledger records into the same audit trail before falling back to fixture evidence.
 - A4 report preview now attempts to load case-scoped reviewed-evidence records when a case id is available from delivery manifests or the game matrix, then persists those records into the preview payload.
+- Reviewed evidence now has a case browser view model that groups records by task, keeps incomplete operator notes pending, exposes missing P0 tasks, and escalates captured counter-evidence.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and the preview entry can attempt case-scoped ledger fetches, but it still needs screenshot/redaction handling, a reviewer workflow, and a case evidence browser to become credible as a production delivery artifact.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model exists, but it still needs a compact reviewer surface, screenshot/redaction handling, and reviewer identity controls to become credible as a production delivery artifact.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -243,3 +244,9 @@ This closes the next handoff gap between the case-scoped listing endpoint and th
 The A4 report preview entry now resolves a reviewed-evidence case id from the latest delivery manifest first, then from `game_matrix.case_id`, `game_matrix.caseId`, `game_matrix.id`, or matching volunteer-plan fields. If a case id is present, it calls the typed reviewed-evidence listing adapter and writes `evidenceAutopilot.reviewedEvidenceRecords` into `pathfinder-report-preview` session storage.
 
 This moves the ledger from "available to a future report caller" to "attempted by the actual report preview entry." The fallback remains conservative: if the ledger is unavailable, the preview still opens with `status: ledger_unavailable` and does not pretend reviewed operator evidence was captured.
+
+### 2026-06-24 Reviewed Evidence Case Browser Model
+
+The frontend now has a reviewed-evidence case browser model. It accepts case-scoped ledger records plus an optional evidence collection plan, filters records to the requested case, groups them by task, and marks each task as `ready_for_report`, `needs_capture`, or `missing`. Captured counter-evidence forces reviewer attention, incomplete operator notes remain pending, and missing P0 task ids stay visible.
+
+This is the first reviewer-workflow data layer. It does not yet render a full browsing surface, collect screenshots, redact personal data, or enforce reviewer permissions.
