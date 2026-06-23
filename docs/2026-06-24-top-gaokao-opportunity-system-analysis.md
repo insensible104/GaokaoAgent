@@ -152,3 +152,17 @@ Here is one opportunity hypothesis, here is the evidence, here is what would dis
 Continue with Real Case v0 before any new UI redesign, multi-case platform, live semi-closed scraping, or additional agent spectacle.
 
 The agent work remains a backend research capability. The product value is the auditable opportunity judgment.
+
+## 2026-06-24 Real Case v0 Status Update
+
+Real Case v0 is now implemented as a fixture-backed, auditable slice:
+
+- Source log: `docs/evidence_autopilot/real_case_v0_source_log.md`
+- Fixture: `data/evidence_autopilot/real_case_v0.json`
+- Provider: `frontend/src/lib/evidenceAutopilotRealCaseProvider.ts`
+- API state: `real_case_fixture`
+- Opportunity Radar smoke test: `frontend/src/components/DeepOpportunityRealCase.test.mjs`
+- Report integration: `PathFinderReportTemplate.tsx`
+- Handoff: `docs/evidence_autopilot/real_case_v0_handoff.md`
+
+This changes the maturity assessment: the system now has one real reviewed public-evidence case flowing through Evidence Autopilot, Opportunity Radar, and the report. It is still fixture-backed, so the next bottleneck is live official-source retrieval and durable capture provenance, not another UI layer.
