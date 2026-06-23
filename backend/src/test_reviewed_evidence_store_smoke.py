@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 import main
 from evidence_autopilot_api import ReviewedEvidenceCard
-from reviewed_evidence_store import append_reviewed_evidence_record
+from reviewed_evidence_store import append_reviewed_evidence_record, load_reviewed_evidence_cards
 
 
 def test_append_reviewed_evidence_record_generates_review_id_and_ledger_entry(tmp_path) -> None:
@@ -83,3 +83,45 @@ def test_reviewed_evidence_endpoint_persists_to_configured_ledger(tmp_path, monk
     assert ledger_path.exists()
     assert "/api/evidence-autopilot/reviewed-evidence" in main.get_runtime_status()["entrypoints"]["api"]
 
+
+def test_load_reviewed_evidence_cards_filters_by_case_id(tmp_path) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    scut_card = ReviewedEvidenceCard(
+        taskId="employment-market",
+        claim="employment_market",
+        status="captured_candidate",
+        sourceTitle="SCUT reviewed job sample",
+        sourceUrl="",
+        sourceType="job",
+        excerpt="SCUT visible job sample.",
+        capturedAt="2026-06-24",
+        confidence="medium",
+        reviewAction="Use as operator-captured job sample only.",
+    )
+    other_card = scut_card.model_copy(
+        update={
+            "taskId": "counter-evidence",
+            "claim": "counter_evidence",
+            "sourceTitle": "Other case counter-evidence",
+        }
+    )
+
+    append_reviewed_evidence_record(
+        ledger_path=ledger_path,
+        target_label="Guangdong 2026 SCUT intelligent manufacturing",
+        card=scut_card,
+        reviewer="operator-a",
+        case_id="scut-im-v0",
+    )
+    append_reviewed_evidence_record(
+        ledger_path=ledger_path,
+        target_label="Other target",
+        card=other_card,
+        reviewer="operator-a",
+        case_id="other-case",
+    )
+
+    cards = load_reviewed_evidence_cards(ledger_path=ledger_path, case_id="scut-im-v0")
+
+    assert [card.taskId for card in cards] == ["employment-market"]
+    assert cards[0].sourceUrl.startswith("operator-review://review-")

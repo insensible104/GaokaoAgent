@@ -52,6 +52,27 @@ def append_reviewed_evidence_record(
     return record
 
 
+def load_reviewed_evidence_cards(
+    *,
+    ledger_path: Path,
+    case_id: str,
+) -> list[ReviewedEvidenceCard]:
+    """Load reviewed evidence cards for one case from the append-only ledger."""
+    if not ledger_path.is_file():
+        return []
+    cards: list[ReviewedEvidenceCard] = []
+    for line in ledger_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            record = ReviewedEvidenceRecord.model_validate_json(line)
+        except ValueError:
+            continue
+        if record.caseId == case_id:
+            cards.append(record.reviewedEvidenceCard)
+    return cards
+
+
 def _new_review_id() -> str:
     return f"review-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
 
@@ -60,4 +81,3 @@ def _with_operator_review_url(card: ReviewedEvidenceCard, review_id: str) -> Rev
     if card.sourceUrl.strip():
         return card
     return card.model_copy(update={"sourceUrl": f"operator-review://{review_id}"})
-

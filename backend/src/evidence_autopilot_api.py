@@ -45,7 +45,9 @@ class EvidenceAutopilotResearchRequest(BaseModel):
     schoolName: str = Field(..., min_length=1)
     majorName: str = Field(..., min_length=1)
     targetYear: int = Field(..., ge=2020, le=2100)
+    caseId: str | None = None
     enableOfficialSourceProvider: bool = False
+    enableReviewedEvidenceLedger: bool = False
     reviewedEvidenceCards: list[ReviewedEvidenceCard] = Field(default_factory=list)
 
 
@@ -141,6 +143,7 @@ def build_evidence_autopilot_research_response(
     request: EvidenceAutopilotResearchRequest,
     official_source_provider=None,
     official_source_providers=None,
+    reviewed_evidence_ledger_path: Path | None = None,
 ) -> EvidenceAutopilotResearchResponse:
     """Build the backend contract consumed by future frontend/live providers."""
     target_label = (
@@ -196,6 +199,17 @@ def build_evidence_autopilot_research_response(
         provider_notes.extend(
             f"Official-source provider warning: {warning}"
             for warning in capture_result.warnings
+        )
+
+    ledger_cards = _load_reviewed_evidence_ledger_cards(
+        request,
+        reviewed_evidence_ledger_path,
+    )
+    if ledger_cards:
+        request.reviewedEvidenceCards.extend(ledger_cards)
+        provider_notes.append(
+            "Reviewed evidence ledger merged: "
+            f"{', '.join(card.taskId for card in ledger_cards)}."
         )
 
     reviewed_merge = _merge_reviewed_evidence_cards(
@@ -261,6 +275,20 @@ def _reviewed_evidence_ledger_path() -> Path:
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[1] / "logs" / "evidence_autopilot" / "reviewed_evidence.jsonl"
+
+
+def _load_reviewed_evidence_ledger_cards(
+    request: EvidenceAutopilotResearchRequest,
+    ledger_path: Path | None,
+) -> list[ReviewedEvidenceCard]:
+    if not request.enableReviewedEvidenceLedger or not request.caseId:
+        return []
+    from reviewed_evidence_store import load_reviewed_evidence_cards
+
+    return load_reviewed_evidence_cards(
+        ledger_path=ledger_path or _reviewed_evidence_ledger_path(),
+        case_id=request.caseId,
+    )
 
 
 def _build_empty_evidence_card(task: EvidenceAutopilotTask) -> EvidenceAutopilotEvidenceCard:

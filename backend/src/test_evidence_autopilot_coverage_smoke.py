@@ -10,8 +10,10 @@ import main
 from evidence_autopilot_api import (
     EvidenceAutopilotEvidenceCard,
     EvidenceAutopilotResearchRequest,
+    ReviewedEvidenceCard,
     build_evidence_autopilot_research_response,
 )
+from reviewed_evidence_store import append_reviewed_evidence_record
 
 
 def test_coverage_summary_marks_uncaptured_p0_tasks_as_not_ready() -> None:
@@ -155,6 +157,50 @@ def test_incomplete_reviewed_evidence_cards_do_not_close_p0_gates() -> None:
     assert "Rejected reviewed evidence cards" in response.claimBoundary
 
 
+def test_research_response_can_merge_case_scoped_reviewed_evidence_ledger(tmp_path) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    append_reviewed_evidence_record(
+        ledger_path=ledger_path,
+        target_label="Guangdong 2026 SCUT intelligent manufacturing",
+        card=ReviewedCardFactory.card(
+            task_id="employment-market",
+            claim="employment_market",
+            source_type="job",
+        ),
+        reviewer="operator-a",
+        case_id="scut-im-v0",
+    )
+    append_reviewed_evidence_record(
+        ledger_path=ledger_path,
+        target_label="Other case",
+        card=ReviewedCardFactory.card(
+            task_id="counter-evidence",
+            claim="counter_evidence",
+            source_type="discussion",
+        ),
+        reviewer="operator-a",
+        case_id="other-case",
+    )
+
+    request = EvidenceAutopilotResearchRequest(
+        province="Guangdong",
+        schoolName="South China University of Technology",
+        majorName="intelligent manufacturing",
+        targetYear=2026,
+        caseId="scut-im-v0",
+        enableReviewedEvidenceLedger=True,
+    )
+
+    response = build_evidence_autopilot_research_response(
+        request,
+        reviewed_evidence_ledger_path=ledger_path,
+    )
+
+    assert "employment-market" in response.evidenceCoverage.capturedTaskIds
+    assert "counter-evidence" not in response.evidenceCoverage.capturedTaskIds
+    assert "Reviewed evidence ledger merged: employment-market" in response.claimBoundary
+
+
 def test_coverage_summary_is_exposed_by_fastapi_endpoint() -> None:
     client = TestClient(main.app)
 
@@ -199,3 +245,25 @@ class StaticProvider:
                 reviewAction="Review source excerpt before delivery.",
             )
         ]
+
+
+class ReviewedCardFactory:
+    @staticmethod
+    def card(
+        *,
+        task_id: str,
+        claim: str,
+        source_type: str,
+    ) -> ReviewedEvidenceCard:
+        return ReviewedEvidenceCard(
+            taskId=task_id,
+            claim=claim,
+            status="captured_candidate",
+            sourceTitle=f"Reviewed source for {task_id}",
+            sourceUrl="",
+            sourceType=source_type,
+            excerpt=f"Reviewed excerpt for {task_id}",
+            capturedAt="2026-06-24",
+            confidence="medium",
+            reviewAction="Use as reviewed operator evidence only.",
+        )

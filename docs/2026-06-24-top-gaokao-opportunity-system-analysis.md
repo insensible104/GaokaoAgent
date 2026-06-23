@@ -81,6 +81,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend API state now preserves and validates backend `evidenceCoverage`, so a malformed or incomplete backend response falls back to the demo boundary instead of appearing connected.
 - Backend accepts request-scoped `reviewedEvidenceCards` so compliant human-captured operator evidence can enter the same coverage gate without pretending that an uncollected task is verified.
 - Backend now has a JSONL reviewed-evidence ledger endpoint that generates `reviewId` values and creates `operator-review://...` source IDs for cards without public URLs.
+- Evidence Autopilot can now load reviewed-evidence ledger cards by `caseId` and merge only matching cards back into coverage.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 
 ### Partially implemented
@@ -208,3 +209,9 @@ This gives the system a compliant path for Boss, WeChat, and counter-evidence wo
 The backend now exposes `POST /api/evidence-autopilot/reviewed-evidence`. It appends one reviewed evidence card to a JSONL ledger, generates a `reviewId`, and returns a normalized card. If the submitted operator card has no public source URL, the endpoint assigns `operator-review://<reviewId>` so downstream Evidence Autopilot can reference an auditable source ID instead of an empty field.
 
 This moves operator evidence from ephemeral request payloads toward an audit trail. It is still not a complete evidence-management system: there is no attachment store, no reviewer permission model, and no UI for browsing prior submissions.
+
+### 2026-06-24 Case-Scoped Ledger Readback
+
+Evidence Autopilot research requests can now opt into reviewed-evidence ledger readback with `caseId` and `enableReviewedEvidenceLedger`. The backend loads matching JSONL records, merges only those reviewed cards into the current evidence cards, and updates `evidenceCoverage` accordingly. Records from other cases are ignored.
+
+This closes the first persistence loop: operator evidence can be submitted, assigned a review ID, stored, and later reused in the same case's research run. The remaining gap is case-level evidence management: listing prior records, attaching screenshots, reviewer permissioning, and showing these records in the delivery UI.
