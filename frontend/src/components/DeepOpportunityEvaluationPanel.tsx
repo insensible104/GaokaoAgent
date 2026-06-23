@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { buildDeepEvidenceCollectionPlan, exampleCollectionContext } from "../lib/deepEvidenceCollectionPlan";
 import { buildEvidenceAutopilotRun } from "../lib/evidenceAutopilot";
+import { buildEvidenceAutopilotSnapshotProviderResults } from "../lib/evidenceAutopilotSnapshotProvider";
 import type { DeepOpportunityEvaluationStatus } from "../lib/deepOpportunityEvaluator";
 
 const statusLabel: Record<DeepOpportunityEvaluationStatus, string> = {
@@ -20,7 +21,13 @@ const statusTone: Record<DeepOpportunityEvaluationStatus, string> = {
 export function DeepOpportunityEvaluationPanel() {
   const autopilotRun = useMemo(() => {
     const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
-    return buildEvidenceAutopilotRun({ plan });
+    const draftRun = buildEvidenceAutopilotRun({ plan });
+    const providerResults = buildEvidenceAutopilotSnapshotProviderResults({
+      plan,
+      searchTasks: draftRun.searchTasks,
+      targetLabel: plan.targetLabel,
+    });
+    return buildEvidenceAutopilotRun({ plan, providerResults });
   }, []);
   const evaluation = autopilotRun.evaluation;
   const p0Failures = evaluation.gateResults.filter((item) => item.priority === "P0" && item.status !== "verified");

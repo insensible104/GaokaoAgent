@@ -2,18 +2,16 @@ import type {
   DeepEvidenceCollectionPlan,
   DeepEvidenceTask,
 } from "./deepEvidenceCollectionPlan";
+import type { EvidenceAutopilotProviderChannel } from "./evidenceAutopilotProvider";
+import type { EvidenceAutopilotProviderResult } from "./evidenceAutopilotProvider";
+import { normalizeEvidenceAutopilotResults } from "./evidenceAutopilotResultNormalizer";
 import {
   buildDeepOpportunityEvaluation,
   type DeepEvidenceResult,
   type DeepOpportunityEvaluation,
 } from "./deepOpportunityEvaluator";
 
-export type EvidenceAutopilotChannel =
-  | "public_web"
-  | "official_pdf"
-  | "wechat_operator"
-  | "job_market_operator"
-  | "manual_review";
+export type EvidenceAutopilotChannel = EvidenceAutopilotProviderChannel;
 
 export interface EvidenceAutopilotSearchTask {
   taskId: string;
@@ -42,12 +40,16 @@ const COMPLIANCE_BOUNDARY =
 export function buildEvidenceAutopilotRun({
   plan,
   capturedEvidence,
+  providerResults,
 }: {
   plan: DeepEvidenceCollectionPlan;
   capturedEvidence?: DeepEvidenceResult[];
+  providerResults?: EvidenceAutopilotProviderResult[];
 }): EvidenceAutopilotRun {
   const searchTasks = plan.tasks.map((task) => buildSearchTask(plan, task));
-  const evidenceResults = capturedEvidence ?? buildDemoEvidenceResults(plan);
+  const evidenceResults = capturedEvidence ?? (
+    providerResults ? normalizeEvidenceAutopilotResults({ plan, providerResults }) : buildDemoEvidenceResults(plan)
+  );
   const evaluation = buildDeepOpportunityEvaluation({ plan, evidenceResults });
 
   return {

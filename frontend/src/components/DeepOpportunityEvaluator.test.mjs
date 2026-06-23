@@ -9,17 +9,19 @@ const libPath = path.join(here, "..", "lib", "deepOpportunityEvaluator.ts");
 const planPath = path.join(here, "..", "lib", "deepEvidenceCollectionPlan.ts");
 const cardModelPath = path.join(here, "..", "lib", "deepOpportunityCard.ts");
 const autopilotPath = path.join(here, "..", "lib", "evidenceAutopilot.ts");
+const normalizerPath = path.join(here, "..", "lib", "evidenceAutopilotResultNormalizer.ts");
 const componentPath = path.join(here, "DeepOpportunityEvaluationPanel.tsx");
 const cardPath = path.join(here, "DeepOpportunityCard.tsx");
 
 const libSource = fs.readFileSync(libPath, "utf8");
 const planSource = fs.readFileSync(planPath, "utf8");
 const cardModelSource = fs.readFileSync(cardModelPath, "utf8");
+const normalizerSource = fs.existsSync(normalizerPath) ? fs.readFileSync(normalizerPath, "utf8") : "";
 const componentSource = fs.readFileSync(componentPath, "utf8");
 const cardSource = fs.readFileSync(cardPath, "utf8");
 const autopilotSource = fs.existsSync(autopilotPath) ? fs.readFileSync(autopilotPath, "utf8") : "";
 
-for (const source of [libSource, planSource, cardModelSource, componentSource, cardSource, autopilotSource]) {
+for (const source of [libSource, planSource, cardModelSource, componentSource, cardSource, autopilotSource, normalizerSource]) {
   assert.equal(source.includes("�"), false, "public demo source must not contain replacement characters");
   assert.equal(
     /(閺|锟|鎷|鏈|鐭|鍙嶈|涓|鏅鸿|骞夸|鍗庡)/.test(source),
@@ -67,9 +69,14 @@ const evaluator = loadTsModule(libSource, {
   "./deepEvidenceCollectionPlan": planModule,
 });
 const cardModel = loadTsModule(cardModelSource);
+const normalizer = loadTsModule(normalizerSource, {
+  "./deepEvidenceCollectionPlan": planModule,
+  "./deepOpportunityEvaluator": evaluator,
+});
 const autopilot = loadTsModule(autopilotSource, {
   "./deepEvidenceCollectionPlan": planModule,
   "./deepOpportunityEvaluator": evaluator,
+  "./evidenceAutopilotResultNormalizer": normalizer,
 });
 
 const {
