@@ -90,12 +90,13 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Report payload can now accept live `reviewedEvidenceRecords` and convert captured case-scoped ledger records into the same audit trail before falling back to fixture evidence.
 - A4 report preview now attempts to load case-scoped reviewed-evidence records when a case id is available from delivery manifests or the game matrix, then persists those records into the preview payload.
 - Reviewed evidence now has a case browser view model that groups records by task, keeps incomplete operator notes pending, exposes missing P0 tasks, and escalates captured counter-evidence.
+- Reviewed evidence now has a compact case browser panel that summarizes captured records, ready-for-report records, pending capture, missing P0 gates, and counter-evidence escalation for reviewer signoff.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model exists, but it still needs a compact reviewer surface, screenshot/redaction handling, and reviewer identity controls to become credible as a production delivery artifact.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel exist, but they still need route wiring, screenshot/redaction handling, and reviewer identity controls to become credible as a production delivery artifact.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -250,3 +251,9 @@ This moves the ledger from "available to a future report caller" to "attempted b
 The frontend now has a reviewed-evidence case browser model. It accepts case-scoped ledger records plus an optional evidence collection plan, filters records to the requested case, groups them by task, and marks each task as `ready_for_report`, `needs_capture`, or `missing`. Captured counter-evidence forces reviewer attention, incomplete operator notes remain pending, and missing P0 task ids stay visible.
 
 This is the first reviewer-workflow data layer. It does not yet render a full browsing surface, collect screenshots, redact personal data, or enforce reviewer permissions.
+
+### 2026-06-24 Reviewed Evidence Reviewer Panel
+
+The frontend now has a compact reviewed-evidence case browser panel. It reuses the case browser view model and converts case-scoped ledger state into reviewer-facing delivery signals: captured count, ready-for-report count, pending capture count, missing P0 count, blocked/needs-review/ready tone, and the next action before report use.
+
+This improves the product loop because the reviewer can see why a case is not deliverable before the family-facing report is treated as final. It is still deliberately narrow: the panel is reusable but not wired into a full delivery route, and it does not yet handle screenshot attachments, redaction, reviewer identity, or permission enforcement.
