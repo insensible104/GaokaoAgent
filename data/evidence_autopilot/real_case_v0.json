@@ -30,13 +30,13 @@
       "taskId": "official-plan-charter",
       "claim": "Official admission rules describe score-priority major allocation without a major-preference grade difference.",
       "status": "captured_candidate",
-      "sourceTitle": "华南理工大学 2025 年本科招生章程",
-      "sourceUrl": "https://xxgk.scut.edu.cn/2025/0529/c132a48230/page.htm",
+      "sourceTitle": "华南理工大学 2026 年本科招生章程",
+      "sourceUrl": "https://xxgk.scut.edu.cn/2026/0528/c132a48854/page.htm",
       "sourceType": "official",
       "excerpt": "学校按投档分数优先，不设置专业志愿级差。",
       "capturedAt": "2026-06-24",
       "confidence": "high",
-      "reviewAction": "Replace with the 2026 charter once published, and verify Guangdong-specific implementation details."
+      "reviewAction": "Verify Guangdong-specific implementation details and the final provincial professional-group table before delivery."
     },
     {
       "taskId": "rank-history-band",

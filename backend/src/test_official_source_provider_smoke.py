@@ -8,6 +8,7 @@ from evidence_autopilot_api import (
     build_evidence_autopilot_research_response,
 )
 from official_source_provider import (
+    ScutOfficialAdmissionPlanProvider,
     ScutOfficialAdmissionScoreProvider,
     capture_official_source_evidence,
     parse_scut_admission_score_rows,
@@ -29,6 +30,23 @@ SCUT_SCORE_HTML = """
     <td>工科试验班(智能装备与先进制造)</td><td>644</td><td>629</td><td>631.9</td>
   </tr>
 </table>
+"""
+
+SCUT_PLAN_HTML = """
+<html><body>
+2026年我校普通类继续实施并升级报满6个不同专业志愿零调剂、大类分流100%任选、
+转专业不限成功次数、辅修专业零壁垒和推免不限校内外等一系列改革政策。
+2026年招生专业和分组进一步优化，2025年录取分数仅供了解。
+</body></html>
+"""
+
+SCUT_CHARTER_HTML = """
+<html><body>
+华南理工大学2026年本科招生章程。
+平行志愿批次普通类考生调档后，服从调剂且符合专业录取要求者不退档。
+学校按投档分数优先的原则从高到低进行专业录取，尊重考生所填的专业志愿顺序，
+不设置专业志愿级差。
+</body></html>
 """
 
 
@@ -71,6 +89,33 @@ def test_scut_provider_builds_captured_candidate_card_from_official_html() -> No
     assert "does not prove 2026 admission probability" in card.reviewAction
 
 
+def test_scut_plan_provider_builds_plan_and_charter_card() -> None:
+    provider = ScutOfficialAdmissionPlanProvider(
+        fetch_plan_html=lambda: SCUT_PLAN_HTML,
+        fetch_charter_html=lambda: SCUT_CHARTER_HTML,
+    )
+    cards = provider.capture(
+        EvidenceAutopilotResearchRequest(
+            province="Guangdong",
+            schoolName="South China University of Technology",
+            majorName="intelligent manufacturing / data engineering opportunity path",
+            targetYear=2026,
+            enableOfficialSourceProvider=True,
+        )
+    )
+
+    assert len(cards) == 1
+    card = cards[0]
+    assert card.taskId == "official-plan-charter"
+    assert card.status == "captured_candidate"
+    assert card.sourceType == "official"
+    assert card.confidence == "high"
+    assert card.sourceUrl == "https://xxgk.scut.edu.cn/2026/0528/c132a48854/page.htm"
+    assert "majors/groups are further optimized" in card.excerpt
+    assert "score-priority admission" in card.excerpt
+    assert "does not prove admission probability" in card.reviewAction
+
+
 def test_research_response_can_opt_into_official_source_provider() -> None:
     provider = ScutOfficialAdmissionScoreProvider(fetch_html=lambda: SCUT_SCORE_HTML)
     response = build_evidence_autopilot_research_response(
@@ -90,6 +135,32 @@ def test_research_response_can_opt_into_official_source_provider() -> None:
     assert any(card.status == "requires_capture" for card in response.evidenceCards)
     assert "Live official-source provider captured public evidence" in response.claimBoundary
     assert "score evidence remains historical context only" in response.claimBoundary
+
+
+def test_research_response_merges_plan_and_score_official_providers() -> None:
+    response = build_evidence_autopilot_research_response(
+        EvidenceAutopilotResearchRequest(
+            province="Guangdong",
+            schoolName="South China University of Technology",
+            majorName="intelligent manufacturing / data engineering opportunity path",
+            targetYear=2026,
+            enableOfficialSourceProvider=True,
+        ),
+        official_source_providers=[
+            ScutOfficialAdmissionPlanProvider(
+                fetch_plan_html=lambda: SCUT_PLAN_HTML,
+                fetch_charter_html=lambda: SCUT_CHARTER_HTML,
+            ),
+            ScutOfficialAdmissionScoreProvider(fetch_html=lambda: SCUT_SCORE_HTML),
+        ],
+    )
+
+    captured_by_task = {
+        card.taskId: card for card in response.evidenceCards if card.status == "captured_candidate"
+    }
+    assert set(captured_by_task) == {"official-plan-charter", "rank-history-band"}
+    assert "majors/groups are further optimized" in captured_by_task["official-plan-charter"].excerpt
+    assert "highest 644, lowest 629, average 631.9" in captured_by_task["rank-history-band"].excerpt
 
 
 class StaticOfficialProvider:
