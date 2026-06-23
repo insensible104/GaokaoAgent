@@ -76,7 +76,7 @@ Manufacturing-data and intelligent-manufacturing evidence may reveal a different
 - Captured at: 2026-06-24
 - Source type: school
 - Claim task id: undergrad-access
-- Accepted excerpt: 学院将科研平台全部面向本科生开放。
+- Accepted excerpt: 学院将科研平台全部面向本科生开放，通过强化科研渗透教学支撑人才培养。
 - Confidence: high
 - Review action: Verify current lab access rules, capacity, and student selection requirements before making a fit claim.
 - What this does not prove: It does not prove any individual undergraduate will enter a lab, publish, intern, or receive advisor support.
