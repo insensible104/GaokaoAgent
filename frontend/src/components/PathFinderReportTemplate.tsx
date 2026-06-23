@@ -6,6 +6,7 @@ import { buildEvidenceAutopilotRun } from "@/lib/evidenceAutopilot";
 import {
   buildEvidenceAutopilotRealCaseProviderResults,
   loadEvidenceAutopilotRealCaseFixture,
+  type EvidenceAutopilotRealCaseFixture,
 } from "@/lib/evidenceAutopilotRealCaseProvider";
 import { buildEvidenceAutopilotSnapshotProviderResults } from "@/lib/evidenceAutopilotSnapshotProvider";
 
@@ -32,6 +33,17 @@ type EvidenceItem = {
   source: string;
   usage: string;
   boundary: string;
+};
+
+type DeepOpportunityEvidenceAuditTrailItem = {
+  reviewId: string;
+  taskId: string;
+  sourceTitle: string;
+  sourceUrl: string;
+  sourceType: string;
+  capturedAt: string;
+  confidence: string;
+  reviewAction: string;
 };
 
 type RiskItem = {
@@ -1955,6 +1967,23 @@ const ReportContentsPage = ({ data }: { data: ReportRenderData }) => {
   );
 };
 
+export function buildDeepOpportunityEvidenceAuditTrail(
+  fixture: EvidenceAutopilotRealCaseFixture,
+): DeepOpportunityEvidenceAuditTrailItem[] {
+  return fixture.evidenceCards
+    .filter((card) => card.status === "captured_candidate" && card.excerpt.trim())
+    .map((card, index) => ({
+      reviewId: `${fixture.caseId}-review-${String(index + 1).padStart(2, "0")}`,
+      taskId: card.taskId,
+      sourceTitle: card.sourceTitle,
+      sourceUrl: card.sourceUrl.trim() || `operator-review://${fixture.caseId}-${card.taskId}`,
+      sourceType: card.sourceType,
+      capturedAt: card.capturedAt,
+      confidence: card.confidence,
+      reviewAction: card.reviewAction,
+    }));
+}
+
 const DeepOpportunityReportPage = () => {
   const card = buildDeepOpportunityCard(exampleDeepOpportunityInput);
   const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
@@ -1962,6 +1991,7 @@ const DeepOpportunityReportPage = () => {
   const realCaseFixture = loadEvidenceAutopilotRealCaseFixture();
   const realCaseProviderResults = buildEvidenceAutopilotRealCaseProviderResults(realCaseFixture);
   const realCaseEvidenceMode = "Real Case v0 auditable opportunity hypothesis";
+  const reviewedEvidenceAuditTrail = buildDeepOpportunityEvidenceAuditTrail(realCaseFixture).slice(0, 4);
   const providerResults = realCaseProviderResults.length > 0
     ? realCaseProviderResults
     : buildEvidenceAutopilotSnapshotProviderResults({
@@ -1970,9 +2000,14 @@ const DeepOpportunityReportPage = () => {
       targetLabel: plan.targetLabel,
     });
   const autopilotRun = buildEvidenceAutopilotRun({ plan, providerResults });
-  const sourceExcerpt = autopilotRun.evidenceResults
-    .flatMap((item) => item.excerpts.map((excerpt) => ({ claim: item.claim, excerpt })))
-    .slice(0, 3);
+  const autopilotSourceExcerpt: Array<{ claim: string; excerpt: string }> = autopilotRun.evidenceResults
+    .flatMap((item) => item.excerpts.map((excerpt) => ({ claim: item.claim, excerpt })));
+  const sourceExcerpt = autopilotSourceExcerpt.slice(0, 3).concat(
+    reviewedEvidenceAuditTrail.slice(0, 2).map((item) => ({
+      claim: "Reviewed Evidence Ledger",
+      excerpt: `case-scoped audit trail ${item.reviewId} ${item.taskId} ${item.sourceTitle} ${item.sourceUrl} reviewAction: ${item.reviewAction}`,
+    })),
+  );
   const pillarByLabel = (label: string) => card.evidencePillars.find((item) => item.label === label);
 
   return (

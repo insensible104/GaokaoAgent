@@ -18,6 +18,7 @@ Date: 2026-06-24
 - Updated the frontend Evidence Autopilot API adapter so callers can pass `caseId` and `enableReviewedEvidenceLedger` into backend research requests without changing the school/major context model.
 - Added `GET /api/evidence-autopilot/reviewed-evidence/{case_id}` to list reviewed-evidence ledger records for one case without mixing records from other cases.
 - Added a frontend API adapter for the reviewed-evidence listing endpoint, with response validation before records can be used by future delivery views.
+- Added a report-level reviewed-evidence audit trail for the Deep Opportunity report page. It surfaces case-scoped review IDs, source IDs/URLs, and `reviewAction` notes from captured Real Case v0 evidence instead of leaving the ledger only in backend/API state.
 
 ## What This Proves
 
@@ -33,6 +34,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not make a case counselor-ready while `evidenceCoverage.missingP0TaskIds` remains non-empty.
 - It does not accept incomplete operator notes as evidence; cards without source URL/review ID and excerpt remain missing evidence.
 - It does not yet provide a full reviewer workflow with authentication, screenshots, redaction, or case-level evidence browsing.
+- The report audit trail is still fixture-backed; it does not yet render live case ledger records from `GET /api/evidence-autopilot/reviewed-evidence/{case_id}`.
 
 ## Verification Commands
 
@@ -80,6 +82,7 @@ git diff --check
 - Reviewed-evidence listing smoke test passed: store and API return only records matching the requested `caseId`.
 - Frontend reviewed-evidence listing adapter smoke test passed: case-scoped records are fetched and malformed record lists are rejected.
 - Backend focused smoke tests passed: 23 passed, 1 existing Pydantic deprecation warning.
+- Report reviewed-evidence audit trail smoke test passed: Deep Opportunity report now exposes case-scoped audit trail labels, generated review IDs, `operator-review://` fallback source IDs, and review actions.
 - `git diff --check` passed.
 
 ## Remaining Work

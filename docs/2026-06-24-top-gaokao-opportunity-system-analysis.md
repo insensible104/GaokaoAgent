@@ -86,12 +86,13 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Backend can now list reviewed-evidence ledger records for one case through a read-only case-scoped endpoint.
 - Frontend API adapter can now fetch and validate case-scoped reviewed-evidence ledger records.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
+- Report template now carries a reviewed-evidence audit trail into the Deep Opportunity page, including case-scoped review IDs, source IDs/URLs, and `reviewAction` notes from captured Real Case v0 evidence.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists, but it still needs one real captured case to become credible as a product artifact.
+- Report integration exists and now exposes fixture-backed reviewed evidence audit details, but it still needs live ledger records and a reviewer workflow to become credible as a production delivery artifact.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
