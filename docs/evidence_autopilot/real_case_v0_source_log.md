@@ -39,7 +39,7 @@ Manufacturing-data and intelligent-manufacturing evidence may reveal a different
 - URL: https://xxgk.scut.edu.cn/2025/0529/c132a48230/page.htm
 - Captured at: 2026-06-24
 - Source type: official
-- Claim task id: official-admission-rule
+- Claim task id: official-plan-charter
 - Accepted excerpt: 学校按投档分数优先，不设置专业志愿级差。
 - Confidence: high
 - Review action: Replace with the 2026 charter once published, and verify Guangdong-specific implementation details.

@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { buildDeepEvidenceCollectionPlan, exampleCollectionContext } from "../lib/deepEvidenceCollectionPlan";
+import { buildDeepEvidenceCollectionPlan } from "../lib/deepEvidenceCollectionPlan";
 import { buildEvidenceAutopilotRun } from "../lib/evidenceAutopilot";
 import {
+  buildEvidenceAutopilotRealCaseState,
   fetchEvidenceAutopilotResearch,
   type EvidenceAutopilotApiState,
   type EvidenceAutopilotBackendStatus,
 } from "../lib/evidenceAutopilotApi";
+import {
+  buildEvidenceAutopilotRealCaseProviderResults,
+  loadEvidenceAutopilotRealCaseFixture,
+} from "../lib/evidenceAutopilotRealCaseProvider";
 import { buildEvidenceAutopilotSnapshotProviderResults } from "../lib/evidenceAutopilotSnapshotProvider";
 import type { DeepOpportunityEvaluationStatus } from "../lib/deepOpportunityEvaluator";
 
@@ -27,11 +32,19 @@ const backendStatusLabel: Record<EvidenceAutopilotBackendStatus, string> = {
   demo_snapshot: "Demo snapshot",
   backend_connected: "Backend connected",
   backend_failed_snapshot_fallback: "Demo fallback",
+  real_case_fixture: "Real case fixture",
 };
 
 export function DeepOpportunityEvaluationPanel() {
   const baseRun = useMemo(() => {
-    const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
+    const realCaseFixture = loadEvidenceAutopilotRealCaseFixture();
+    const context = {
+      province: realCaseFixture.candidate.province,
+      schoolName: realCaseFixture.target.schoolName,
+      majorName: realCaseFixture.target.majorName,
+      targetYear: realCaseFixture.candidate.targetYear,
+    };
+    const plan = buildDeepEvidenceCollectionPlan(context);
     const draftRun = buildEvidenceAutopilotRun({ plan });
     const providerResults = buildEvidenceAutopilotSnapshotProviderResults({
       plan,
@@ -39,6 +52,8 @@ export function DeepOpportunityEvaluationPanel() {
       targetLabel: plan.targetLabel,
     });
     return {
+      context,
+      realCaseFixture,
       plan,
       searchTasks: draftRun.searchTasks,
       targetLabel: plan.targetLabel,
@@ -57,8 +72,25 @@ export function DeepOpportunityEvaluationPanel() {
 
   useEffect(() => {
     let cancelled = false;
+    const realCaseProviderResults = buildEvidenceAutopilotRealCaseProviderResults(baseRun.realCaseFixture);
+    if (
+      realCaseProviderResults.length > 0 &&
+      baseRun.realCaseFixture.target.schoolName === baseRun.context.schoolName &&
+      baseRun.realCaseFixture.target.majorName === baseRun.context.majorName
+    ) {
+      if (!cancelled) {
+        setApiState(buildEvidenceAutopilotRealCaseState({
+          providerResults: realCaseProviderResults,
+          claimBoundary: baseRun.realCaseFixture.claimBoundary,
+        }));
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
+
     fetchEvidenceAutopilotResearch({
-      context: exampleCollectionContext,
+      context: baseRun.context,
       fallback: {
         plan: baseRun.plan,
         searchTasks: baseRun.searchTasks,
@@ -70,7 +102,7 @@ export function DeepOpportunityEvaluationPanel() {
     return () => {
       cancelled = true;
     };
-  }, [baseRun.plan, baseRun.searchTasks, baseRun.targetLabel]);
+  }, [baseRun.context, baseRun.plan, baseRun.realCaseFixture, baseRun.searchTasks, baseRun.targetLabel]);
 
   const evaluation = autopilotRun.evaluation;
   const p0Failures = evaluation.gateResults.filter((item) => item.priority === "P0" && item.status !== "verified");
