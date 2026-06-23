@@ -12,6 +12,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buildApiUrl } from "@/lib/api";
+import { ReviewedEvidenceCaseBrowserPanel } from "@/components/ReviewedEvidenceCaseBrowserPanel";
+import { buildDeliveryReviewedEvidencePlan } from "@/lib/deliveryReviewedEvidencePlan";
+import { fetchReviewedEvidenceRecords, type ReviewedEvidenceRecord } from "@/lib/evidenceAutopilotApi";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameMatrix, MajorGroupRow } from "@/components/GameMatrixView";
 
@@ -504,9 +507,15 @@ export function InternalDeliveryReview({
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
+  const [reviewedEvidenceRecords, setReviewedEvidenceRecords] = useState<ReviewedEvidenceRecord[]>([]);
+  const [reviewedEvidenceError, setReviewedEvidenceError] = useState<string | null>(null);
 
   const canRun = Boolean(profile?.score && profile?.subject_group && report);
   const plan = useMemo(() => buildPlanFromGameMatrix(profile, gameMatrix), [profile, gameMatrix]);
+  const reviewedEvidencePlan = useMemo(
+    () => buildDeliveryReviewedEvidencePlan({ profile, gameMatrix }),
+    [profile, gameMatrix]
+  );
   const orderedArtifacts = useMemo(() => {
     if (!preview) return [];
     const preferredOrder = [
@@ -582,6 +591,8 @@ export function InternalDeliveryReview({
     if (!profile || !report) return;
     setIsLoading(true);
     setError(null);
+    setReviewedEvidenceRecords([]);
+    setReviewedEvidenceError(null);
 
     try {
       const response = await fetch(buildApiUrl("/api/delivery/preview"), {
@@ -603,6 +614,14 @@ export function InternalDeliveryReview({
       const nextPreview: DeliveryPreview = await response.json();
       setPreview(nextPreview);
       onManifestGenerated?.(nextPreview.manifest);
+      const reviewedEvidenceCaseId = nextPreview.manifest.case_id || nextPreview.case_id;
+      try {
+        const listing = await fetchReviewedEvidenceRecords({ caseId: reviewedEvidenceCaseId });
+        setReviewedEvidenceRecords(listing.records);
+      } catch (reviewedEvidenceErr) {
+        const reason = reviewedEvidenceErr instanceof Error ? reviewedEvidenceErr.message : String(reviewedEvidenceErr);
+        setReviewedEvidenceError(`operator-review ledger unavailable: ${reason}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "交付预检失败");
     } finally {
@@ -1206,6 +1225,20 @@ export function InternalDeliveryReview({
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-800">case-scoped reviewed evidence</div>
+            {reviewedEvidenceError && (
+              <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                {reviewedEvidenceError}
+              </div>
+            )}
+            <ReviewedEvidenceCaseBrowserPanel
+              caseId={preview.manifest.case_id || preview.case_id}
+              records={reviewedEvidenceRecords}
+              plan={reviewedEvidencePlan}
+            />
           </div>
 
           <div className="rounded-lg border border-slate-200 p-4">

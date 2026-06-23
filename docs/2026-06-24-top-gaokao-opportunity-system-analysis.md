@@ -91,12 +91,13 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - A4 report preview now attempts to load case-scoped reviewed-evidence records when a case id is available from delivery manifests or the game matrix, then persists those records into the preview payload.
 - Reviewed evidence now has a case browser view model that groups records by task, keeps incomplete operator notes pending, exposes missing P0 tasks, and escalates captured counter-evidence.
 - Reviewed evidence now has a compact case browser panel that summarizes captured records, ready-for-report records, pending capture, missing P0 gates, and counter-evidence escalation for reviewer signoff.
+- Internal delivery review now attempts case-scoped reviewed-evidence ledger readback after a delivery preview is generated and renders the compact reviewer panel before next-action and artifact preview sections.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel exist, but they still need route wiring, screenshot/redaction handling, and reviewer identity controls to become credible as a production delivery artifact.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, but they still need screenshot/redaction handling and reviewer identity controls to become credible as a production delivery artifact.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -257,3 +258,9 @@ This is the first reviewer-workflow data layer. It does not yet render a full br
 The frontend now has a compact reviewed-evidence case browser panel. It reuses the case browser view model and converts case-scoped ledger state into reviewer-facing delivery signals: captured count, ready-for-report count, pending capture count, missing P0 count, blocked/needs-review/ready tone, and the next action before report use.
 
 This improves the product loop because the reviewer can see why a case is not deliverable before the family-facing report is treated as final. It is still deliberately narrow: the panel is reusable but not wired into a full delivery route, and it does not yet handle screenshot attachments, redaction, reviewer identity, or permission enforcement.
+
+### 2026-06-24 Internal Delivery Reviewed-Evidence Gate
+
+Internal delivery review now uses the reviewed-evidence panel as a pre-report gate. After the backend delivery preview returns a case id, the frontend attempts `GET /api/evidence-autopilot/reviewed-evidence/{case_id}`, builds a delivery-derived evidence collection plan, and renders the case-scoped evidence state before next actions and artifact download controls.
+
+This moves reviewed evidence from a standalone model into the delivery workflow. The boundary remains important: ledger readback failure is shown as an internal warning and does not fabricate evidence, while missing P0 evidence and counter-evidence remain reviewer-facing blockers rather than family-facing claims.
