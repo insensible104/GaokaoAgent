@@ -96,6 +96,14 @@ const localRequire = (specifier) => {
       buildEvidenceAutopilotSnapshotProviderResults: () => [],
     };
   }
+  if (specifier === "@/lib/evidenceAutopilotRealCaseProvider") {
+    return {
+      loadEvidenceAutopilotRealCaseFixture: () => ({
+        claimBoundary: "Real Case v0 fixture supports an auditable opportunity hypothesis only.",
+      }),
+      buildEvidenceAutopilotRealCaseProviderResults: () => [],
+    };
+  }
   throw new Error(`Unexpected require: ${specifier}`);
 };
 

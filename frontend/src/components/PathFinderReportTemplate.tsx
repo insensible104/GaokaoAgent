@@ -3,6 +3,10 @@ import { buildDeliveryReadinessSummary, type DeliveryReadinessSummary } from "@/
 import { buildDeepEvidenceCollectionPlan, exampleCollectionContext } from "@/lib/deepEvidenceCollectionPlan";
 import { buildDeepOpportunityCard, exampleDeepOpportunityInput } from "@/lib/deepOpportunityCard";
 import { buildEvidenceAutopilotRun } from "@/lib/evidenceAutopilot";
+import {
+  buildEvidenceAutopilotRealCaseProviderResults,
+  loadEvidenceAutopilotRealCaseFixture,
+} from "@/lib/evidenceAutopilotRealCaseProvider";
 import { buildEvidenceAutopilotSnapshotProviderResults } from "@/lib/evidenceAutopilotSnapshotProvider";
 
 type Metric = {
@@ -1955,11 +1959,16 @@ const DeepOpportunityReportPage = () => {
   const card = buildDeepOpportunityCard(exampleDeepOpportunityInput);
   const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
   const draftRun = buildEvidenceAutopilotRun({ plan });
-  const providerResults = buildEvidenceAutopilotSnapshotProviderResults({
-    plan,
-    searchTasks: draftRun.searchTasks,
-    targetLabel: plan.targetLabel,
-  });
+  const realCaseFixture = loadEvidenceAutopilotRealCaseFixture();
+  const realCaseProviderResults = buildEvidenceAutopilotRealCaseProviderResults(realCaseFixture);
+  const realCaseEvidenceMode = "Real Case v0 auditable opportunity hypothesis";
+  const providerResults = realCaseProviderResults.length > 0
+    ? realCaseProviderResults
+    : buildEvidenceAutopilotSnapshotProviderResults({
+      plan,
+      searchTasks: draftRun.searchTasks,
+      targetLabel: plan.targetLabel,
+    });
   const autopilotRun = buildEvidenceAutopilotRun({ plan, providerResults });
   const sourceExcerpt = autopilotRun.evidenceResults
     .flatMap((item) => item.excerpts.map((excerpt) => ({ claim: item.claim, excerpt })))
@@ -1990,6 +1999,7 @@ const DeepOpportunityReportPage = () => {
         <div className="counter-evidence">
           <p className="small-label">Evidence Autopilot · 机会雷达</p>
           <p>短期录取 / 中期升学 / 长期职业</p>
+          <p>{realCaseEvidenceMode}: {realCaseFixture.claimBoundary}</p>
           <div className="path-grid">
             <article className="path-card">
               <strong>{autopilotRun.evaluation.opportunityScore}</strong>
