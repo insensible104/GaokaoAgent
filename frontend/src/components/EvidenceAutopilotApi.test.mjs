@@ -126,6 +126,34 @@ assert.equal(connected.claimBoundary, backendResponse.claimBoundary);
 
 const plan = planModule.buildDeepEvidenceCollectionPlan(planModule.exampleCollectionContext);
 const draftRun = autopilot.buildEvidenceAutopilotRun({ plan });
+
+const malformedBackendFallback = await api.fetchEvidenceAutopilotResearch({
+  context,
+  fallback: {
+    plan,
+    searchTasks: draftRun.searchTasks,
+    targetLabel: plan.targetLabel,
+  },
+  fetchImpl: async () => ({
+    ok: true,
+    async json() {
+      return {
+        ...backendResponse,
+        evidenceCards: [
+          {
+            ...backendResponse.evidenceCards[0],
+            sourceType: "unsupported-blog-source",
+            confidence: "certain",
+          },
+        ],
+      };
+    },
+  }),
+});
+assert.equal(malformedBackendFallback.status, "backend_failed_snapshot_fallback");
+assert.match(malformedBackendFallback.error, /invalid backend evidence card/i);
+assert(malformedBackendFallback.providerResults.length > 0);
+
 const fallback = await api.fetchEvidenceAutopilotResearch({
   context,
   fallback: {

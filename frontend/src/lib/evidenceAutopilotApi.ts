@@ -19,6 +19,9 @@ interface BackendEvidenceCard {
   confidence: EvidenceAutopilotProviderResult["confidence"];
 }
 
+const VALID_SOURCE_TYPES = new Set(["official", "school", "paper", "job", "wechat", "discussion", "other"]);
+const VALID_CONFIDENCE_LEVELS = new Set(["high", "medium", "low"]);
+
 export interface EvidenceAutopilotBackendResponse {
   success: boolean;
   targetLabel: string;
@@ -57,7 +60,10 @@ export function mapBackendEvidenceCardsToProviderResults(
   response: EvidenceAutopilotBackendResponse,
 ): EvidenceAutopilotProviderResult[] {
   return response.evidenceCards
-    .filter((card) => card.sourceUrl.trim() && card.excerpt.trim())
+    .filter((card, index) => {
+      assertValidBackendEvidenceCard(card, index);
+      return card.sourceUrl.trim() && card.excerpt.trim();
+    })
     .map((card, index) => ({
       requestId: `backend-${card.taskId}-${index + 1}`,
       taskId: card.taskId,
@@ -143,5 +149,17 @@ function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
   if (!value || typeof value !== "object") {
     throw new Error("backend response was not an object");
   }
+  if (!Array.isArray((value as EvidenceAutopilotBackendResponse).evidenceCards)) {
+    throw new Error("backend response evidenceCards was not an array");
+  }
   return value as EvidenceAutopilotBackendResponse;
+}
+
+function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number): void {
+  if (!VALID_SOURCE_TYPES.has(card.sourceType)) {
+    throw new Error(`invalid backend evidence card ${index + 1}: sourceType ${card.sourceType}`);
+  }
+  if (!VALID_CONFIDENCE_LEVELS.has(card.confidence)) {
+    throw new Error(`invalid backend evidence card ${index + 1}: confidence ${card.confidence}`);
+  }
 }
