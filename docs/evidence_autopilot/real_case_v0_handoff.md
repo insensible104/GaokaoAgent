@@ -27,6 +27,7 @@ Date: 2026-06-24
 - Expanded the compact panel record rows to show audit fields: `sourceId`, `reviewer`, and `reviewAction`, so the reviewer can trace why a record is usable or still needs capture.
 - Added review-control gates for operator-review evidence. Cards using `operator-review://...` now need at least one attachment, a non-pending redaction status, and a structured reviewer identity before they can close a P0 Evidence Autopilot gate.
 - Updated the frontend reviewed-evidence listing contract and panel so `attachments`, `redactionStatus`, and `reviewerIdentity` are preserved and shown to internal reviewers.
+- Added `POST /api/evidence-autopilot/reviewed-evidence/attachments` and a local reviewed-evidence attachment store. The endpoint decodes base64 screenshot/PDF/image payloads, writes the binary file, writes a JSON metadata sidecar with case/task/reviewer IDs and SHA-256, and returns a `ReviewedEvidenceAttachment` that can be attached to an operator-review card.
 
 ## What This Proves
 
@@ -41,9 +42,9 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not validate WeChat, Boss, or other operator evidence.
 - It does not make a case counselor-ready while `evidenceCoverage.missingP0TaskIds` remains non-empty.
 - It does not accept incomplete operator notes as evidence; cards without source URL/review ID and excerpt remain missing evidence.
-- It does not yet provide a full reviewer workflow with authentication, screenshots, redaction, or case-level evidence browsing.
-- The report preview can attempt case-scoped ledger loading, but there is still no full case evidence browser, screenshot attachment store, redaction workflow, or reviewer permission model.
-- The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata, but there is still no binary attachment store, redaction UI, authentication, or permission enforcement system.
+- It does not yet provide a full reviewer workflow with authentication, redaction UI, or permission enforcement.
+- The report preview can attempt case-scoped ledger loading, but there is still no full redaction workflow or reviewer permission model.
+- The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata. Binary attachment storage now exists as a local backend store, but there is still no frontend redaction UI, authentication, or permission enforcement system.
 
 ## Verification Commands
 
@@ -99,12 +100,13 @@ git diff --check
 - Internal delivery reviewed-evidence wiring test passed: delivery preview wiring imports the panel, fetches case-scoped ledger records, and builds a delivery-derived evidence collection plan for the reviewer surface.
 - Operator-review control gate test passed: reviewed cards without attachments, redaction status, and reviewer identity no longer close P0 gates.
 - Reviewed-evidence store test passed: attachment, redaction, and reviewer identity metadata are persisted in the JSONL ledger.
+- Reviewed-evidence attachment store test passed: binary attachment bytes and JSON metadata sidecars are persisted, and the upload endpoint returns a reusable `storageRef`, `attachmentId`, byte size, and SHA-256.
 - `git diff --check` passed.
 
 ## Remaining Work
 
 - Add more official-source providers behind the existing provider registry, starting with final 2026 provincial professional-group tables, province-side plan data, and external outcome validation sources.
 - Add durable operator capture workflow for semi-closed sources.
-- Add the binary screenshot attachment store, redaction UI, and reviewer authentication/permission enforcement around the metadata contract.
+- Add frontend redaction UI and reviewer authentication/permission enforcement around the attachment and metadata contracts.
 - Connect quant positioning and 2025 backtest signals to case selection.
 - Run outcome validation before making any effectiveness claim.

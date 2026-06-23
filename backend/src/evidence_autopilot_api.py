@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from subgraphs.deep_research import build_evidence_autopilot_research_topics
@@ -152,6 +152,30 @@ class ReviewedEvidenceListingResponse(BaseModel):
     caseId: str
     recordCount: int
     records: list
+
+
+class ReviewedEvidenceAttachmentUploadRequest(BaseModel):
+    """Upload one operator-reviewed evidence attachment into local storage."""
+
+    caseId: str = Field(..., min_length=1)
+    taskId: str = Field(..., min_length=1)
+    reviewerId: str = Field(..., min_length=1)
+    kind: ReviewedEvidenceAttachmentKind
+    contentType: str = Field(..., min_length=1)
+    contentBase64: str = Field(..., min_length=1)
+    capturedAt: str = Field(..., min_length=1)
+    redactionStatus: ReviewedEvidenceRedactionStatus
+    originalFileName: str | None = None
+
+
+class ReviewedEvidenceAttachmentUploadResponse(BaseModel):
+    """Stored reviewed-evidence attachment response."""
+
+    success: bool
+    attachment: ReviewedEvidenceAttachment
+    byteSize: int
+    sha256: str
+    metadataPath: str
 
 
 class ReviewedEvidenceMergeResult(BaseModel):
@@ -322,11 +346,46 @@ async def list_reviewed_evidence(
     )
 
 
+@router.post(
+    "/reviewed-evidence/attachments",
+    response_model=ReviewedEvidenceAttachmentUploadResponse,
+)
+async def upload_reviewed_evidence_attachment(
+    request: ReviewedEvidenceAttachmentUploadRequest,
+) -> ReviewedEvidenceAttachmentUploadResponse:
+    """Persist one binary attachment for operator-reviewed evidence."""
+    from reviewed_evidence_attachment_store import save_reviewed_evidence_attachment
+
+    try:
+        saved = save_reviewed_evidence_attachment(
+            storage_root=_reviewed_evidence_attachment_dir(),
+            case_id=request.caseId,
+            task_id=request.taskId,
+            reviewer_id=request.reviewerId,
+            kind=request.kind,
+            content_type=request.contentType,
+            content_base64=request.contentBase64,
+            captured_at=request.capturedAt,
+            redaction_status=request.redactionStatus,
+            original_file_name=request.originalFileName,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ReviewedEvidenceAttachmentUploadResponse(success=True, **saved.model_dump())
+
+
 def _reviewed_evidence_ledger_path() -> Path:
     configured = os.getenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", "").strip()
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[1] / "logs" / "evidence_autopilot" / "reviewed_evidence.jsonl"
+
+
+def _reviewed_evidence_attachment_dir() -> Path:
+    configured = os.getenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", "").strip()
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[1] / "logs" / "evidence_autopilot" / "attachments"
 
 
 def _load_reviewed_evidence_ledger_cards(

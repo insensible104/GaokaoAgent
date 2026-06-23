@@ -1,0 +1,121 @@
+"""Local file store for reviewed-evidence attachments."""
+
+from __future__ import annotations
+
+import base64
+import binascii
+import hashlib
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
+
+from pydantic import BaseModel
+
+from evidence_autopilot_api import (
+    ReviewedEvidenceAttachment,
+    ReviewedEvidenceAttachmentKind,
+    ReviewedEvidenceRedactionStatus,
+)
+
+
+class SavedReviewedEvidenceAttachment(BaseModel):
+    """Stored attachment plus audit metadata needed by reviewed evidence cards."""
+
+    attachment: ReviewedEvidenceAttachment
+    byteSize: int
+    sha256: str
+    metadataPath: str
+
+
+def save_reviewed_evidence_attachment(
+    *,
+    storage_root: Path,
+    case_id: str,
+    task_id: str,
+    reviewer_id: str,
+    kind: ReviewedEvidenceAttachmentKind,
+    content_type: str,
+    content_base64: str,
+    captured_at: str,
+    redaction_status: ReviewedEvidenceRedactionStatus,
+    original_file_name: str | None = None,
+) -> SavedReviewedEvidenceAttachment:
+    """Decode and persist one operator-reviewed attachment with sidecar metadata."""
+    raw_bytes = _decode_base64(content_base64)
+    attachment_id = _new_attachment_id()
+    safe_case_id = _safe_path_segment(case_id)
+    suffix = _suffix_for(content_type, original_file_name)
+    storage_ref = f"reviewed-evidence/{safe_case_id}/{attachment_id}{suffix}"
+    storage_path = storage_root / storage_ref
+    storage_path.parent.mkdir(parents=True, exist_ok=True)
+    storage_path.write_bytes(raw_bytes)
+
+    digest = hashlib.sha256(raw_bytes).hexdigest()
+    attachment = ReviewedEvidenceAttachment(
+        attachmentId=attachment_id,
+        kind=kind,
+        storageRef=storage_ref,
+        capturedAt=captured_at,
+        redactionStatus=redaction_status,
+    )
+    metadata = {
+        "attachmentId": attachment_id,
+        "caseId": case_id,
+        "taskId": task_id,
+        "reviewerId": reviewer_id,
+        "kind": kind,
+        "contentType": content_type,
+        "originalFileName": original_file_name or "",
+        "byteSize": len(raw_bytes),
+        "sha256": digest,
+        "storageRef": storage_ref,
+        "capturedAt": captured_at,
+        "redactionStatus": redaction_status,
+        "storedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    metadata_path = storage_path.with_suffix(storage_path.suffix + ".json")
+    metadata_path.write_text(
+        json.dumps(metadata, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    return SavedReviewedEvidenceAttachment(
+        attachment=attachment,
+        byteSize=len(raw_bytes),
+        sha256=digest,
+        metadataPath=str(metadata_path),
+    )
+
+
+def _decode_base64(content_base64: str) -> bytes:
+    try:
+        raw_bytes = base64.b64decode(content_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("contentBase64 must be valid base64") from exc
+    if not raw_bytes:
+        raise ValueError("attachment content must not be empty")
+    return raw_bytes
+
+
+def _new_attachment_id() -> str:
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"att-{timestamp}-{uuid4().hex[:8]}"
+
+
+def _safe_path_segment(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", value.strip()).strip("-")
+    return cleaned[:80] or "case"
+
+
+def _suffix_for(content_type: str, original_file_name: str | None) -> str:
+    suffix = Path(original_file_name or "").suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".webp", ".pdf"}:
+        return suffix
+    return {
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+        "image/webp": ".webp",
+        "application/pdf": ".pdf",
+    }.get(content_type.lower().strip(), ".bin")

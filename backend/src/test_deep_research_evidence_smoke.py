@@ -9,7 +9,7 @@ from models.audit_result import AuditStatus
 from subgraphs.deep_research import _evidence_appendix, execute_research, synthesize_report
 
 
-def test_deep_research_fallback_generates_evidence_cards() -> None:
+def test_deep_research_fallback_generates_readable_evidence_cards() -> None:
     original_key = os.environ.pop("TAVILY_API_KEY", None)
     try:
         result = execute_research(
@@ -40,6 +40,7 @@ def test_deep_research_fallback_generates_evidence_cards() -> None:
     appendix = _evidence_appendix(cards)
     assert "引用与证据附录" in appendix
     assert "fallback_no_web_search" in appendix
+    assert_no_mojibake(appendix)
 
 
 def test_slow_loop_audit_requires_evidence_appendix_and_cards() -> None:
@@ -69,7 +70,7 @@ def test_slow_loop_audit_requires_evidence_appendix_and_cards() -> None:
     assert any("不可直接用于预测" in issue for issue in with_cards.issues)
 
 
-def test_synthesize_report_preserves_evidence_appendix() -> None:
+def test_synthesize_report_preserves_readable_evidence_appendix() -> None:
     result = synthesize_report(
         {
             "research_topic": "测试专业组招生计划",
@@ -92,10 +93,16 @@ def test_synthesize_report_preserves_evidence_appendix() -> None:
 
     assert "引用与证据附录" in result["research_report"]
     assert "official_or_school" in result["research_report"]
+    assert_no_mojibake(result["research_report"])
+
+
+def assert_no_mojibake(text: str) -> None:
+    markers = ["锛", "鍙", "鎷", "骞", "涓", "寰", "鏍", "€", "�"]
+    assert not any(marker in text for marker in markers), text
 
 
 if __name__ == "__main__":
-    test_deep_research_fallback_generates_evidence_cards()
+    test_deep_research_fallback_generates_readable_evidence_cards()
     test_slow_loop_audit_requires_evidence_appendix_and_cards()
-    test_synthesize_report_preserves_evidence_appendix()
+    test_synthesize_report_preserves_readable_evidence_appendix()
     print("deep research evidence smoke tests passed")
