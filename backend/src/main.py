@@ -31,6 +31,7 @@ from recommendation.student_profile_assessment import (
 )
 from utils.audit_logger import audit_logger
 from utils.rate_limiter import RateLimiter
+from evidence_autopilot_api import router as evidence_autopilot_router
 
 
 logging.basicConfig(level=logging.INFO)
@@ -116,6 +117,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+app.include_router(evidence_autopilot_router)
 
 
 class SubjectScores(BaseModel):
@@ -547,6 +549,7 @@ def get_runtime_status() -> dict[str, Any]:
                 "/api/delivery/preview",
                 "/api/delivery/portfolio",
                 "/api/delivery/manifests/recent",
+                "/api/evidence-autopilot/research",
                 "/api/stats",
             ],
             "cli_commands": [

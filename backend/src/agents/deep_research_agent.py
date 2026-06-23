@@ -7,7 +7,32 @@ from langchain_core.messages import AIMessage
 from models.research_state import DeepResearchState
 from models.state import SupervisorState
 from subgraphs import deep_research_subgraph
+from subgraphs.deep_research import build_evidence_autopilot_research_topics
 from utils.agent_bus import get_messages_for_stage, publish_agent_message, remember
+
+
+def build_deep_research_topic_from_state(state: SupervisorState) -> str | None:
+    """Build a candidate-specific topic when Evidence Autopilot target data exists."""
+    explicit_profile = state.get("explicit_profile") or {}
+    target = explicit_profile.get("evidence_autopilot_target") if isinstance(explicit_profile, dict) else None
+    if not isinstance(target, dict):
+        return None
+    required = ("province", "school_name", "major_name", "target_year")
+    if not all(target.get(key) for key in required):
+        return None
+    tasks = build_evidence_autopilot_research_topics(
+        province=str(target["province"]),
+        school_name=str(target["school_name"]),
+        major_name=str(target["major_name"]),
+        target_year=int(target["target_year"]),
+    )
+    queries = "\n".join(f"- {task['title']}: {task['query']}" for task in tasks[:8])
+    return (
+        f"Evidence Autopilot target: {target['province']} {target['target_year']} "
+        f"{target['school_name']} {target['major_name']}\n"
+        "Research tasks:\n"
+        f"{queries}"
+    )
 
 
 def deep_research_agent_node(state: SupervisorState) -> dict:
@@ -53,7 +78,11 @@ def deep_research_agent_node(state: SupervisorState) -> dict:
         }
 
     user_message = messages[-1].content if hasattr(messages[-1], "content") else str(messages[-1])
-    research_topic = state.get("research_topic") or user_message
+    research_topic = (
+        state.get("research_topic")
+        or build_deep_research_topic_from_state(state)
+        or user_message
+    )
 
     subgraph_input: DeepResearchState = {
         "research_topic": research_topic,

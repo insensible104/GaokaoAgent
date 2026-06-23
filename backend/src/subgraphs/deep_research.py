@@ -29,6 +29,104 @@ class ReflectionResult(BaseModel):
     reasoning: str = Field(default="", description="Short explanation")
 
 
+def build_evidence_autopilot_research_topics(
+    *,
+    province: str,
+    school_name: str,
+    major_name: str,
+    target_year: int,
+) -> list[dict[str, Any]]:
+    """Build candidate-specific Evidence Autopilot research tasks.
+
+    These tasks are provider requests, not verified evidence. A task may become
+    evidence only after source title, URL, excerpt, capture time, and confidence
+    are collected by a public provider or a compliant human operator.
+    """
+    target_label = f"{province} {target_year} {school_name} {major_name}"
+    return [
+        {
+            "id": "official-plan-charter",
+            "claim": "official_admission",
+            "title": "官方招生计划与章程核验",
+            "channel": "official_pdf",
+            "priority": "P0",
+            "query": f"{target_label} 招生章程 招生计划 专业组 选科要求 校区 PDF",
+            "required_fields": ["来源链接", "发布日期", "学校代码", "专业组代码", "计划数", "选科要求", "校区", "原文摘录"],
+            "review_action": "核验官方 PDF 或招生网页面，保留原文摘录后才能进入量化定位。",
+        },
+        {
+            "id": "rank-history-band",
+            "claim": "rank_history",
+            "title": "历史位次与计划变化复核",
+            "channel": "official_pdf",
+            "priority": "P0",
+            "query": f"{province} {school_name} {major_name} 历年投档 最低位次 计划数 {target_year - 3}-{target_year - 1}",
+            "required_fields": ["年份", "最低分", "最低位次", "计划数", "第二来源", "原文摘录"],
+            "review_action": "至少使用省考试院和学校来源交叉复核，不把位次外推写成录取承诺。",
+        },
+        {
+            "id": "faculty-research-direction",
+            "claim": "faculty_research",
+            "title": "科研方向与课题组地图",
+            "channel": "public_web",
+            "priority": "P0",
+            "query": f"{school_name} {major_name} 学院 实验室 导师 课题组 科研方向",
+            "required_fields": ["导师", "实验室", "研究方向", "项目场景", "近三年动态", "原文摘录"],
+            "review_action": "拆出真实课题组和方向，避免只引用学院宣传口号。",
+        },
+        {
+            "id": "undergrad-access",
+            "claim": "undergrad_access",
+            "title": "本科生可获得性核验",
+            "channel": "wechat_operator",
+            "priority": "P0",
+            "query": f"{school_name} {major_name} 本科生 科研训练 创新项目 竞赛队 公众号",
+            "required_fields": ["入口类型", "项目名称", "学生参与方式", "年级限制", "报名方式", "原文摘录"],
+            "review_action": "微信公众号和半封闭材料只生成合规人工采集任务，不绕过登录、付费或平台限制。",
+        },
+        {
+            "id": "employment-market",
+            "claim": "employment_market",
+            "title": "国内岗位样本与真实就业锚点",
+            "channel": "job_market_operator",
+            "priority": "P0",
+            "query": f"{major_name} {school_name} Boss直聘 国企 校招 岗位 技能 学历门槛",
+            "required_fields": ["岗位名", "城市", "学历要求", "技能栏", "工作内容", "薪资口径", "来源链接", "原文摘录"],
+            "review_action": "招聘平台只做人可见样本记录，不绕过平台限制，也不把岗位样本写成就业确定性。",
+        },
+        {
+            "id": "graduate-progression",
+            "claim": "graduate_progression",
+            "title": "考研与保研路径核验",
+            "channel": "public_web",
+            "priority": "P1",
+            "query": f"{school_name} {major_name} 保研 去向 考研 研究生 招生目录 课程 项目经历",
+            "required_fields": ["去向类型", "目标学科", "保研/考研要求", "项目经历", "课程要求", "原文摘录"],
+            "review_action": "只在能连接课程、项目和导师方向时支持中期升学判断。",
+        },
+        {
+            "id": "civil-service-path",
+            "claim": "civil_service_path",
+            "title": "考公与选调岗位现实核验",
+            "channel": "public_web",
+            "priority": "P2",
+            "query": f"{major_name} 国考 省考 选调 岗位表 专业限制 工学",
+            "required_fields": ["公告年份", "岗位类别", "专业限制", "学历限制", "地区", "竞争口径", "原文摘录"],
+            "review_action": "考公路径只能作为弱备选，必须说明专业限制和不限专业比例。",
+        },
+        {
+            "id": "counter-evidence",
+            "claim": "counter_evidence",
+            "title": "反证降权检查",
+            "channel": "manual_review",
+            "priority": "P0",
+            "query": f"{target_label} 调剂风险 黑名单 校区冲突 投诉 培养方案 断档",
+            "required_fields": ["反证类型", "命中证据", "影响范围", "降权动作", "是否阻断推荐", "原文摘录"],
+            "review_action": "先查不利证据；任何 P0 反证命中都必须降权或阻断推荐。",
+        },
+    ]
+
+
 PLAN_PROMPT = """你是研究规划专家，需要把一个复杂问题拆成可搜索、可验证的子问题。
 
 研究主题：
