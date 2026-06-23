@@ -87,12 +87,13 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend API adapter can now fetch and validate case-scoped reviewed-evidence ledger records.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 - Report template now carries a reviewed-evidence audit trail into the Deep Opportunity page, including case-scoped review IDs, source IDs/URLs, and `reviewAction` notes from captured Real Case v0 evidence.
+- Report payload can now accept live `reviewedEvidenceRecords` and convert captured case-scoped ledger records into the same audit trail before falling back to fixture evidence.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and now exposes fixture-backed reviewed evidence audit details, but it still needs live ledger records and a reviewer workflow to become credible as a production delivery artifact.
+- Report integration exists and can consume live ledger records through payload, but it still needs automatic case fetch, screenshot/redaction handling, and a reviewer workflow to become credible as a production delivery artifact.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -229,3 +230,9 @@ The backend now exposes `GET /api/evidence-autopilot/reviewed-evidence/{case_id}
 This makes the ledger inspectable enough for future delivery review and report attachment. It is still backend-only; the product still needs frontend browsing, screenshot attachment handling, redaction, and reviewer identity controls.
 
 The frontend API adapter now has a typed fetch path for this listing endpoint. This is still not a UI feature; it is the contract needed before delivery pages can safely render reviewed operator evidence.
+
+### 2026-06-24 Reviewed Evidence Report Payload
+
+The report template now accepts `PathFinderReportPayload.evidenceAutopilot.reviewedEvidenceRecords`. Captured ledger records are converted into report audit trail rows with `reviewId`, `caseId`, task ID, source ID/URL, confidence, capture time, and `reviewAction`. Incomplete operator-review placeholders remain excluded from the report trail.
+
+This closes the next handoff gap between the case-scoped listing endpoint and the Chinese deliverable report. It is still not a full delivery UI: the report route does not fetch records by case ID on its own, and there is still no screenshot attachment store, redaction workflow, or reviewer permission model.

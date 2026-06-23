@@ -37,6 +37,7 @@ type EvidenceItem = {
 
 type DeepOpportunityEvidenceAuditTrailItem = {
   reviewId: string;
+  caseId: string;
   taskId: string;
   sourceTitle: string;
   sourceUrl: string;
@@ -44,6 +45,22 @@ type DeepOpportunityEvidenceAuditTrailItem = {
   capturedAt: string;
   confidence: string;
   reviewAction: string;
+};
+
+type ReportReviewedEvidenceRecord = {
+  reviewId: string;
+  caseId: string;
+  reviewedEvidenceCard: {
+    taskId: string;
+    status: "requires_capture" | "operator_review" | "captured_candidate";
+    sourceTitle: string;
+    sourceUrl: string;
+    sourceType: string;
+    excerpt: string;
+    capturedAt: string;
+    confidence: string;
+    reviewAction: string;
+  };
 };
 
 type RiskItem = {
@@ -150,6 +167,10 @@ export type PathFinderReportPayload = {
       formal_recommendation_ready?: boolean;
       limitations?: string[];
     } | null;
+  } | null;
+  evidenceAutopilot?: {
+    caseId?: string;
+    reviewedEvidenceRecords?: ReportReviewedEvidenceRecord[];
   } | null;
   deliveryProfile?: {
     score?: number;
@@ -1974,6 +1995,7 @@ export function buildDeepOpportunityEvidenceAuditTrail(
     .filter((card) => card.status === "captured_candidate" && card.excerpt.trim())
     .map((card, index) => ({
       reviewId: `${fixture.caseId}-review-${String(index + 1).padStart(2, "0")}`,
+      caseId: fixture.caseId,
       taskId: card.taskId,
       sourceTitle: card.sourceTitle,
       sourceUrl: card.sourceUrl.trim() || `operator-review://${fixture.caseId}-${card.taskId}`,
@@ -1984,14 +2006,47 @@ export function buildDeepOpportunityEvidenceAuditTrail(
     }));
 }
 
-const DeepOpportunityReportPage = () => {
+export function buildDeepOpportunityEvidenceAuditTrailFromRecords(
+  records: ReportReviewedEvidenceRecord[] = [],
+): DeepOpportunityEvidenceAuditTrailItem[] {
+  return records
+    .filter((record) =>
+      record.reviewedEvidenceCard.status === "captured_candidate"
+      && record.reviewedEvidenceCard.excerpt.trim()
+    )
+    .map((record) => {
+      const card = record.reviewedEvidenceCard;
+      return {
+        reviewId: record.reviewId,
+        caseId: record.caseId,
+        taskId: card.taskId,
+        sourceTitle: card.sourceTitle,
+        sourceUrl: card.sourceUrl.trim() || `operator-review://${record.reviewId}`,
+        sourceType: card.sourceType,
+        capturedAt: card.capturedAt,
+        confidence: card.confidence,
+        reviewAction: card.reviewAction,
+      };
+    });
+}
+
+const DeepOpportunityReportPage = ({
+  reviewedEvidenceRecords = [],
+}: {
+  reviewedEvidenceRecords?: ReportReviewedEvidenceRecord[];
+}) => {
   const card = buildDeepOpportunityCard(exampleDeepOpportunityInput);
   const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
   const draftRun = buildEvidenceAutopilotRun({ plan });
   const realCaseFixture = loadEvidenceAutopilotRealCaseFixture();
   const realCaseProviderResults = buildEvidenceAutopilotRealCaseProviderResults(realCaseFixture);
   const realCaseEvidenceMode = "Real Case v0 auditable opportunity hypothesis";
-  const reviewedEvidenceAuditTrail = buildDeepOpportunityEvidenceAuditTrail(realCaseFixture).slice(0, 4);
+  const liveReviewedEvidenceAuditTrail = buildDeepOpportunityEvidenceAuditTrailFromRecords(reviewedEvidenceRecords);
+  const reviewedEvidenceAuditTrail = (
+    liveReviewedEvidenceAuditTrail.length > 0
+      ? liveReviewedEvidenceAuditTrail
+      : buildDeepOpportunityEvidenceAuditTrail(realCaseFixture)
+  ).slice(0, 4);
   const providerResults = realCaseProviderResults.length > 0
     ? realCaseProviderResults
     : buildEvidenceAutopilotSnapshotProviderResults({
@@ -2215,7 +2270,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
         </div>
       </section>
 
-      <DeepOpportunityReportPage />
+      <DeepOpportunityReportPage reviewedEvidenceRecords={payload?.evidenceAutopilot?.reviewedEvidenceRecords ?? []} />
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">

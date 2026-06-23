@@ -114,6 +114,57 @@ assert.equal(
   "function",
   "buildReportPayload should be exported for evidence-binding tests",
 );
+assert.equal(
+  typeof module.exports.buildDeepOpportunityEvidenceAuditTrailFromRecords,
+  "function",
+  "report should convert live reviewed-evidence records into an audit trail",
+);
+
+const liveReviewedTrail = module.exports.buildDeepOpportunityEvidenceAuditTrailFromRecords([
+  {
+    reviewId: "review-live-001",
+    caseId: "scut-im-v0",
+    reviewer: "operator-a",
+    targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+    recordedAt: "2026-06-24T00:00:00Z",
+    ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+    reviewedEvidenceCard: {
+      taskId: "employment-market",
+      status: "captured_candidate",
+      sourceTitle: "Live reviewed job-market sample",
+      sourceUrl: "operator-review://review-live-001",
+      sourceType: "job",
+      excerpt: "Visible job sample describes robotics integration responsibilities.",
+      capturedAt: "2026-06-24",
+      confidence: "medium",
+      reviewAction: "Use as operator-captured job sample only.",
+    },
+  },
+  {
+    reviewId: "review-live-002",
+    caseId: "scut-im-v0",
+    reviewer: "operator-a",
+    targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+    recordedAt: "2026-06-24T00:10:00Z",
+    ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+    reviewedEvidenceCard: {
+      taskId: "wechat-public-account",
+      status: "operator_review",
+      sourceTitle: "Incomplete WeChat note",
+      sourceUrl: "",
+      sourceType: "wechat",
+      excerpt: "",
+      capturedAt: "",
+      confidence: "low",
+      reviewAction: "Collect visible screenshot before use.",
+    },
+  },
+]);
+assert.equal(liveReviewedTrail.length, 1);
+assert.equal(liveReviewedTrail[0].reviewId, "review-live-001");
+assert.equal(liveReviewedTrail[0].caseId, "scut-im-v0");
+assert.equal(liveReviewedTrail[0].sourceUrl, "operator-review://review-live-001");
+assert.match(liveReviewedTrail[0].reviewAction, /operator-captured job sample/);
 
 const reportData = module.exports.buildReportPayload({
   gameMatrix: {
