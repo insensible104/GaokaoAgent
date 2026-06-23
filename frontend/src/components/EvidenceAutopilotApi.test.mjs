@@ -196,6 +196,25 @@ assert(fallback.providerResults.length > 0);
 assert(fallback.claimBoundary.includes("demo snapshot"));
 assert(fallback.error.includes("network down"));
 
+const realCaseState = api.buildEvidenceAutopilotRealCaseState({
+  providerResults: [
+    {
+      requestId: "real-case-v0-1",
+      taskId: "official-plan-charter",
+      sourceTitle: "Official source",
+      sourceUrl: "https://example.edu/official",
+      sourceType: "official",
+      excerpt: "Official public source excerpt for audited real case.",
+      capturedAt: "2026-06-24",
+      confidence: "high",
+    },
+  ],
+  claimBoundary: "Real Case v0 fixture supports an auditable opportunity hypothesis only.",
+});
+assert.equal(realCaseState.status, "real_case_fixture");
+assert.equal(realCaseState.providerResults.length, 1);
+assert.match(realCaseState.claimBoundary, /auditable opportunity hypothesis/i);
+
 const panelSource = fs.readFileSync(panelPath, "utf8");
 assert(panelSource.includes("fetchEvidenceAutopilotResearch"));
 assert(panelSource.includes("demo_snapshot"));

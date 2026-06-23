@@ -7,7 +7,8 @@ import { buildEvidenceAutopilotSnapshotProviderResults } from "./evidenceAutopil
 export type EvidenceAutopilotBackendStatus =
   | "demo_snapshot"
   | "backend_connected"
-  | "backend_failed_snapshot_fallback";
+  | "backend_failed_snapshot_fallback"
+  | "real_case_fixture";
 
 type BackendEvidenceCardStatus = "requires_capture" | "operator_review" | "captured_candidate";
 
@@ -96,6 +97,20 @@ export function buildEvidenceAutopilotSnapshotFallback({
     providerResults: buildEvidenceAutopilotSnapshotProviderResults({ plan, searchTasks, targetLabel }),
     claimBoundary: `Using demo snapshot fallback: ${reason}. Live backend evidence still requires source URL, excerpt, capture time, and confidence.`,
     error: reason,
+  };
+}
+
+export function buildEvidenceAutopilotRealCaseState({
+  providerResults,
+  claimBoundary,
+}: {
+  providerResults: EvidenceAutopilotProviderResult[];
+  claimBoundary: string;
+}): EvidenceAutopilotApiState {
+  return {
+    status: "real_case_fixture",
+    providerResults,
+    claimBoundary,
   };
 }
 
