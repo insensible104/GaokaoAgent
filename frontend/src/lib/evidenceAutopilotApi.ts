@@ -33,13 +33,24 @@ export interface EvidenceAutopilotBackendResponse {
   tasks: unknown[];
   searchQueries: string[];
   evidenceCards: BackendEvidenceCard[];
+  evidenceCoverage: EvidenceAutopilotBackendCoverage;
   claimBoundary: string;
+}
+
+export interface EvidenceAutopilotBackendCoverage {
+  totalTasks: number;
+  capturedTaskIds: string[];
+  missingP0TaskIds: string[];
+  operatorTaskIds: string[];
+  readyForCounselorReview: boolean;
+  reviewBlockers: string[];
 }
 
 export interface EvidenceAutopilotApiState {
   status: EvidenceAutopilotBackendStatus;
   providerResults: EvidenceAutopilotProviderResult[];
   claimBoundary: string;
+  evidenceCoverage?: EvidenceAutopilotBackendCoverage;
   backendResponse?: EvidenceAutopilotBackendResponse;
   error?: string;
 }
@@ -148,6 +159,7 @@ export async function fetchEvidenceAutopilotResearch({
       status: "backend_connected",
       providerResults,
       claimBoundary: backendResponse.claimBoundary,
+      evidenceCoverage: backendResponse.evidenceCoverage,
       backendResponse,
     };
   } catch (error) {
@@ -168,10 +180,12 @@ function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
   if (!value || typeof value !== "object") {
     throw new Error("backend response was not an object");
   }
-  if (!Array.isArray((value as EvidenceAutopilotBackendResponse).evidenceCards)) {
+  const response = value as EvidenceAutopilotBackendResponse;
+  if (!Array.isArray(response.evidenceCards)) {
     throw new Error("backend response evidenceCards was not an array");
   }
-  return value as EvidenceAutopilotBackendResponse;
+  assertValidBackendCoverage(response.evidenceCoverage);
+  return response;
 }
 
 function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number): void {
@@ -183,5 +197,29 @@ function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number
   }
   if (!VALID_CONFIDENCE_LEVELS.has(card.confidence)) {
     throw new Error(`invalid backend evidence card ${index + 1}: confidence ${card.confidence}`);
+  }
+}
+
+function assertValidBackendCoverage(coverage: EvidenceAutopilotBackendCoverage): void {
+  if (!coverage || typeof coverage !== "object") {
+    throw new Error("backend response evidenceCoverage was not an object");
+  }
+  if (typeof coverage.totalTasks !== "number") {
+    throw new Error("backend response evidenceCoverage totalTasks was not a number");
+  }
+  if (!Array.isArray(coverage.capturedTaskIds)) {
+    throw new Error("backend response evidenceCoverage capturedTaskIds was not an array");
+  }
+  if (!Array.isArray(coverage.missingP0TaskIds)) {
+    throw new Error("backend response evidenceCoverage missingP0TaskIds was not an array");
+  }
+  if (!Array.isArray(coverage.operatorTaskIds)) {
+    throw new Error("backend response evidenceCoverage operatorTaskIds was not an array");
+  }
+  if (typeof coverage.readyForCounselorReview !== "boolean") {
+    throw new Error("backend response evidenceCoverage readyForCounselorReview was not a boolean");
+  }
+  if (!Array.isArray(coverage.reviewBlockers)) {
+    throw new Error("backend response evidenceCoverage reviewBlockers was not an array");
   }
 }

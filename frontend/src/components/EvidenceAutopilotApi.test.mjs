@@ -64,6 +64,14 @@ const backendResponse = {
   targetLabel: "广东 2026 华南理工示例校 智能制造与数据工程",
   tasks: [],
   searchQueries: [],
+  evidenceCoverage: {
+    totalTasks: 8,
+    capturedTaskIds: ["official-plan-charter"],
+    missingP0TaskIds: ["employment-market", "counter-evidence"],
+    operatorTaskIds: ["employment-market", "counter-evidence"],
+    readyForCounselorReview: false,
+    reviewBlockers: ["Missing captured P0 evidence: employment-market, counter-evidence"],
+  },
   claimBoundary: "后端只返回可审计证据。",
   evidenceCards: [
     {
@@ -123,6 +131,8 @@ const connected = await api.fetchEvidenceAutopilotResearch({
 assert.equal(connected.status, "backend_connected");
 assert.equal(connected.providerResults.length, 1);
 assert.equal(connected.claimBoundary, backendResponse.claimBoundary);
+assert.deepEqual(connected.evidenceCoverage, backendResponse.evidenceCoverage);
+assert.equal(connected.backendResponse.evidenceCoverage.readyForCounselorReview, false);
 
 const plan = planModule.buildDeepEvidenceCollectionPlan(planModule.exampleCollectionContext);
 const draftRun = autopilot.buildEvidenceAutopilotRun({ plan });
@@ -153,6 +163,25 @@ const malformedBackendFallback = await api.fetchEvidenceAutopilotResearch({
 assert.equal(malformedBackendFallback.status, "backend_failed_snapshot_fallback");
 assert.match(malformedBackendFallback.error, /invalid backend evidence card/i);
 assert(malformedBackendFallback.providerResults.length > 0);
+
+const missingCoverageFallback = await api.fetchEvidenceAutopilotResearch({
+  context,
+  fallback: {
+    plan,
+    searchTasks: draftRun.searchTasks,
+    targetLabel: plan.targetLabel,
+  },
+  fetchImpl: async () => ({
+    ok: true,
+    async json() {
+      const { evidenceCoverage, ...withoutCoverage } = backendResponse;
+      return withoutCoverage;
+    },
+  }),
+});
+assert.equal(missingCoverageFallback.status, "backend_failed_snapshot_fallback");
+assert.match(missingCoverageFallback.error, /evidenceCoverage/i);
+assert(missingCoverageFallback.providerResults.length > 0);
 
 const placeholderWithExcerptFallback = await api.fetchEvidenceAutopilotResearch({
   context,

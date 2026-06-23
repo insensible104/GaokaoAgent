@@ -11,6 +11,7 @@ Date: 2026-06-24
 - Routed captured evidence through Evidence Autopilot, Opportunity Radar, and the report output.
 - Added an opt-in backend official-source provider contract, with SCUT plan/charter evidence, historical admission score evidence, and school-source major-profile evidence as the first implementations.
 - Added a backend `evidenceCoverage` summary so the API exposes captured tasks, missing P0 gates, operator/manual-review tasks, and counselor-review blockers.
+- Updated the frontend Evidence Autopilot API adapter to preserve and validate backend `evidenceCoverage` instead of treating incomplete backend responses as connected evidence.
 
 ## What This Proves
 
@@ -63,6 +64,7 @@ git diff --check
 - Manual live SCUT provider check captured `faculty-research-direction`, `undergrad-access`, and `graduate-progression` from WUSIE school pages.
 - Provider registry smoke test passed: provider cards and warnings merge without fabricating captured evidence.
 - Evidence coverage smoke test passed: `evidenceCoverage` is exposed by both the builder and FastAPI endpoint, and missing P0 tasks keep counselor review blocked.
+- Frontend API adapter smoke test passed: backend `evidenceCoverage` is preserved in API state, and responses without coverage fall back to the demo snapshot boundary.
 - Backend focused smoke tests passed: 25 passed, 1 existing Pydantic deprecation warning.
 - `git diff --check` passed.
 

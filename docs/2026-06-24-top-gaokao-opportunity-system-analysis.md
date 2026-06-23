@@ -78,6 +78,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Only `captured_candidate` cards can become provider results.
 - Backend can generate candidate-specific research tasks and placeholders.
 - Backend now returns an `evidenceCoverage` gate summary with captured task IDs, missing P0 task IDs, operator/manual-review tasks, review blockers, and counselor-review readiness.
+- Frontend API state now preserves and validates backend `evidenceCoverage`, so a malformed or incomplete backend response falls back to the demo boundary instead of appearing connected.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 
 ### Partially implemented
@@ -191,3 +192,5 @@ The backend API now exposes `evidenceCoverage` on every Evidence Autopilot respo
 - `reviewBlockers`: machine-readable reasons the case is not yet deliverable
 
 This is a product-control improvement, not an outcome claim. It helps PathFinder stop expanding the case when the immediate blocker is simply missing P0 evidence.
+
+The frontend adapter now carries this summary through `EvidenceAutopilotApiState`. No new UI surface was added in this slice; the point is to stabilize the contract first.
