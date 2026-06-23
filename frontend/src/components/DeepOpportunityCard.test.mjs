@@ -16,7 +16,7 @@ const appSource = fs.readFileSync(appPath, "utf8");
 for (const token of [
   "深度机会卡",
   "量化定位",
-  "研究方向",
+  "科研方向",
   "师资与论文",
   "本科生可获得性",
   "真实就业",
@@ -25,6 +25,10 @@ for (const token of [
   "证据缺口",
 ]) {
   assert(componentSource.includes(token), `DeepOpportunityCard should render section token: ${token}`);
+}
+
+for (const source of [libSource, componentSource]) {
+  assert.equal(/(閺|锟|鎷|鏈|鐭|鍙嶈|涓|鏅鸿|骞夸|鍗庡)/.test(source), false);
 }
 
 assert.match(appSource, /DeepOpportunityCard/);
@@ -51,7 +55,7 @@ const card = buildDeepOpportunityCard(exampleDeepOpportunityInput);
 assert.equal(card.protocol, "deep_opportunity_card_v1");
 assert.equal(card.opportunityType, "科研资源被低估型机会");
 assert(card.totalScore >= 80, "sample opportunity should be strong enough for a public MVP card");
-assert(card.fitFor.some((item) => item.includes("读研")));
+assert(card.fitFor.some((item) => item.includes("读研") || item.includes("保研")));
 assert(card.notFitFor.some((item) => item.includes("只想本科稳定就业")));
 assert(card.claimBoundary.includes("不是最终志愿推荐"));
 

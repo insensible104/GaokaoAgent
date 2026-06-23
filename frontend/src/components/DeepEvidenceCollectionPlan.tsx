@@ -21,10 +21,10 @@ export function DeepEvidenceCollectionPlan() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>
           <p className="text-xs font-semibold tracking-[0.16em] text-[#1F5E99]">高维证据采集台账</p>
-          <h2 className="mt-2 text-2xl font-semibold">先把要查的证据定义清楚，再谈自动化。</h2>
+          <h2 className="mt-2 text-2xl font-semibold">先把要查的证据定义清楚，再谈自动化</h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-[#35506B]">
-            这一层把官方招生、科研方向、师资与论文、本科生可获得性、真实就业、升学/保研、考公、微信公众号和反证降权拆成可执行任务。
-            就业侧以 Boss直聘/国聘/校招官网 的岗位样本为锚点；它不会承诺自动抓取半封闭平台，而是规定每一类证据的字段、通过规则和降权规则。
+            这一层把官方招生、科研方向、师资与论文、本科生可获得性、真实就业、考研/保研、考公、微信公众号和反证降权拆成可执行任务。
+            就业侧以 Boss直聘、国聘、校招官网的岗位样本为锚点；公众号材料只作为过程证据，必须合规采集并双来源印证。
           </p>
         </div>
         <aside className="border border-[#C8D8EA] bg-[#F8FBFF] p-4">

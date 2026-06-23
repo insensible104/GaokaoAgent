@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { buildDeepOpportunityCard, exampleDeepOpportunityInput } from "../lib/deepOpportunityCard";
 import { DeepEvidenceCollectionPlan } from "./DeepEvidenceCollectionPlan";
+import { DeepOpportunityEvaluationPanel } from "./DeepOpportunityEvaluationPanel";
 
 const statusTone = {
   strong: "border-[#0F766E] bg-[#E7F7F2] text-[#0F3F3B]",
@@ -21,15 +22,15 @@ export function DeepOpportunityCard() {
 
   return (
     <article className="deep-opportunity-card mx-auto max-w-[1360px] text-[#102033]">
-      <section className="grid gap-0 overflow-hidden border border-[#C8D8EA] bg-white lg:grid-cols-[minmax(0,1.08fr)_360px]">
+      <section className="grid gap-0 overflow-hidden border border-[#C8D8EA] bg-white lg:grid-cols-[minmax(0,1.08fr)_380px]">
         <div className="bg-[#F8FBFF] p-6 sm:p-8 lg:p-10">
-          <p className="text-xs font-semibold tracking-[0.16em] text-[#1F5E99]">深度机会卡 / 公开演示</p>
+          <p className="text-xs font-semibold tracking-[0.16em] text-[#1F5E99]">PathFinder Alpha Lab · 公开演示</p>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight tracking-normal sm:text-5xl">
-            先判断这是不是机会，再判断能不能推荐。
+            深度机会卡：先判断这是不是机会，再判断能不能推荐
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-7 text-[#35506B]">
-            这张样板卡把量化定位、研究方向、师资与论文、本科生可获得性、真实就业、升学路径和反证与降权放在同一个证据协议里。
-            它的目标不是给一句“可以冲”，而是告诉家庭：机会来自哪里，缺口在哪里，下一步该查什么。
+            这张样板卡把量化定位、科研方向、师资与论文、本科生机会、真实就业、考研保研、考公路径和反证降权放进同一套证据协议。
+            它的目标不是生成一句“可以冲”，而是说明机会来自哪里、代价是什么、谁能承受、下一步该查什么。
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -65,12 +66,42 @@ export function DeepOpportunityCard() {
         </aside>
       </section>
 
+      <section className="mt-6 border border-[#C8D8EA] bg-white p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.16em] text-[#1F5E99]">Alpha Board</p>
+            <h2 className="mt-2 text-2xl font-semibold">像量化项目一样拆机会因子</h2>
+          </div>
+          <span className="border border-[#C8D8EA] bg-[#F8FBFF] px-3 py-2 text-sm text-[#35506B]">
+            正向因子必须配反证风险
+          </span>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {card.alphaBoard.map((row) => (
+            <section key={row.factor} className="border border-[#C8D8EA] bg-[#F8FBFF] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">{row.factor}</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#35506B]">{row.evidence}</p>
+                </div>
+                <b className={row.exposure === "负向" ? "text-2xl text-[#C14E2A]" : "text-2xl text-[#1F5E99]"}>
+                  {row.score}
+                </b>
+              </div>
+              <span className="mt-3 inline-block border border-[#C8D8EA] bg-white px-2 py-1 text-xs text-[#64748B]">
+                暴露：{row.exposure}
+              </span>
+            </section>
+          ))}
+        </div>
+      </section>
+
       <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <main className="space-y-5">
           <section className="border border-[#C8D8EA] bg-white p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold tracking-[0.16em] text-[#1F5E99]">证据柱</p>
+                <p className="text-xs font-semibold tracking-[0.16em] text-[#1F5E99]">证据栈</p>
                 <h2 className="mt-2 text-2xl font-semibold">从“分数够不够”扩展到“机会真不真”</h2>
               </div>
               <span className="border border-[#C8D8EA] bg-[#F8FBFF] px-3 py-2 text-sm text-[#35506B]">
@@ -98,7 +129,7 @@ export function DeepOpportunityCard() {
           </section>
 
           <section className="grid gap-5 lg:grid-cols-2">
-            <SignalPanel title="研究方向" eyebrow="科研视角" items={card.researchSignals} />
+            <SignalPanel title="科研方向" eyebrow="科研视角" items={card.researchSignals} />
             <SignalPanel title="师资与论文" eyebrow="导师证据" items={card.researchSignals.slice(1)} />
             <SignalPanel title="本科生可获得性" eyebrow="机会是否落到本科" items={card.undergradAccessSignals} />
             <SignalPanel title="真实就业" eyebrow="国内岗位锚点" items={card.employmentSignals} />
@@ -141,6 +172,10 @@ export function DeepOpportunityCard() {
             </ol>
           </section>
         </aside>
+      </section>
+
+      <section className="mt-6">
+        <DeepOpportunityEvaluationPanel />
       </section>
 
       <section className="mt-6">
