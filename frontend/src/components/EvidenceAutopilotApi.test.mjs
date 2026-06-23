@@ -13,6 +13,10 @@ const autopilotPath = path.join(here, "..", "lib", "evidenceAutopilot.ts");
 const panelPath = path.join(here, "DeepOpportunityEvaluationPanel.tsx");
 
 assert.equal(fs.existsSync(apiPath), true, "Evidence Autopilot API adapter should exist");
+const apiSource = fs.readFileSync(apiPath, "utf8");
+for (const token of ["attachments", "redactionStatus", "reviewerIdentity"]) {
+  assert.match(apiSource, new RegExp(token), `API adapter should preserve reviewed evidence ${token}`);
+}
 
 function loadTsModule(source, requireMap = {}) {
   const output = ts.transpileModule(source, {

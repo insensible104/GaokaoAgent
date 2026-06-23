@@ -11,6 +11,21 @@ export type EvidenceAutopilotBackendStatus =
   | "real_case_fixture";
 
 type BackendEvidenceCardStatus = "requires_capture" | "operator_review" | "captured_candidate";
+type ReviewedEvidenceRedactionStatus = "pending" | "redacted" | "not_required";
+
+interface ReviewedEvidenceAttachment {
+  attachmentId: string;
+  kind: "screenshot" | "page_capture" | "pdf" | "image" | "other";
+  storageRef: string;
+  capturedAt: string;
+  redactionStatus: ReviewedEvidenceRedactionStatus;
+}
+
+interface ReviewedEvidenceReviewerIdentity {
+  reviewerId: string;
+  displayName: string;
+  role: "operator" | "counselor" | "qa_reviewer" | "lead_counselor";
+}
 
 interface BackendEvidenceCard {
   taskId: string;
@@ -22,11 +37,15 @@ interface BackendEvidenceCard {
   capturedAt: string;
   confidence: EvidenceAutopilotProviderResult["confidence"];
   reviewAction: string;
+  attachments?: ReviewedEvidenceAttachment[];
+  redactionStatus?: ReviewedEvidenceRedactionStatus;
+  reviewerIdentity?: ReviewedEvidenceReviewerIdentity;
 }
 
 const VALID_CARD_STATUSES = new Set(["requires_capture", "operator_review", "captured_candidate"]);
 const VALID_SOURCE_TYPES = new Set(["official", "school", "paper", "job", "wechat", "discussion", "other"]);
 const VALID_CONFIDENCE_LEVELS = new Set(["high", "medium", "low"]);
+const VALID_REDACTION_STATUSES = new Set(["pending", "redacted", "not_required"]);
 
 export interface EvidenceAutopilotBackendResponse {
   success: boolean;
@@ -283,6 +302,22 @@ function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number
   }
   if (!VALID_CONFIDENCE_LEVELS.has(card.confidence)) {
     throw new Error(`invalid backend evidence card ${index + 1}: confidence ${card.confidence}`);
+  }
+  if (card.redactionStatus && !VALID_REDACTION_STATUSES.has(card.redactionStatus)) {
+    throw new Error(`invalid backend evidence card ${index + 1}: redactionStatus ${card.redactionStatus}`);
+  }
+  if (card.attachments && !Array.isArray(card.attachments)) {
+    throw new Error(`invalid backend evidence card ${index + 1}: attachments`);
+  }
+  if (
+    card.reviewerIdentity
+    && (
+      typeof card.reviewerIdentity.reviewerId !== "string"
+      || typeof card.reviewerIdentity.displayName !== "string"
+      || typeof card.reviewerIdentity.role !== "string"
+    )
+  ) {
+    throw new Error(`invalid backend evidence card ${index + 1}: reviewerIdentity`);
   }
 }
 

@@ -39,6 +39,21 @@ const records = [
     sourceUrl: "operator-review://review-live-001",
     excerpt: "Robotics integration job sample asks for PLC and data-platform skills.",
     reviewAction: "Use as operator-captured job sample only.",
+    attachments: [
+      {
+        attachmentId: "attachment-job-001",
+        kind: "screenshot",
+        storageRef: "reviewed-evidence/job-001.png",
+        capturedAt: "2026-06-24T00:00:00Z",
+        redactionStatus: "redacted",
+      },
+    ],
+    redactionStatus: "redacted",
+    reviewerIdentity: {
+      reviewerId: "operator-a",
+      displayName: "Operator A",
+      role: "operator",
+    },
   }),
   reviewedRecord({
     reviewId: "review-live-002",
@@ -105,6 +120,9 @@ const employment = view.taskGroups.find((group) => group.taskId === "employment-
 assert.equal(employment.status, "ready_for_report");
 assert.equal(employment.records[0].reviewId, "review-live-001");
 assert.equal(employment.records[0].sourceId, "operator-review://review-live-001");
+assert.equal(employment.records[0].attachmentCount, 1);
+assert.equal(employment.records[0].redactionStatus, "redacted");
+assert.equal(employment.records[0].reviewerIdentity, "Operator A (operator)");
 assert.match(employment.records[0].excerpt, /PLC/);
 
 const wechat = view.taskGroups.find((group) => group.taskId === "wechat-public-account");
@@ -123,6 +141,9 @@ function reviewedRecord({
   sourceUrl,
   excerpt,
   reviewAction,
+  attachments,
+  redactionStatus,
+  reviewerIdentity,
 }) {
   return {
     reviewId,
@@ -138,6 +159,9 @@ function reviewedRecord({
       capturedAt: "2026-06-24",
       confidence: status === "captured_candidate" ? "medium" : "low",
       reviewAction,
+      attachments,
+      redactionStatus,
+      reviewerIdentity,
     },
     reviewer: "operator-a",
     caseId,

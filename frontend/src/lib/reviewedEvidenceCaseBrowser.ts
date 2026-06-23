@@ -22,6 +22,9 @@ export interface ReviewedEvidenceCaseBrowserRecord {
   capturedAt: string;
   confidence: string;
   reviewAction: string;
+  attachmentCount: number;
+  redactionStatus: string;
+  reviewerIdentity: string;
   readyForReport: boolean;
 }
 
@@ -166,8 +169,16 @@ function toBrowserRecord(
     capturedAt: card.capturedAt,
     confidence: card.confidence,
     reviewAction: card.reviewAction,
+    attachmentCount: card.attachments?.length ?? 0,
+    redactionStatus: card.redactionStatus ?? "pending",
+    reviewerIdentity: formatReviewerIdentity(card.reviewerIdentity),
     readyForReport,
   };
+}
+
+function formatReviewerIdentity(identity: ReviewedEvidenceCardWithClaim["reviewerIdentity"]): string {
+  if (!identity) return "unverified reviewer";
+  return `${identity.displayName} (${identity.role})`;
 }
 
 function statusFor(group: ReviewedEvidenceTaskGroup): ReviewedEvidenceTaskGroupStatus {

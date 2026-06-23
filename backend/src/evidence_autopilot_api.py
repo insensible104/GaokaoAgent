@@ -21,6 +21,27 @@ EvidenceAutopilotChannel = Literal[
 ]
 EvidenceAutopilotSourceType = Literal["official", "school", "paper", "job", "wechat", "discussion", "other"]
 EvidenceAutopilotConfidence = Literal["high", "medium", "low"]
+ReviewedEvidenceAttachmentKind = Literal["screenshot", "page_capture", "pdf", "image", "other"]
+ReviewedEvidenceRedactionStatus = Literal["pending", "redacted", "not_required"]
+ReviewedEvidenceReviewerRole = Literal["operator", "counselor", "qa_reviewer", "lead_counselor"]
+
+
+class ReviewedEvidenceAttachment(BaseModel):
+    """Attachment proof for semi-closed or operator-captured evidence."""
+
+    attachmentId: str = Field(..., min_length=1)
+    kind: ReviewedEvidenceAttachmentKind
+    storageRef: str = Field(..., min_length=1)
+    capturedAt: str = Field(..., min_length=1)
+    redactionStatus: ReviewedEvidenceRedactionStatus = "pending"
+
+
+class ReviewedEvidenceReviewerIdentity(BaseModel):
+    """Reviewer identity used for operator-evidence accountability."""
+
+    reviewerId: str = Field(..., min_length=1)
+    displayName: str = Field(..., min_length=1)
+    role: ReviewedEvidenceReviewerRole
 
 
 class ReviewedEvidenceCard(BaseModel):
@@ -36,6 +57,9 @@ class ReviewedEvidenceCard(BaseModel):
     capturedAt: str
     confidence: EvidenceAutopilotConfidence
     reviewAction: str
+    attachments: list[ReviewedEvidenceAttachment] = Field(default_factory=list)
+    redactionStatus: ReviewedEvidenceRedactionStatus = "pending"
+    reviewerIdentity: ReviewedEvidenceReviewerIdentity | None = None
 
 
 class EvidenceAutopilotResearchRequest(BaseModel):
@@ -372,7 +396,7 @@ def _merge_reviewed_evidence_cards(
 
 
 def _is_complete_reviewed_card(card: ReviewedEvidenceCard) -> bool:
-    return all(
+    text_complete = all(
         value.strip()
         for value in [
             card.sourceTitle,
@@ -381,6 +405,24 @@ def _is_complete_reviewed_card(card: ReviewedEvidenceCard) -> bool:
             card.capturedAt,
             card.reviewAction,
         ]
+    )
+    if not text_complete:
+        return False
+    if not card.sourceUrl.startswith("operator-review://"):
+        return True
+    return _has_operator_review_controls(card)
+
+
+def _has_operator_review_controls(card: ReviewedEvidenceCard) -> bool:
+    if card.reviewerIdentity is None:
+        return False
+    if card.redactionStatus not in {"redacted", "not_required"}:
+        return False
+    return any(
+        attachment.redactionStatus in {"redacted", "not_required"}
+        and attachment.storageRef.strip()
+        and attachment.attachmentId.strip()
+        for attachment in card.attachments
     )
 
 

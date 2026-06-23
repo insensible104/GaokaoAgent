@@ -28,6 +28,21 @@ def test_append_reviewed_evidence_record_generates_review_id_and_ledger_entry(tm
         capturedAt="2026-06-24",
         confidence="medium",
         reviewAction="Use as operator-captured job sample only; do not infer employment certainty.",
+        attachments=[
+            {
+                "attachmentId": "attachment-job-001",
+                "kind": "screenshot",
+                "storageRef": "reviewed-evidence/job-001.png",
+                "capturedAt": "2026-06-24T00:00:00Z",
+                "redactionStatus": "redacted",
+            }
+        ],
+        redactionStatus="redacted",
+        reviewerIdentity={
+            "reviewerId": "operator-a",
+            "displayName": "Operator A",
+            "role": "operator",
+        },
     )
 
     record = append_reviewed_evidence_record(
@@ -51,6 +66,9 @@ def test_append_reviewed_evidence_record_generates_review_id_and_ledger_entry(tm
     assert payload["caseId"] == "scut-im-v0"
     assert payload["reviewer"] == "operator-a"
     assert payload["reviewedEvidenceCard"]["sourceUrl"] == f"operator-review://{record.reviewId}"
+    assert payload["reviewedEvidenceCard"]["attachments"][0]["attachmentId"] == "attachment-job-001"
+    assert payload["reviewedEvidenceCard"]["redactionStatus"] == "redacted"
+    assert payload["reviewedEvidenceCard"]["reviewerIdentity"]["reviewerId"] == "operator-a"
 
 
 def test_reviewed_evidence_endpoint_persists_to_configured_ledger(tmp_path, monkeypatch) -> None:

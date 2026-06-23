@@ -85,7 +85,13 @@ export function ReviewedEvidenceCaseBrowserPanel({
                     <p className="truncate font-medium text-slate-700">{record.sourceTitle}</p>
                     <p className="mt-1 break-words">sourceId: {record.sourceId}</p>
                     <p className="mt-1">
-                      reviewer: {record.reviewer} - reviewAction: {record.reviewAction}
+                      attachmentCount: {record.attachmentCount} - redactionStatus: {record.redactionStatus}
+                    </p>
+                    <p className="mt-1">
+                      reviewer: {record.reviewer} - reviewerIdentity: {record.reviewerIdentity}
+                    </p>
+                    <p className="mt-1">
+                      reviewAction: {record.reviewAction}
                     </p>
                   </div>
                 ))}

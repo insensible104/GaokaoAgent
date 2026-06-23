@@ -93,6 +93,7 @@ def test_reviewed_evidence_cards_can_close_operator_p0_gates() -> None:
                 "capturedAt": "2026-06-24",
                 "confidence": "medium",
                 "reviewAction": "Use as operator-captured job sample only; do not infer employment certainty.",
+                **review_controls("job-market-screenshot"),
             },
             {
                 "taskId": "counter-evidence",
@@ -105,6 +106,7 @@ def test_reviewed_evidence_cards_can_close_operator_p0_gates() -> None:
                 "capturedAt": "2026-06-24",
                 "confidence": "medium",
                 "reviewAction": "Use as a counter-evidence check log only; rerun before final delivery.",
+                **review_controls("counter-evidence-screenshot"),
             },
         ],
     )
@@ -146,6 +148,35 @@ def test_incomplete_reviewed_evidence_cards_do_not_close_p0_gates() -> None:
                 "capturedAt": "2026-06-24",
                 "confidence": "medium",
                 "reviewAction": "Incomplete card must remain a task.",
+            }
+        ],
+    )
+
+    response = build_evidence_autopilot_research_response(request)
+
+    assert "employment-market" in response.evidenceCoverage.missingP0TaskIds
+    assert "employment-market" not in response.evidenceCoverage.capturedTaskIds
+    assert "Rejected reviewed evidence cards" in response.claimBoundary
+
+
+def test_operator_review_card_requires_attachment_redaction_and_identity_for_p0_gate() -> None:
+    request = EvidenceAutopilotResearchRequest(
+        province="Guangdong",
+        schoolName="South China University of Technology",
+        majorName="intelligent manufacturing",
+        targetYear=2026,
+        reviewedEvidenceCards=[
+            {
+                "taskId": "employment-market",
+                "claim": "employment_market",
+                "status": "captured_candidate",
+                "sourceTitle": "Reviewed job-market sample",
+                "sourceUrl": "operator-review://boss/2026-06-24/scut-im-001",
+                "sourceType": "job",
+                "excerpt": "Reviewed visible job sample links intelligent manufacturing work to robotics integration.",
+                "capturedAt": "2026-06-24",
+                "confidence": "medium",
+                "reviewAction": "Use as operator-captured job sample only; do not infer employment certainty.",
             }
         ],
     )
@@ -266,4 +297,25 @@ class ReviewedCardFactory:
             capturedAt="2026-06-24",
             confidence="medium",
             reviewAction="Use as reviewed operator evidence only.",
+            **review_controls(task_id),
         )
+
+
+def review_controls(seed: str) -> dict:
+    return {
+        "attachments": [
+            {
+                "attachmentId": f"attachment-{seed}",
+                "kind": "screenshot",
+                "storageRef": f"reviewed-evidence/{seed}.png",
+                "capturedAt": "2026-06-24T00:00:00Z",
+                "redactionStatus": "redacted",
+            }
+        ],
+        "redactionStatus": "redacted",
+        "reviewerIdentity": {
+            "reviewerId": "operator-a",
+            "displayName": "Operator A",
+            "role": "operator",
+        },
+    }
