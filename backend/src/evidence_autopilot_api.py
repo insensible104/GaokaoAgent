@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter
@@ -96,6 +98,25 @@ class EvidenceAutopilotResearchResponse(BaseModel):
     evidenceCards: list[EvidenceAutopilotEvidenceCard]
     evidenceCoverage: EvidenceAutopilotCoverageSummary
     claimBoundary: str
+
+
+class ReviewedEvidenceSubmissionRequest(BaseModel):
+    """Persist one human-reviewed evidence card into the operator ledger."""
+
+    targetLabel: str = Field(..., min_length=1)
+    card: ReviewedEvidenceCard
+    reviewer: str = Field(..., min_length=1)
+    caseId: str | None = None
+
+
+class ReviewedEvidenceSubmissionResponse(BaseModel):
+    """Append-only reviewed-evidence ledger response."""
+
+    success: bool
+    reviewId: str
+    reviewedEvidenceCard: ReviewedEvidenceCard
+    ledgerPath: str
+    recordedAt: str
 
 
 class ReviewedEvidenceMergeResult(BaseModel):
@@ -210,6 +231,36 @@ async def research_evidence_autopilot(
 ) -> EvidenceAutopilotResearchResponse:
     """Return auditable research tasks for one target school-major opportunity."""
     return build_evidence_autopilot_research_response(request)
+
+
+@router.post("/reviewed-evidence", response_model=ReviewedEvidenceSubmissionResponse)
+async def submit_reviewed_evidence(
+    request: ReviewedEvidenceSubmissionRequest,
+) -> ReviewedEvidenceSubmissionResponse:
+    """Persist one human-reviewed evidence card with a generated review id."""
+    from reviewed_evidence_store import append_reviewed_evidence_record
+
+    record = append_reviewed_evidence_record(
+        ledger_path=_reviewed_evidence_ledger_path(),
+        target_label=request.targetLabel,
+        card=request.card,
+        reviewer=request.reviewer,
+        case_id=request.caseId,
+    )
+    return ReviewedEvidenceSubmissionResponse(
+        success=True,
+        reviewId=record.reviewId,
+        reviewedEvidenceCard=record.reviewedEvidenceCard,
+        ledgerPath=record.ledgerPath,
+        recordedAt=record.recordedAt,
+    )
+
+
+def _reviewed_evidence_ledger_path() -> Path:
+    configured = os.getenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", "").strip()
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[1] / "logs" / "evidence_autopilot" / "reviewed_evidence.jsonl"
 
 
 def _build_empty_evidence_card(task: EvidenceAutopilotTask) -> EvidenceAutopilotEvidenceCard:

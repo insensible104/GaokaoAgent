@@ -13,6 +13,7 @@ Date: 2026-06-24
 - Added a backend `evidenceCoverage` summary so the API exposes captured tasks, missing P0 gates, operator/manual-review tasks, and counselor-review blockers.
 - Updated the frontend Evidence Autopilot API adapter to preserve and validate backend `evidenceCoverage` instead of treating incomplete backend responses as connected evidence.
 - Added backend `reviewedEvidenceCards` input so compliant human-captured job-market, WeChat, or manual-review evidence can close P0 gates only when it includes task match, URL/review ID, excerpt, capture time, confidence, and review action.
+- Added `POST /api/evidence-autopilot/reviewed-evidence` and a JSONL reviewed-evidence ledger. The endpoint generates a `reviewId`, appends an audit record, and converts missing source URLs into `operator-review://<reviewId>` source IDs for downstream Evidence Autopilot use.
 
 ## What This Proves
 
@@ -27,6 +28,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not validate WeChat, Boss, or other operator evidence.
 - It does not make a case counselor-ready while `evidenceCoverage.missingP0TaskIds` remains non-empty.
 - It does not accept incomplete operator notes as evidence; cards without source URL/review ID and excerpt remain missing evidence.
+- It does not yet provide a full reviewer workflow with authentication, screenshots, redaction, or case-level evidence browsing.
 
 ## Verification Commands
 
@@ -48,7 +50,7 @@ npm run build
 Set-Location ..
 
 Set-Location backend
-.\.venv\Scripts\python.exe -m pytest src/test_evidence_autopilot_coverage_smoke.py src/test_official_source_provider_smoke.py src/test_evidence_autopilot_api_smoke.py src/test_backend_api_status_smoke.py -q
+.\.venv\Scripts\python.exe -m pytest src/test_reviewed_evidence_store_smoke.py src/test_evidence_autopilot_coverage_smoke.py src/test_official_source_provider_smoke.py src/test_evidence_autopilot_api_smoke.py src/test_backend_api_status_smoke.py -q
 Set-Location ..
 
 git diff --check
@@ -68,13 +70,14 @@ git diff --check
 - Evidence coverage smoke test passed: `evidenceCoverage` is exposed by both the builder and FastAPI endpoint, and missing P0 tasks keep counselor review blocked.
 - Frontend API adapter smoke test passed: backend `evidenceCoverage` is preserved in API state, and responses without coverage fall back to the demo snapshot boundary.
 - Reviewed-evidence smoke test passed: accepted reviewed cards can close operator/manual P0 gates, while incomplete reviewed cards are rejected and keep P0 blocked.
-- Backend focused smoke tests passed: 27 passed, 1 existing Pydantic deprecation warning.
+- Reviewed-evidence ledger smoke test passed: API and store generate `reviewId`, write JSONL, and create `operator-review://...` source IDs when a card has no public URL.
+- Backend focused smoke tests passed: 29 passed, 1 existing Pydantic deprecation warning.
 - `git diff --check` passed.
 
 ## Remaining Work
 
 - Add more official-source providers behind the existing provider registry, starting with final 2026 provincial professional-group tables, province-side plan data, and external outcome validation sources.
 - Add durable operator capture workflow for semi-closed sources.
-- Add storage and review IDs for submitted `reviewedEvidenceCards`; current support is request-scoped and stateless.
+- Connect the reviewed-evidence ledger back into case-level retrieval, screenshot attachments, and reviewer identity controls.
 - Connect quant positioning and 2025 backtest signals to case selection.
 - Run outcome validation before making any effectiveness claim.
