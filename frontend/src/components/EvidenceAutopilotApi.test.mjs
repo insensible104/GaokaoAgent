@@ -69,7 +69,7 @@ const backendResponse = {
     {
       taskId: "official-plan-charter",
       claim: "official_admission",
-      status: "requires_capture",
+      status: "captured_candidate",
       sourceTitle: "华南理工大学本科招生章程",
       sourceUrl: "https://example.edu/charter.pdf",
       sourceType: "official",
@@ -153,6 +153,32 @@ const malformedBackendFallback = await api.fetchEvidenceAutopilotResearch({
 assert.equal(malformedBackendFallback.status, "backend_failed_snapshot_fallback");
 assert.match(malformedBackendFallback.error, /invalid backend evidence card/i);
 assert(malformedBackendFallback.providerResults.length > 0);
+
+const placeholderWithExcerptFallback = await api.fetchEvidenceAutopilotResearch({
+  context,
+  fallback: {
+    plan,
+    searchTasks: draftRun.searchTasks,
+    targetLabel: plan.targetLabel,
+  },
+  fetchImpl: async () => ({
+    ok: true,
+    async json() {
+      return {
+        ...backendResponse,
+        evidenceCards: [
+          {
+            ...backendResponse.evidenceCards[0],
+            status: "requires_capture",
+          },
+        ],
+      };
+    },
+  }),
+});
+assert.equal(placeholderWithExcerptFallback.status, "backend_failed_snapshot_fallback");
+assert.match(placeholderWithExcerptFallback.error, /task placeholders without captured evidence/i);
+assert(placeholderWithExcerptFallback.providerResults.length > 0);
 
 const fallback = await api.fetchEvidenceAutopilotResearch({
   context,

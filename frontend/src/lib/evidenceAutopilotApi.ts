@@ -9,8 +9,11 @@ export type EvidenceAutopilotBackendStatus =
   | "backend_connected"
   | "backend_failed_snapshot_fallback";
 
+type BackendEvidenceCardStatus = "requires_capture" | "operator_review" | "captured_candidate";
+
 interface BackendEvidenceCard {
   taskId: string;
+  status: BackendEvidenceCardStatus;
   sourceTitle: string;
   sourceUrl: string;
   sourceType: EvidenceAutopilotProviderResult["sourceType"];
@@ -19,6 +22,7 @@ interface BackendEvidenceCard {
   confidence: EvidenceAutopilotProviderResult["confidence"];
 }
 
+const VALID_CARD_STATUSES = new Set(["requires_capture", "operator_review", "captured_candidate"]);
 const VALID_SOURCE_TYPES = new Set(["official", "school", "paper", "job", "wechat", "discussion", "other"]);
 const VALID_CONFIDENCE_LEVELS = new Set(["high", "medium", "low"]);
 
@@ -62,7 +66,7 @@ export function mapBackendEvidenceCardsToProviderResults(
   return response.evidenceCards
     .filter((card, index) => {
       assertValidBackendEvidenceCard(card, index);
-      return card.sourceUrl.trim() && card.excerpt.trim();
+      return card.status === "captured_candidate" && card.sourceUrl.trim() && card.excerpt.trim();
     })
     .map((card, index) => ({
       requestId: `backend-${card.taskId}-${index + 1}`,
@@ -156,6 +160,9 @@ function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
 }
 
 function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number): void {
+  if (!VALID_CARD_STATUSES.has(card.status)) {
+    throw new Error(`invalid backend evidence card ${index + 1}: status ${card.status}`);
+  }
   if (!VALID_SOURCE_TYPES.has(card.sourceType)) {
     throw new Error(`invalid backend evidence card ${index + 1}: sourceType ${card.sourceType}`);
   }

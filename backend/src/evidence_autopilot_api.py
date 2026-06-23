@@ -46,7 +46,7 @@ class EvidenceAutopilotEvidenceCard(BaseModel):
 
     taskId: str
     claim: str
-    status: Literal["requires_capture", "operator_review"]
+    status: Literal["requires_capture", "operator_review", "captured_candidate"]
     sourceTitle: str
     sourceUrl: str
     sourceType: Literal["official", "school", "paper", "job", "wechat", "discussion", "other"]
