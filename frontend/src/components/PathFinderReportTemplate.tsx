@@ -1,6 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { buildDeliveryReadinessSummary, type DeliveryReadinessSummary } from "@/lib/deliveryReadiness";
+import { buildDeepEvidenceCollectionPlan, exampleCollectionContext } from "@/lib/deepEvidenceCollectionPlan";
 import { buildDeepOpportunityCard, exampleDeepOpportunityInput } from "@/lib/deepOpportunityCard";
+import { buildEvidenceAutopilotRun } from "@/lib/evidenceAutopilot";
+import { buildEvidenceAutopilotSnapshotProviderResults } from "@/lib/evidenceAutopilotSnapshotProvider";
 
 type Metric = {
   label: string;
@@ -1950,6 +1953,17 @@ const ReportContentsPage = ({ data }: { data: ReportRenderData }) => {
 
 const DeepOpportunityReportPage = () => {
   const card = buildDeepOpportunityCard(exampleDeepOpportunityInput);
+  const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
+  const draftRun = buildEvidenceAutopilotRun({ plan });
+  const providerResults = buildEvidenceAutopilotSnapshotProviderResults({
+    plan,
+    searchTasks: draftRun.searchTasks,
+    targetLabel: plan.targetLabel,
+  });
+  const autopilotRun = buildEvidenceAutopilotRun({ plan, providerResults });
+  const sourceExcerpt = autopilotRun.evidenceResults
+    .flatMap((item) => item.excerpts.map((excerpt) => ({ claim: item.claim, excerpt })))
+    .slice(0, 3);
   const pillarByLabel = (label: string) => card.evidencePillars.find((item) => item.label === label);
 
   return (
@@ -1972,6 +1986,43 @@ const DeepOpportunityReportPage = () => {
               </article>
             );
           })}
+        </div>
+        <div className="counter-evidence">
+          <p className="small-label">Evidence Autopilot · 机会雷达</p>
+          <p>短期录取 / 中期升学 / 长期职业</p>
+          <div className="path-grid">
+            <article className="path-card">
+              <strong>{autopilotRun.evaluation.opportunityScore}</strong>
+              <h3>机会雷达分</h3>
+              <p>{autopilotRun.evaluation.claimBoundary}</p>
+            </article>
+            <article className="path-card">
+              <strong>{autopilotRun.evaluation.p0Gate.passedCount}/{autopilotRun.evaluation.p0Gate.totalCount}</strong>
+              <h3>P0 门槛</h3>
+              <p>官方招生、位次、科研方向、本科可获得性、真实就业和反证检查必须先过门槛。</p>
+            </article>
+            <article className="path-card">
+              <strong>{autopilotRun.evaluation.counterEvidence.hit ? "命中" : "未命中"}</strong>
+              <h3>反证命中</h3>
+              <p>{autopilotRun.evaluation.counterEvidence.reasons[0] ?? "未发现阻断推荐的 P0 反证，仍需顾问复核原始来源。"}</p>
+            </article>
+          </div>
+          <div className="counter-evidence__grid">
+            {autopilotRun.evaluation.horizonSignals.map((signal) => (
+              <article className="counter-evidence__item" key={signal.horizon}>
+                <div><strong>{signal.horizon}</strong><span>{signal.status}</span></div>
+                <p>{signal.summary}</p>
+              </article>
+            ))}
+          </div>
+          <div className="evidence-grid sourceExcerpt">
+            {sourceExcerpt.map((item) => (
+              <article key={`${item.claim}-${item.excerpt}`}>
+                <h3>{item.claim}</h3>
+                <p><b>sourceExcerpt：</b>{item.excerpt}</p>
+              </article>
+            ))}
+          </div>
         </div>
         <div className="counter-evidence">
           <p className="small-label">科研视角</p>

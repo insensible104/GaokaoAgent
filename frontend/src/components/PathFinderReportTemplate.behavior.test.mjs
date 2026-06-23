@@ -56,6 +56,46 @@ const localRequire = (specifier) => {
       exampleDeepOpportunityInput: {},
     };
   }
+  if (specifier === "@/lib/deepEvidenceCollectionPlan") {
+    return {
+      exampleCollectionContext: {
+        province: "广东",
+        schoolName: "华南理工示例校",
+        majorName: "智能制造与数据工程",
+        targetYear: 2026,
+      },
+      buildDeepEvidenceCollectionPlan: () => ({
+        targetLabel: "广东 2026 华南理工示例校 智能制造与数据工程",
+        tasks: [],
+      }),
+    };
+  }
+  if (specifier === "@/lib/evidenceAutopilot") {
+    return {
+      buildEvidenceAutopilotRun: () => ({
+        searchTasks: [],
+        evidenceResults: [
+          { claim: "official_admission", excerpts: ["official excerpt"] },
+        ],
+        evaluation: {
+          opportunityScore: 90,
+          claimBoundary: "radar boundary",
+          p0Gate: { passedCount: 6, totalCount: 6 },
+          counterEvidence: { hit: false, reasons: [] },
+          horizonSignals: [
+            { horizon: "短期录取", status: "supported", summary: "short" },
+            { horizon: "中期升学", status: "supported", summary: "mid" },
+            { horizon: "长期职业", status: "supported", summary: "long" },
+          ],
+        },
+      }),
+    };
+  }
+  if (specifier === "@/lib/evidenceAutopilotSnapshotProvider") {
+    return {
+      buildEvidenceAutopilotSnapshotProviderResults: () => [],
+    };
+  }
   throw new Error(`Unexpected require: ${specifier}`);
 };
 
