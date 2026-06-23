@@ -55,6 +55,8 @@ assert.match(readme, /external-plan-audit-demo/);
 assert.match(readme, /admissions-opportunity-demo/);
 assert.match(readme, /deep-opportunity-card/);
 assert.match(readme, /report-template-preview/);
+assert.match(readme, /PathFinder Alpha Loop/);
+assert.match(readme, /quant positioning, evidence autopilot, opportunity radar/);
 
 assert.match(viteConfig, /VITE_BASE_PATH/);
 assert.match(viteConfig, /VITE_DEV_API_PROXY/);

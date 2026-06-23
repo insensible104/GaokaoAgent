@@ -2,6 +2,10 @@
 
 PathFinder Lite is a public demo of an evidence-first Gaokao volunteer-planning system. It is not another chat wrapper: the core workflow is structured recommendation, quantitative risk control, deep research, external-plan audit, and counselor-review boundaries.
 
+## PathFinder Alpha Loop
+
+PathFinder uses quant positioning, evidence autopilot, opportunity radar, and a Chinese deliverable report to find auditable Gaokao volunteer opportunities.
+
 The fastest way to try it is Docker Compose:
 
 ```powershell
