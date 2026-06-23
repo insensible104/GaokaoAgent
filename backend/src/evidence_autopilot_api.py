@@ -26,6 +26,7 @@ class EvidenceAutopilotResearchRequest(BaseModel):
     schoolName: str = Field(..., min_length=1)
     majorName: str = Field(..., min_length=1)
     targetYear: int = Field(..., ge=2020, le=2100)
+    enableOfficialSourceProvider: bool = False
 
 
 class EvidenceAutopilotTask(BaseModel):
@@ -79,6 +80,7 @@ CLAIM_BOUNDARY = (
 
 def build_evidence_autopilot_research_response(
     request: EvidenceAutopilotResearchRequest,
+    official_source_provider=None,
 ) -> EvidenceAutopilotResearchResponse:
     """Build the backend contract consumed by future frontend/live providers."""
     target_label = (
@@ -103,13 +105,32 @@ def build_evidence_autopilot_research_response(
         )
         for task in raw_tasks
     ]
+    evidence_cards = [_build_empty_evidence_card(task) for task in tasks]
+    provider_note = ""
+    if request.enableOfficialSourceProvider:
+        provider = official_source_provider
+        if provider is None:
+            from official_source_provider import ScutOfficialAdmissionScoreProvider
+
+            provider = ScutOfficialAdmissionScoreProvider()
+        captured_cards = provider.capture(request)
+        if captured_cards:
+            captured_by_task = {card.taskId: card for card in captured_cards}
+            evidence_cards = [
+                captured_by_task.get(card.taskId, card) for card in evidence_cards
+            ]
+            provider_note = (
+                " Live official-source provider captured public score evidence;"
+                " treat it as historical context only."
+            )
+
     return EvidenceAutopilotResearchResponse(
         success=True,
         targetLabel=target_label,
         tasks=tasks,
         searchQueries=[task.query for task in tasks],
-        evidenceCards=[_build_empty_evidence_card(task) for task in tasks],
-        claimBoundary=CLAIM_BOUNDARY,
+        evidenceCards=evidence_cards,
+        claimBoundary=f"{CLAIM_BOUNDARY}{provider_note}",
     )
 
 

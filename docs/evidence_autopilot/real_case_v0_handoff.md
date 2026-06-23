@@ -9,17 +9,18 @@ Date: 2026-06-24
 - Added a fixture-backed provider that emits provider results only from captured cards with URL and excerpt.
 - Added `real_case_fixture` API state so the UI can distinguish reviewed fixture evidence from demo snapshot and backend fallback.
 - Routed captured evidence through Evidence Autopilot, Opportunity Radar, and the report output.
+- Added an opt-in backend official-source provider for SCUT historical admission score evidence.
 
 ## What This Proves
 
-The system can carry one reviewed public evidence fixture through the opportunity-research loop.
+The system can carry one reviewed public evidence fixture through the opportunity-research loop. The backend can also capture one public official score-history card from SCUT's admissions score endpoint when `enableOfficialSourceProvider` is explicitly enabled.
 
 ## What This Does Not Prove
 
 - It does not prove admission probability.
 - It does not prove graduate-school or employment outcomes.
 - It does not prove improved 2026 admission results.
-- It does not validate live web or PDF retrieval.
+- It does not validate generalized live web or PDF retrieval beyond the narrow SCUT score-history provider.
 - It does not validate WeChat, Boss, or other operator evidence.
 
 ## Verification Commands
@@ -31,6 +32,10 @@ node frontend/src/components/EvidenceAutopilotResultNormalizer.test.mjs
 node frontend/src/components/DeepOpportunityRealCase.test.mjs
 node frontend/src/components/PathFinderDeepOpportunityReport.test.mjs
 node frontend/src/PublicLaunchReadiness.test.mjs
+
+Set-Location backend
+.\.venv\Scripts\python.exe -m pytest src/test_official_source_provider_smoke.py -q
+Set-Location ..
 
 Set-Location frontend
 npm run lint
@@ -50,11 +55,13 @@ git diff --check
 - Frontend lint passed with 0 errors and 3 existing Fast Refresh warnings.
 - Frontend build passed.
 - Backend smoke tests passed: 12 passed, 1 existing Pydantic deprecation warning.
+- Official-source provider smoke test passed: 3 passed, 1 existing Pydantic deprecation warning.
+- Manual live SCUT provider check captured `rank-history-band` with highest 644, lowest 629, average 631.9.
 - `git diff --check` passed.
 
 ## Remaining Work
 
-- Replace fixture-only public evidence with a live official-source provider.
+- Extend the narrow SCUT official-source provider into a reusable official-source provider interface.
 - Add durable operator capture workflow for semi-closed sources.
 - Connect quant positioning and 2025 backtest signals to case selection.
 - Run outcome validation before making any effectiveness claim.

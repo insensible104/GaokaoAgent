@@ -166,3 +166,15 @@ Real Case v0 is now implemented as a fixture-backed, auditable slice:
 - Handoff: `docs/evidence_autopilot/real_case_v0_handoff.md`
 
 This changes the maturity assessment: the system now has one real reviewed public-evidence case flowing through Evidence Autopilot, Opportunity Radar, and the report. It is still fixture-backed, so the next bottleneck is live official-source retrieval and durable capture provenance, not another UI layer.
+
+### 2026-06-24 Live Official-Source Provider Slice
+
+The first narrow live provider now exists on the backend:
+
+- Module: `backend/src/official_source_provider.py`
+- Test: `backend/src/test_official_source_provider_smoke.py`
+- API contract: `enableOfficialSourceProvider` opt-in on `EvidenceAutopilotResearchRequest`
+- Captured card: `rank-history-band`
+- Current scope: SCUT 2025 Guangdong physics ordinary-batch historical score row for `工科试验班(智能装备与先进制造)`
+
+This is intentionally not a general crawler. It proves that an official source can be parsed into a `captured_candidate` card with URL, excerpt, capture time, confidence, and review action. It still does not prove 2026 admission probability or generalized source coverage.
