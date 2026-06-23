@@ -66,16 +66,31 @@ export function ReviewedEvidenceCaseBrowserPanel({
 
       <div className="mt-4 divide-y divide-slate-100 rounded-md border border-slate-100">
         {visibleGroups.map((group) => (
-          <div key={group.taskId} className="flex items-start justify-between gap-3 p-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-950">{group.title}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {group.taskId} - {group.priority} - {group.records.length} record(s)
-              </p>
+          <div key={group.taskId} className="p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-950">{group.title}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {group.taskId} - {group.priority} - {group.records.length} record(s)
+                </p>
+              </div>
+              <span className="shrink-0 rounded border border-slate-200 px-2 py-1 text-xs text-slate-600">
+                {group.status}
+              </span>
             </div>
-            <span className="shrink-0 rounded border border-slate-200 px-2 py-1 text-xs text-slate-600">
-              {group.status}
-            </span>
+            {group.records.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {group.records.slice(0, 2).map((record) => (
+                  <div key={record.reviewId} className="rounded-md bg-slate-50 p-2 text-xs text-slate-600">
+                    <p className="truncate font-medium text-slate-700">{record.sourceTitle}</p>
+                    <p className="mt-1 break-words">sourceId: {record.sourceId}</p>
+                    <p className="mt-1">
+                      reviewer: {record.reviewer} - reviewAction: {record.reviewAction}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>

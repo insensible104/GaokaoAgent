@@ -24,6 +24,7 @@ Date: 2026-06-24
 - Added a case evidence browser view model for reviewed-evidence records. It filters records by `caseId`, groups them by evidence task, separates ready-for-report captured cards from incomplete operator notes, flags missing P0 tasks, and marks counter-evidence hits for reviewer escalation.
 - Added a compact reviewed-evidence case browser panel. It reuses the case browser view model and gives reviewers one summary of captured records, ready-for-report records, pending capture, missing P0 gates, and counter-evidence escalation before report use.
 - Wired the compact reviewed-evidence panel into the internal delivery review preview. After a delivery preview returns a case id, the UI attempts case-scoped ledger readback and shows the reviewed evidence gate before the next-action and artifact preview sections.
+- Expanded the compact panel record rows to show audit fields: `sourceId`, `reviewer`, and `reviewAction`, so the reviewer can trace why a record is usable or still needs capture.
 
 ## What This Proves
 
@@ -92,7 +93,7 @@ git diff --check
 - Report payload behavior test passed: live `reviewedEvidenceRecords` are converted into case-scoped audit trail rows, while incomplete operator-review placeholders are excluded.
 - Report preview wiring smoke test passed: App resolves a reviewed-evidence case id, calls the listing adapter, and persists `evidenceAutopilot.reviewedEvidenceRecords` into the preview payload.
 - Reviewed-evidence case browser test passed: case records are grouped by task, incomplete operator notes stay pending, missing P0 tasks are listed, and counter-evidence hits force review.
-- Reviewed-evidence case browser panel test passed: the reviewer summary marks blocked, needs-review, and ready states from missing P0 tasks, pending capture, and counter-evidence.
+- Reviewed-evidence case browser panel test passed: the reviewer summary marks blocked, needs-review, and ready states from missing P0 tasks, pending capture, and counter-evidence, and the panel keeps source ID, reviewer, and review action visible.
 - Internal delivery reviewed-evidence wiring test passed: delivery preview wiring imports the panel, fetches case-scoped ledger records, and builds a delivery-derived evidence collection plan for the reviewer surface.
 - `git diff --check` passed.
 

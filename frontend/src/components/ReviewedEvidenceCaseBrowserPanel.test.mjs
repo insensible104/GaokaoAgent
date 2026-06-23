@@ -22,6 +22,9 @@ for (const token of [
   "counterEvidenceHit",
   "ready_for_report",
   "needs_capture",
+  "sourceId",
+  "reviewer",
+  "reviewAction",
   "case-scoped reviewed evidence",
 ]) {
   assert.match(combinedSource, new RegExp(token), `panel should include ${token}`);

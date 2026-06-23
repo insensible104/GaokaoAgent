@@ -92,6 +92,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Reviewed evidence now has a case browser view model that groups records by task, keeps incomplete operator notes pending, exposes missing P0 tasks, and escalates captured counter-evidence.
 - Reviewed evidence now has a compact case browser panel that summarizes captured records, ready-for-report records, pending capture, missing P0 gates, and counter-evidence escalation for reviewer signoff.
 - Internal delivery review now attempts case-scoped reviewed-evidence ledger readback after a delivery preview is generated and renders the compact reviewer panel before next-action and artifact preview sections.
+- The compact reviewed-evidence panel now shows record-level source ID, reviewer, and review action so internal reviewers can audit evidence provenance without opening the raw JSONL ledger.
 
 ### Partially implemented
 
@@ -257,7 +258,7 @@ This is the first reviewer-workflow data layer. It does not yet render a full br
 
 The frontend now has a compact reviewed-evidence case browser panel. It reuses the case browser view model and converts case-scoped ledger state into reviewer-facing delivery signals: captured count, ready-for-report count, pending capture count, missing P0 count, blocked/needs-review/ready tone, and the next action before report use.
 
-This improves the product loop because the reviewer can see why a case is not deliverable before the family-facing report is treated as final. It is still deliberately narrow: the panel is reusable but not wired into a full delivery route, and it does not yet handle screenshot attachments, redaction, reviewer identity, or permission enforcement.
+This improves the product loop because the reviewer can see why a case is not deliverable before the family-facing report is treated as final. The panel also exposes source ID, reviewer, and review action for the first records in each task group. It is still deliberately narrow: it does not yet handle screenshot attachments, redaction, reviewer identity controls, or permission enforcement.
 
 ### 2026-06-24 Internal Delivery Reviewed-Evidence Gate
 
