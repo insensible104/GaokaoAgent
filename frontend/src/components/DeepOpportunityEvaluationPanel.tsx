@@ -1,6 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildDeepEvidenceCollectionPlan, exampleCollectionContext } from "../lib/deepEvidenceCollectionPlan";
 import { buildEvidenceAutopilotRun } from "../lib/evidenceAutopilot";
+import {
+  fetchEvidenceAutopilotResearch,
+  type EvidenceAutopilotApiState,
+  type EvidenceAutopilotBackendStatus,
+} from "../lib/evidenceAutopilotApi";
 import { buildEvidenceAutopilotSnapshotProviderResults } from "../lib/evidenceAutopilotSnapshotProvider";
 import type { DeepOpportunityEvaluationStatus } from "../lib/deepOpportunityEvaluator";
 
@@ -18,8 +23,14 @@ const statusTone: Record<DeepOpportunityEvaluationStatus, string> = {
   blocked: "border-[#C14E2A] bg-[#FFF0E7] text-[#8F3218]",
 };
 
+const backendStatusLabel: Record<EvidenceAutopilotBackendStatus, string> = {
+  demo_snapshot: "Demo snapshot",
+  backend_connected: "Backend connected",
+  backend_failed_snapshot_fallback: "Demo fallback",
+};
+
 export function DeepOpportunityEvaluationPanel() {
-  const autopilotRun = useMemo(() => {
+  const baseRun = useMemo(() => {
     const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
     const draftRun = buildEvidenceAutopilotRun({ plan });
     const providerResults = buildEvidenceAutopilotSnapshotProviderResults({
@@ -27,8 +38,40 @@ export function DeepOpportunityEvaluationPanel() {
       searchTasks: draftRun.searchTasks,
       targetLabel: plan.targetLabel,
     });
-    return buildEvidenceAutopilotRun({ plan, providerResults });
+    return {
+      plan,
+      searchTasks: draftRun.searchTasks,
+      targetLabel: plan.targetLabel,
+      initialApiState: {
+        status: "demo_snapshot" as const,
+        providerResults,
+        claimBoundary: "Demo snapshot uses deterministic public evidence samples until backend returns captured source excerpts.",
+      },
+    };
   }, []);
+  const [apiState, setApiState] = useState<EvidenceAutopilotApiState>(baseRun.initialApiState);
+  const autopilotRun = useMemo(
+    () => buildEvidenceAutopilotRun({ plan: baseRun.plan, providerResults: apiState.providerResults }),
+    [apiState.providerResults, baseRun.plan],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchEvidenceAutopilotResearch({
+      context: exampleCollectionContext,
+      fallback: {
+        plan: baseRun.plan,
+        searchTasks: baseRun.searchTasks,
+        targetLabel: baseRun.targetLabel,
+      },
+    }).then((result) => {
+      if (!cancelled) setApiState(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [baseRun.plan, baseRun.searchTasks, baseRun.targetLabel]);
+
   const evaluation = autopilotRun.evaluation;
   const p0Failures = evaluation.gateResults.filter((item) => item.priority === "P0" && item.status !== "verified");
 
@@ -51,6 +94,9 @@ export function DeepOpportunityEvaluationPanel() {
             <strong>{statusLabel[evaluation.status]}</strong>
           </div>
           <p className="mt-3 text-xs leading-5">综合机会分 / 100。{evaluation.claimBoundary}</p>
+          <p className="mt-3 border-t border-current/30 pt-3 text-xs leading-5">
+            {backendStatusLabel[apiState.status]} · {apiState.claimBoundary}
+          </p>
         </aside>
       </div>
 
