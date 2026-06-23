@@ -551,6 +551,7 @@ def get_runtime_status() -> dict[str, Any]:
                 "/api/delivery/manifests/recent",
                 "/api/evidence-autopilot/research",
                 "/api/evidence-autopilot/reviewed-evidence",
+                "/api/evidence-autopilot/reviewed-evidence/{case_id}",
                 "/api/stats",
             ],
             "cli_commands": [

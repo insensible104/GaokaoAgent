@@ -83,6 +83,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Backend now has a JSONL reviewed-evidence ledger endpoint that generates `reviewId` values and creates `operator-review://...` source IDs for cards without public URLs.
 - Evidence Autopilot can now load reviewed-evidence ledger cards by `caseId` and merge only matching cards back into coverage.
 - Frontend API adapter can now opt into case-scoped ledger readback by sending `caseId` and `enableReviewedEvidenceLedger`.
+- Backend can now list reviewed-evidence ledger records for one case through a read-only case-scoped endpoint.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 
 ### Partially implemented
@@ -218,3 +219,9 @@ Evidence Autopilot research requests can now opt into reviewed-evidence ledger r
 This closes the first persistence loop: operator evidence can be submitted, assigned a review ID, stored, and later reused in the same case's research run. The remaining gap is case-level evidence management: listing prior records, attaching screenshots, reviewer permissioning, and showing these records in the delivery UI.
 
 The frontend adapter now exposes this backend capability as explicit request options rather than embedding case state into the core school/major context. That keeps the target context stable while allowing case-scoped evidence reuse when the caller has a real case ID.
+
+### 2026-06-24 Case-Level Ledger Listing
+
+The backend now exposes `GET /api/evidence-autopilot/reviewed-evidence/{case_id}`. It returns full reviewed-evidence ledger records for one case, including review ID, reviewer, target label, recorded time, and the normalized evidence card. Records from other cases are filtered out.
+
+This makes the ledger inspectable enough for future delivery review and report attachment. It is still backend-only; the product still needs frontend browsing, screenshot attachment handling, redaction, and reviewer identity controls.

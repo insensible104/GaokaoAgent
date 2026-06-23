@@ -8,7 +8,11 @@ from fastapi.testclient import TestClient
 
 import main
 from evidence_autopilot_api import ReviewedEvidenceCard
-from reviewed_evidence_store import append_reviewed_evidence_record, load_reviewed_evidence_cards
+from reviewed_evidence_store import (
+    append_reviewed_evidence_record,
+    list_reviewed_evidence_records,
+    load_reviewed_evidence_cards,
+)
 
 
 def test_append_reviewed_evidence_record_generates_review_id_and_ledger_entry(tmp_path) -> None:
@@ -125,3 +129,83 @@ def test_load_reviewed_evidence_cards_filters_by_case_id(tmp_path) -> None:
 
     assert [card.taskId for card in cards] == ["employment-market"]
     assert cards[0].sourceUrl.startswith("operator-review://review-")
+
+
+def test_list_reviewed_evidence_records_returns_case_scoped_audit_metadata(tmp_path) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    card = ReviewedEvidenceCard(
+        taskId="employment-market",
+        claim="employment_market",
+        status="captured_candidate",
+        sourceTitle="SCUT reviewed job sample",
+        sourceUrl="",
+        sourceType="job",
+        excerpt="SCUT visible job sample.",
+        capturedAt="2026-06-24",
+        confidence="medium",
+        reviewAction="Use as operator-captured job sample only.",
+    )
+    first = append_reviewed_evidence_record(
+        ledger_path=ledger_path,
+        target_label="Guangdong 2026 SCUT intelligent manufacturing",
+        card=card,
+        reviewer="operator-a",
+        case_id="scut-im-v0",
+    )
+    append_reviewed_evidence_record(
+        ledger_path=ledger_path,
+        target_label="Other target",
+        card=card.model_copy(update={"taskId": "counter-evidence", "claim": "counter_evidence"}),
+        reviewer="operator-b",
+        case_id="other-case",
+    )
+
+    records = list_reviewed_evidence_records(ledger_path=ledger_path, case_id="scut-im-v0")
+
+    assert len(records) == 1
+    assert records[0].reviewId == first.reviewId
+    assert records[0].caseId == "scut-im-v0"
+    assert records[0].reviewer == "operator-a"
+    assert records[0].reviewedEvidenceCard.taskId == "employment-market"
+
+
+def test_reviewed_evidence_listing_endpoint_filters_by_case_id(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "api_reviewed_evidence.jsonl"
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", str(ledger_path))
+    client = TestClient(main.app)
+
+    for case_id, task_id in [
+        ("scut-im-v0", "employment-market"),
+        ("other-case", "counter-evidence"),
+    ]:
+        response = client.post(
+            "/api/evidence-autopilot/reviewed-evidence",
+            json={
+                "targetLabel": "Guangdong 2026 SCUT intelligent manufacturing",
+                "caseId": case_id,
+                "reviewer": "operator-a",
+                "card": {
+                    "taskId": task_id,
+                    "claim": "employment_market" if task_id == "employment-market" else "counter_evidence",
+                    "status": "captured_candidate",
+                    "sourceTitle": f"Reviewed source for {task_id}",
+                    "sourceUrl": "",
+                    "sourceType": "job" if task_id == "employment-market" else "discussion",
+                    "excerpt": f"Reviewed excerpt for {task_id}.",
+                    "capturedAt": "2026-06-24",
+                    "confidence": "medium",
+                    "reviewAction": "Use as reviewed operator evidence only.",
+                },
+            },
+        )
+        assert response.status_code == 200
+
+    listing = client.get("/api/evidence-autopilot/reviewed-evidence/scut-im-v0")
+
+    assert listing.status_code == 200
+    payload = listing.json()
+    assert payload["success"] is True
+    assert payload["caseId"] == "scut-im-v0"
+    assert payload["recordCount"] == 1
+    assert payload["records"][0]["reviewedEvidenceCard"]["taskId"] == "employment-market"
+    assert "/api/evidence-autopilot/reviewed-evidence/{case_id}" in main.get_runtime_status()["entrypoints"]["api"]

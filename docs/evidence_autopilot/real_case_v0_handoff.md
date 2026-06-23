@@ -16,6 +16,7 @@ Date: 2026-06-24
 - Added `POST /api/evidence-autopilot/reviewed-evidence` and a JSONL reviewed-evidence ledger. The endpoint generates a `reviewId`, appends an audit record, and converts missing source URLs into `operator-review://<reviewId>` source IDs for downstream Evidence Autopilot use.
 - Added case-scoped reviewed-evidence ledger readback. When a research request supplies `caseId` and `enableReviewedEvidenceLedger`, Evidence Autopilot loads matching reviewed cards from the ledger and merges them into the same coverage gate.
 - Updated the frontend Evidence Autopilot API adapter so callers can pass `caseId` and `enableReviewedEvidenceLedger` into backend research requests without changing the school/major context model.
+- Added `GET /api/evidence-autopilot/reviewed-evidence/{case_id}` to list reviewed-evidence ledger records for one case without mixing records from other cases.
 
 ## What This Proves
 
@@ -75,13 +76,14 @@ git diff --check
 - Reviewed-evidence ledger smoke test passed: API and store generate `reviewId`, write JSONL, and create `operator-review://...` source IDs when a card has no public URL.
 - Ledger readback smoke test passed: only cards matching the requested `caseId` are merged back into Evidence Autopilot coverage.
 - Frontend API adapter smoke test passed: `caseId` and `enableReviewedEvidenceLedger` are included only when explicitly requested.
-- Backend focused smoke tests passed: 31 passed, 1 existing Pydantic deprecation warning.
+- Reviewed-evidence listing smoke test passed: store and API return only records matching the requested `caseId`.
+- Backend focused smoke tests passed: 23 passed, 1 existing Pydantic deprecation warning.
 - `git diff --check` passed.
 
 ## Remaining Work
 
 - Add more official-source providers behind the existing provider registry, starting with final 2026 provincial professional-group tables, province-side plan data, and external outcome validation sources.
 - Add durable operator capture workflow for semi-closed sources.
-- Connect the reviewed-evidence ledger back into case-level retrieval, screenshot attachments, and reviewer identity controls.
+- Connect the reviewed-evidence listing to frontend/delivery views, screenshot attachments, and reviewer identity controls.
 - Connect quant positioning and 2025 backtest signals to case selection.
 - Run outcome validation before making any effectiveness claim.

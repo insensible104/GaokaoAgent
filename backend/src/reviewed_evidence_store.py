@@ -58,19 +58,40 @@ def load_reviewed_evidence_cards(
     case_id: str,
 ) -> list[ReviewedEvidenceCard]:
     """Load reviewed evidence cards for one case from the append-only ledger."""
+    return [
+        record.reviewedEvidenceCard
+        for record in list_reviewed_evidence_records(
+            ledger_path=ledger_path,
+            case_id=case_id,
+        )
+    ]
+
+
+def list_reviewed_evidence_records(
+    *,
+    ledger_path: Path,
+    case_id: str,
+) -> list[ReviewedEvidenceRecord]:
+    """List full reviewed-evidence records for one case."""
+    return [
+        record
+        for record in _iter_reviewed_evidence_records(ledger_path)
+        if record.caseId == case_id
+    ]
+
+
+def _iter_reviewed_evidence_records(ledger_path: Path) -> list[ReviewedEvidenceRecord]:
     if not ledger_path.is_file():
         return []
-    cards: list[ReviewedEvidenceCard] = []
+    records: list[ReviewedEvidenceRecord] = []
     for line in ledger_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         try:
-            record = ReviewedEvidenceRecord.model_validate_json(line)
+            records.append(ReviewedEvidenceRecord.model_validate_json(line))
         except ValueError:
             continue
-        if record.caseId == case_id:
-            cards.append(record.reviewedEvidenceCard)
-    return cards
+    return records
 
 
 def _new_review_id() -> str:

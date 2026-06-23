@@ -121,6 +121,15 @@ class ReviewedEvidenceSubmissionResponse(BaseModel):
     recordedAt: str
 
 
+class ReviewedEvidenceListingResponse(BaseModel):
+    """Case-scoped reviewed-evidence ledger listing."""
+
+    success: bool
+    caseId: str
+    recordCount: int
+    records: list
+
+
 class ReviewedEvidenceMergeResult(BaseModel):
     """Reviewed-card merge output with explicit accepted and rejected counts."""
 
@@ -267,6 +276,25 @@ async def submit_reviewed_evidence(
         reviewedEvidenceCard=record.reviewedEvidenceCard,
         ledgerPath=record.ledgerPath,
         recordedAt=record.recordedAt,
+    )
+
+
+@router.get("/reviewed-evidence/{case_id}", response_model=ReviewedEvidenceListingResponse)
+async def list_reviewed_evidence(
+    case_id: str,
+) -> ReviewedEvidenceListingResponse:
+    """List reviewed evidence records for one case id."""
+    from reviewed_evidence_store import list_reviewed_evidence_records
+
+    records = list_reviewed_evidence_records(
+        ledger_path=_reviewed_evidence_ledger_path(),
+        case_id=case_id,
+    )
+    return ReviewedEvidenceListingResponse(
+        success=True,
+        caseId=case_id,
+        recordCount=len(records),
+        records=[record.model_dump() for record in records],
     )
 
 
