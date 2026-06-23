@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date
 from html.parser import HTMLParser
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 from urllib.request import Request, urlopen
 
 if TYPE_CHECKING:
@@ -23,6 +24,40 @@ SCUT_SCORE_QUERY_URL = (
     "&cq16s190=%25E6%2599%25AE%25E9%2580%259A%25E7%25B1%25BB"
     "&cq16s191=%25E7%2590%2586%25E5%25B7%25A5%2F%25E7%2589%25A9%25E7%2590%2586%25E7%25B1%25BB"
 )
+
+
+class OfficialSourceProvider(Protocol):
+    """Contract for official-source evidence capture providers."""
+
+    def capture(
+        self,
+        request: "EvidenceAutopilotResearchRequest",
+    ) -> list["EvidenceAutopilotEvidenceCard"]:
+        """Capture reviewed public evidence cards for one request."""
+        ...
+
+
+@dataclass(frozen=True)
+class OfficialSourceCaptureResult:
+    """Provider-capture output with explicit failure notes."""
+
+    cards: list["EvidenceAutopilotEvidenceCard"]
+    warnings: list[str]
+
+
+def capture_official_source_evidence(
+    request: "EvidenceAutopilotResearchRequest",
+    providers: list[OfficialSourceProvider],
+) -> OfficialSourceCaptureResult:
+    """Capture official-source evidence while isolating provider failures."""
+    cards: list["EvidenceAutopilotEvidenceCard"] = []
+    warnings: list[str] = []
+    for provider in providers:
+        try:
+            cards.extend(provider.capture(request))
+        except Exception as exc:  # noqa: BLE001 - provider failures must not break research task generation.
+            warnings.append(f"{provider.__class__.__name__}: {exc}")
+    return OfficialSourceCaptureResult(cards=cards, warnings=warnings)
 
 
 class _TableCellParser(HTMLParser):

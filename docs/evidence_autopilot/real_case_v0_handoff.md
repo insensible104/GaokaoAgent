@@ -9,11 +9,11 @@ Date: 2026-06-24
 - Added a fixture-backed provider that emits provider results only from captured cards with URL and excerpt.
 - Added `real_case_fixture` API state so the UI can distinguish reviewed fixture evidence from demo snapshot and backend fallback.
 - Routed captured evidence through Evidence Autopilot, Opportunity Radar, and the report output.
-- Added an opt-in backend official-source provider for SCUT historical admission score evidence.
+- Added an opt-in backend official-source provider contract, with SCUT historical admission score evidence as the first implementation.
 
 ## What This Proves
 
-The system can carry one reviewed public evidence fixture through the opportunity-research loop. The backend can also capture one public official score-history card from SCUT's admissions score endpoint when `enableOfficialSourceProvider` is explicitly enabled.
+The system can carry one reviewed public evidence fixture through the opportunity-research loop. The backend can also run an opt-in official-source provider registry, isolate provider failures, and capture one public official score-history card from SCUT's admissions score endpoint when `enableOfficialSourceProvider` is explicitly enabled.
 
 ## What This Does Not Prove
 
@@ -57,11 +57,12 @@ git diff --check
 - Backend smoke tests passed: 12 passed, 1 existing Pydantic deprecation warning.
 - Official-source provider smoke test passed: 3 passed, 1 existing Pydantic deprecation warning.
 - Manual live SCUT provider check captured `rank-history-band` with highest 644, lowest 629, average 631.9.
+- Provider registry smoke test passed: provider cards and warnings merge without fabricating captured evidence.
 - `git diff --check` passed.
 
 ## Remaining Work
 
-- Extend the narrow SCUT official-source provider into a reusable official-source provider interface.
+- Add more official-source providers behind the existing provider registry, starting with final 2026 provincial plan and school charter pages.
 - Add durable operator capture workflow for semi-closed sources.
 - Connect quant positioning and 2025 backtest signals to case selection.
 - Run outcome validation before making any effectiveness claim.

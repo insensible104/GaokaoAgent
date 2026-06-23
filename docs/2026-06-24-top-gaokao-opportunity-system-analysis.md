@@ -177,4 +177,4 @@ The first narrow live provider now exists on the backend:
 - Captured card: `rank-history-band`
 - Current scope: SCUT 2025 Guangdong physics ordinary-batch historical score row for `工科试验班(智能装备与先进制造)`
 
-This is intentionally not a general crawler. It proves that an official source can be parsed into a `captured_candidate` card with URL, excerpt, capture time, confidence, and review action. It still does not prove 2026 admission probability or generalized source coverage.
+This is intentionally not a general crawler. It proves that an official source can be parsed into a `captured_candidate` card with URL, excerpt, capture time, confidence, and review action. It also establishes a provider registry that can merge cards and warnings without letting a failed provider fabricate evidence or break task generation. It still does not prove 2026 admission probability or generalized source coverage.

@@ -81,6 +81,7 @@ CLAIM_BOUNDARY = (
 def build_evidence_autopilot_research_response(
     request: EvidenceAutopilotResearchRequest,
     official_source_provider=None,
+    official_source_providers=None,
 ) -> EvidenceAutopilotResearchResponse:
     """Build the backend contract consumed by future frontend/live providers."""
     target_label = (
@@ -106,23 +107,33 @@ def build_evidence_autopilot_research_response(
         for task in raw_tasks
     ]
     evidence_cards = [_build_empty_evidence_card(task) for task in tasks]
-    provider_note = ""
+    provider_notes: list[str] = []
     if request.enableOfficialSourceProvider:
-        provider = official_source_provider
-        if provider is None:
-            from official_source_provider import ScutOfficialAdmissionScoreProvider
+        from official_source_provider import (
+            ScutOfficialAdmissionScoreProvider,
+            capture_official_source_evidence,
+        )
 
-            provider = ScutOfficialAdmissionScoreProvider()
-        captured_cards = provider.capture(request)
+        providers = official_source_providers
+        if providers is None:
+            providers = [official_source_provider] if official_source_provider is not None else [
+                ScutOfficialAdmissionScoreProvider()
+            ]
+        capture_result = capture_official_source_evidence(request, providers)
+        captured_cards = capture_result.cards
         if captured_cards:
             captured_by_task = {card.taskId: card for card in captured_cards}
             evidence_cards = [
                 captured_by_task.get(card.taskId, card) for card in evidence_cards
             ]
-            provider_note = (
-                " Live official-source provider captured public score evidence;"
-                " treat it as historical context only."
+            provider_notes.append(
+                "Live official-source provider captured public evidence;"
+                " score evidence remains historical context only."
             )
+        provider_notes.extend(
+            f"Official-source provider warning: {warning}"
+            for warning in capture_result.warnings
+        )
 
     return EvidenceAutopilotResearchResponse(
         success=True,
@@ -130,7 +141,7 @@ def build_evidence_autopilot_research_response(
         tasks=tasks,
         searchQueries=[task.query for task in tasks],
         evidenceCards=evidence_cards,
-        claimBoundary=f"{CLAIM_BOUNDARY}{provider_note}",
+        claimBoundary=f"{CLAIM_BOUNDARY}{' '.join(provider_notes)}",
     )
 
 
