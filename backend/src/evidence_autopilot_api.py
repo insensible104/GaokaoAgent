@@ -17,6 +17,23 @@ EvidenceAutopilotChannel = Literal[
     "job_market_operator",
     "manual_review",
 ]
+EvidenceAutopilotSourceType = Literal["official", "school", "paper", "job", "wechat", "discussion", "other"]
+EvidenceAutopilotConfidence = Literal["high", "medium", "low"]
+
+
+class ReviewedEvidenceCard(BaseModel):
+    """Human-reviewed evidence card submitted back into the research loop."""
+
+    taskId: str
+    claim: str
+    status: Literal["captured_candidate"]
+    sourceTitle: str
+    sourceUrl: str
+    sourceType: EvidenceAutopilotSourceType
+    excerpt: str
+    capturedAt: str
+    confidence: EvidenceAutopilotConfidence
+    reviewAction: str
 
 
 class EvidenceAutopilotResearchRequest(BaseModel):
@@ -27,6 +44,7 @@ class EvidenceAutopilotResearchRequest(BaseModel):
     majorName: str = Field(..., min_length=1)
     targetYear: int = Field(..., ge=2020, le=2100)
     enableOfficialSourceProvider: bool = False
+    reviewedEvidenceCards: list[ReviewedEvidenceCard] = Field(default_factory=list)
 
 
 class EvidenceAutopilotTask(BaseModel):
@@ -50,10 +68,10 @@ class EvidenceAutopilotEvidenceCard(BaseModel):
     status: Literal["requires_capture", "operator_review", "captured_candidate"]
     sourceTitle: str
     sourceUrl: str
-    sourceType: Literal["official", "school", "paper", "job", "wechat", "discussion", "other"]
+    sourceType: EvidenceAutopilotSourceType
     excerpt: str
     capturedAt: str
-    confidence: Literal["high", "medium", "low"]
+    confidence: EvidenceAutopilotConfidence
     reviewAction: str
 
 
@@ -78,6 +96,14 @@ class EvidenceAutopilotResearchResponse(BaseModel):
     evidenceCards: list[EvidenceAutopilotEvidenceCard]
     evidenceCoverage: EvidenceAutopilotCoverageSummary
     claimBoundary: str
+
+
+class ReviewedEvidenceMergeResult(BaseModel):
+    """Reviewed-card merge output with explicit accepted and rejected counts."""
+
+    cards: list[EvidenceAutopilotEvidenceCard]
+    acceptedTaskIds: list[str]
+    rejectedCount: int
 
 
 router = APIRouter(prefix="/api/evidence-autopilot", tags=["evidence-autopilot"])
@@ -151,6 +177,22 @@ def build_evidence_autopilot_research_response(
             for warning in capture_result.warnings
         )
 
+    reviewed_merge = _merge_reviewed_evidence_cards(
+        tasks,
+        evidence_cards,
+        request.reviewedEvidenceCards,
+    )
+    evidence_cards = reviewed_merge.cards
+    if reviewed_merge.acceptedTaskIds:
+        provider_notes.append(
+            "Reviewed evidence cards accepted: "
+            f"{', '.join(reviewed_merge.acceptedTaskIds)}."
+        )
+    if reviewed_merge.rejectedCount:
+        provider_notes.append(
+            f"Rejected reviewed evidence cards: {reviewed_merge.rejectedCount}."
+        )
+
     return EvidenceAutopilotResearchResponse(
         success=True,
         targetLabel=target_label,
@@ -183,6 +225,55 @@ def _build_empty_evidence_card(task: EvidenceAutopilotTask) -> EvidenceAutopilot
         capturedAt="",
         confidence="low",
         reviewAction=task.reviewAction,
+    )
+
+
+def _merge_reviewed_evidence_cards(
+    tasks: list[EvidenceAutopilotTask],
+    evidence_cards: list[EvidenceAutopilotEvidenceCard],
+    reviewed_cards: list[ReviewedEvidenceCard],
+) -> ReviewedEvidenceMergeResult:
+    task_by_id = {task.taskId: task for task in tasks}
+    merged_by_task = {card.taskId: card for card in evidence_cards}
+    accepted_task_ids: list[str] = []
+    rejected_count = 0
+
+    for reviewed in reviewed_cards:
+        task = task_by_id.get(reviewed.taskId)
+        if task is None or task.claim != reviewed.claim or not _is_complete_reviewed_card(reviewed):
+            rejected_count += 1
+            continue
+        merged_by_task[reviewed.taskId] = EvidenceAutopilotEvidenceCard(
+            taskId=reviewed.taskId,
+            claim=reviewed.claim,
+            status=reviewed.status,
+            sourceTitle=reviewed.sourceTitle,
+            sourceUrl=reviewed.sourceUrl,
+            sourceType=reviewed.sourceType,
+            excerpt=reviewed.excerpt,
+            capturedAt=reviewed.capturedAt,
+            confidence=reviewed.confidence,
+            reviewAction=reviewed.reviewAction,
+        )
+        accepted_task_ids.append(reviewed.taskId)
+
+    return ReviewedEvidenceMergeResult(
+        cards=[merged_by_task[task.taskId] for task in tasks],
+        acceptedTaskIds=accepted_task_ids,
+        rejectedCount=rejected_count,
+    )
+
+
+def _is_complete_reviewed_card(card: ReviewedEvidenceCard) -> bool:
+    return all(
+        value.strip()
+        for value in [
+            card.sourceTitle,
+            card.sourceUrl,
+            card.excerpt,
+            card.capturedAt,
+            card.reviewAction,
+        ]
     )
 
 

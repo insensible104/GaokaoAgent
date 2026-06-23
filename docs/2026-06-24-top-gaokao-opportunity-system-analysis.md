@@ -79,6 +79,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Backend can generate candidate-specific research tasks and placeholders.
 - Backend now returns an `evidenceCoverage` gate summary with captured task IDs, missing P0 task IDs, operator/manual-review tasks, review blockers, and counselor-review readiness.
 - Frontend API state now preserves and validates backend `evidenceCoverage`, so a malformed or incomplete backend response falls back to the demo boundary instead of appearing connected.
+- Backend accepts request-scoped `reviewedEvidenceCards` so compliant human-captured operator evidence can enter the same coverage gate without pretending that an uncollected task is verified.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 
 ### Partially implemented
@@ -194,3 +195,9 @@ The backend API now exposes `evidenceCoverage` on every Evidence Autopilot respo
 This is a product-control improvement, not an outcome claim. It helps PathFinder stop expanding the case when the immediate blocker is simply missing P0 evidence.
 
 The frontend adapter now carries this summary through `EvidenceAutopilotApiState`. No new UI surface was added in this slice; the point is to stabilize the contract first.
+
+### 2026-06-24 Reviewed Evidence Injection
+
+The backend request contract now accepts `reviewedEvidenceCards` for human-captured evidence from semi-closed or manual-review channels. A reviewed card only closes a task when it matches an existing task and includes a source URL or review ID, excerpt, capture date, confidence, and review action. Incomplete notes are rejected and keep the P0 gate blocked.
+
+This gives the system a compliant path for Boss, WeChat, and counter-evidence work without scraping or fabricating evidence. It is still stateless and request-scoped; durable storage, reviewer identity, screenshots, and audit IDs remain future work.

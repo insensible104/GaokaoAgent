@@ -72,6 +72,89 @@ def test_coverage_summary_counts_captured_cards_but_keeps_remaining_blocks() -> 
     assert coverage.readyForCounselorReview is False
 
 
+def test_reviewed_evidence_cards_can_close_operator_p0_gates() -> None:
+    request = EvidenceAutopilotResearchRequest(
+        province="Guangdong",
+        schoolName="South China University of Technology",
+        majorName="intelligent manufacturing",
+        targetYear=2026,
+        enableOfficialSourceProvider=True,
+        reviewedEvidenceCards=[
+            {
+                "taskId": "employment-market",
+                "claim": "employment_market",
+                "status": "captured_candidate",
+                "sourceTitle": "Reviewed job-market sample",
+                "sourceUrl": "operator-review://boss/2026-06-24/scut-im-001",
+                "sourceType": "job",
+                "excerpt": "Reviewed visible job sample links intelligent manufacturing work to robotics integration.",
+                "capturedAt": "2026-06-24",
+                "confidence": "medium",
+                "reviewAction": "Use as operator-captured job sample only; do not infer employment certainty.",
+            },
+            {
+                "taskId": "counter-evidence",
+                "claim": "counter_evidence",
+                "status": "captured_candidate",
+                "sourceTitle": "Manual counter-evidence review log",
+                "sourceUrl": "operator-review://manual/2026-06-24/scut-im-counter",
+                "sourceType": "discussion",
+                "excerpt": "Manual review found no blocking campus-conflict, blacklist, or complaint hit in the checked sources.",
+                "capturedAt": "2026-06-24",
+                "confidence": "medium",
+                "reviewAction": "Use as a counter-evidence check log only; rerun before final delivery.",
+            },
+        ],
+    )
+
+    response = build_evidence_autopilot_research_response(
+        request,
+        official_source_providers=[
+            StaticProvider("official-plan-charter", "official_admission", "official"),
+            StaticProvider("rank-history-band", "rank_history", "official"),
+            StaticProvider("faculty-research-direction", "faculty_research", "school"),
+            StaticProvider("undergrad-access", "undergrad_access", "school"),
+            StaticProvider("graduate-progression", "graduate_progression", "school"),
+        ],
+    )
+
+    coverage = response.evidenceCoverage
+    assert "employment-market" in coverage.capturedTaskIds
+    assert "counter-evidence" in coverage.capturedTaskIds
+    assert coverage.missingP0TaskIds == []
+    assert coverage.readyForCounselorReview is True
+    assert "Reviewed evidence cards accepted" in response.claimBoundary
+
+
+def test_incomplete_reviewed_evidence_cards_do_not_close_p0_gates() -> None:
+    request = EvidenceAutopilotResearchRequest(
+        province="Guangdong",
+        schoolName="South China University of Technology",
+        majorName="intelligent manufacturing",
+        targetYear=2026,
+        reviewedEvidenceCards=[
+            {
+                "taskId": "employment-market",
+                "claim": "employment_market",
+                "status": "captured_candidate",
+                "sourceTitle": "Incomplete job-market sample",
+                "sourceUrl": "",
+                "sourceType": "job",
+                "excerpt": "",
+                "capturedAt": "2026-06-24",
+                "confidence": "medium",
+                "reviewAction": "Incomplete card must remain a task.",
+            }
+        ],
+    )
+
+    response = build_evidence_autopilot_research_response(request)
+
+    assert "employment-market" in response.evidenceCoverage.missingP0TaskIds
+    assert "employment-market" not in response.evidenceCoverage.capturedTaskIds
+    assert "Rejected reviewed evidence cards" in response.claimBoundary
+
+
 def test_coverage_summary_is_exposed_by_fastapi_endpoint() -> None:
     client = TestClient(main.app)
 
