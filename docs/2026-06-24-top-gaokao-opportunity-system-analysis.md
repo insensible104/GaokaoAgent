@@ -84,6 +84,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Evidence Autopilot can now load reviewed-evidence ledger cards by `caseId` and merge only matching cards back into coverage.
 - Frontend API adapter can now opt into case-scoped ledger readback by sending `caseId` and `enableReviewedEvidenceLedger`.
 - Backend can now list reviewed-evidence ledger records for one case through a read-only case-scoped endpoint.
+- Frontend API adapter can now fetch and validate case-scoped reviewed-evidence ledger records.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 
 ### Partially implemented
@@ -225,3 +226,5 @@ The frontend adapter now exposes this backend capability as explicit request opt
 The backend now exposes `GET /api/evidence-autopilot/reviewed-evidence/{case_id}`. It returns full reviewed-evidence ledger records for one case, including review ID, reviewer, target label, recorded time, and the normalized evidence card. Records from other cases are filtered out.
 
 This makes the ledger inspectable enough for future delivery review and report attachment. It is still backend-only; the product still needs frontend browsing, screenshot attachment handling, redaction, and reviewer identity controls.
+
+The frontend API adapter now has a typed fetch path for this listing endpoint. This is still not a UI feature; it is the contract needed before delivery pages can safely render reviewed operator evidence.

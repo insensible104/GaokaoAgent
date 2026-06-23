@@ -17,6 +17,7 @@ Date: 2026-06-24
 - Added case-scoped reviewed-evidence ledger readback. When a research request supplies `caseId` and `enableReviewedEvidenceLedger`, Evidence Autopilot loads matching reviewed cards from the ledger and merges them into the same coverage gate.
 - Updated the frontend Evidence Autopilot API adapter so callers can pass `caseId` and `enableReviewedEvidenceLedger` into backend research requests without changing the school/major context model.
 - Added `GET /api/evidence-autopilot/reviewed-evidence/{case_id}` to list reviewed-evidence ledger records for one case without mixing records from other cases.
+- Added a frontend API adapter for the reviewed-evidence listing endpoint, with response validation before records can be used by future delivery views.
 
 ## What This Proves
 
@@ -77,6 +78,7 @@ git diff --check
 - Ledger readback smoke test passed: only cards matching the requested `caseId` are merged back into Evidence Autopilot coverage.
 - Frontend API adapter smoke test passed: `caseId` and `enableReviewedEvidenceLedger` are included only when explicitly requested.
 - Reviewed-evidence listing smoke test passed: store and API return only records matching the requested `caseId`.
+- Frontend reviewed-evidence listing adapter smoke test passed: case-scoped records are fetched and malformed record lists are rejected.
 - Backend focused smoke tests passed: 23 passed, 1 existing Pydantic deprecation warning.
 - `git diff --check` passed.
 

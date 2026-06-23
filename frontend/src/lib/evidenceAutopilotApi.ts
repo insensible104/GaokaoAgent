@@ -55,6 +55,23 @@ export interface EvidenceAutopilotApiState {
   error?: string;
 }
 
+export interface ReviewedEvidenceRecord {
+  reviewId: string;
+  targetLabel: string;
+  reviewedEvidenceCard: BackendEvidenceCard;
+  reviewer: string;
+  caseId: string;
+  recordedAt: string;
+  ledgerPath: string;
+}
+
+export interface ReviewedEvidenceListingResponse {
+  success: boolean;
+  caseId: string;
+  recordCount: number;
+  records: ReviewedEvidenceRecord[];
+}
+
 type FetchLike = (url: string, init: RequestInit) => Promise<{
   ok: boolean;
   status?: number;
@@ -203,6 +220,27 @@ export async function fetchEvidenceAutopilotResearch({
   }
 }
 
+export async function fetchReviewedEvidenceRecords({
+  caseId,
+  fetchImpl = fetch,
+}: {
+  caseId: string;
+  fetchImpl?: FetchLike;
+}): Promise<ReviewedEvidenceListingResponse> {
+  const encodedCaseId = encodeURIComponent(caseId);
+  const response = await fetchImpl(
+    buildApiUrl(`/api/evidence-autopilot/reviewed-evidence/${encodedCaseId}`),
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`backend returned HTTP ${response.status ?? "error"}`);
+  }
+  return reviewedEvidenceListingFromJson(await response.json());
+}
+
 function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
   if (!value || typeof value !== "object") {
     throw new Error("backend response was not an object");
@@ -212,6 +250,26 @@ function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
     throw new Error("backend response evidenceCards was not an array");
   }
   assertValidBackendCoverage(response.evidenceCoverage);
+  return response;
+}
+
+function reviewedEvidenceListingFromJson(value: unknown): ReviewedEvidenceListingResponse {
+  if (!value || typeof value !== "object") {
+    throw new Error("reviewed evidence listing response was not an object");
+  }
+  const response = value as ReviewedEvidenceListingResponse;
+  if (!Array.isArray(response.records)) {
+    throw new Error("reviewed evidence listing records was not an array");
+  }
+  response.records.forEach((record, index) => {
+    if (!record.reviewId || typeof record.reviewId !== "string") {
+      throw new Error(`invalid reviewed evidence record ${index + 1}: reviewId`);
+    }
+    if (!record.reviewedEvidenceCard || typeof record.reviewedEvidenceCard !== "object") {
+      throw new Error(`invalid reviewed evidence record ${index + 1}: reviewedEvidenceCard`);
+    }
+    assertValidBackendEvidenceCard(record.reviewedEvidenceCard, index);
+  });
   return response;
 }
 

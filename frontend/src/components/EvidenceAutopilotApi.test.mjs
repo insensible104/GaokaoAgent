@@ -50,6 +50,7 @@ assert.equal(typeof api.buildEvidenceAutopilotResearchPayload, "function");
 assert.equal(typeof api.mapBackendEvidenceCardsToProviderResults, "function");
 assert.equal(typeof api.fetchEvidenceAutopilotResearch, "function");
 assert.equal(typeof api.buildEvidenceAutopilotSnapshotFallback, "function");
+assert.equal(typeof api.fetchReviewedEvidenceRecords, "function");
 
 const context = {
   province: "广东",
@@ -150,6 +151,64 @@ assert.equal(connected.providerResults.length, 1);
 assert.equal(connected.claimBoundary, backendResponse.claimBoundary);
 assert.deepEqual(connected.evidenceCoverage, backendResponse.evidenceCoverage);
 assert.equal(connected.backendResponse.evidenceCoverage.readyForCounselorReview, false);
+
+const reviewedRecordsResponse = {
+  success: true,
+  caseId: "scut-im-v0",
+  recordCount: 1,
+  records: [
+    {
+      reviewId: "review-20260624T000000Z-abc12345",
+      targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+      reviewedEvidenceCard: {
+        taskId: "employment-market",
+        claim: "employment_market",
+        status: "captured_candidate",
+        sourceTitle: "Reviewed job-market sample",
+        sourceUrl: "operator-review://review-20260624T000000Z-abc12345",
+        sourceType: "job",
+        excerpt: "Visible job sample describes robotics integration responsibilities.",
+        capturedAt: "2026-06-24",
+        confidence: "medium",
+        reviewAction: "Use as operator-captured job sample only.",
+      },
+      reviewer: "operator-a",
+      caseId: "scut-im-v0",
+      recordedAt: "2026-06-24T00:00:00Z",
+      ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+    },
+  ],
+};
+
+const reviewedListing = await api.fetchReviewedEvidenceRecords({
+  caseId: "scut-im-v0",
+  fetchImpl: async (url, init) => {
+    assert.equal(url, "https://api.test/api/evidence-autopilot/reviewed-evidence/scut-im-v0");
+    assert.equal(init.method, "GET");
+    return {
+      ok: true,
+      async json() {
+        return reviewedRecordsResponse;
+      },
+    };
+  },
+});
+assert.equal(reviewedListing.success, true);
+assert.equal(reviewedListing.recordCount, 1);
+assert.equal(reviewedListing.records[0].reviewedEvidenceCard.taskId, "employment-market");
+
+await assert.rejects(
+  () => api.fetchReviewedEvidenceRecords({
+    caseId: "scut-im-v0",
+    fetchImpl: async () => ({
+      ok: true,
+      async json() {
+        return { ...reviewedRecordsResponse, records: "not-an-array" };
+      },
+    }),
+  }),
+  /records was not an array/i,
+);
 
 const plan = planModule.buildDeepEvidenceCollectionPlan(planModule.exampleCollectionContext);
 const draftRun = autopilot.buildEvidenceAutopilotRun({ plan });
