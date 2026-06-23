@@ -57,6 +57,17 @@ class EvidenceAutopilotEvidenceCard(BaseModel):
     reviewAction: str
 
 
+class EvidenceAutopilotCoverageSummary(BaseModel):
+    """Machine-readable evidence gate summary for counselor review."""
+
+    totalTasks: int
+    capturedTaskIds: list[str]
+    missingP0TaskIds: list[str]
+    operatorTaskIds: list[str]
+    readyForCounselorReview: bool
+    reviewBlockers: list[str]
+
+
 class EvidenceAutopilotResearchResponse(BaseModel):
     """Auditable Evidence Autopilot bridge response."""
 
@@ -65,6 +76,7 @@ class EvidenceAutopilotResearchResponse(BaseModel):
     tasks: list[EvidenceAutopilotTask]
     searchQueries: list[str]
     evidenceCards: list[EvidenceAutopilotEvidenceCard]
+    evidenceCoverage: EvidenceAutopilotCoverageSummary
     claimBoundary: str
 
 
@@ -145,6 +157,7 @@ def build_evidence_autopilot_research_response(
         tasks=tasks,
         searchQueries=[task.query for task in tasks],
         evidenceCards=evidence_cards,
+        evidenceCoverage=_build_evidence_coverage(tasks, evidence_cards),
         claimBoundary=f"{CLAIM_BOUNDARY}{' '.join(provider_notes)}",
     )
 
@@ -170,6 +183,43 @@ def _build_empty_evidence_card(task: EvidenceAutopilotTask) -> EvidenceAutopilot
         capturedAt="",
         confidence="low",
         reviewAction=task.reviewAction,
+    )
+
+
+def _build_evidence_coverage(
+    tasks: list[EvidenceAutopilotTask],
+    evidence_cards: list[EvidenceAutopilotEvidenceCard],
+) -> EvidenceAutopilotCoverageSummary:
+    captured_task_ids = {
+        card.taskId
+        for card in evidence_cards
+        if card.status == "captured_candidate" and card.sourceUrl and card.excerpt
+    }
+    ordered_captured_task_ids = [
+        task.taskId for task in tasks if task.taskId in captured_task_ids
+    ]
+    missing_p0_task_ids = [
+        task.taskId
+        for task in tasks
+        if task.priority == "P0" and task.taskId not in captured_task_ids
+    ]
+    operator_task_ids = [
+        task.taskId
+        for task in tasks
+        if task.channel in {"wechat_operator", "job_market_operator", "manual_review"}
+    ]
+    review_blockers = []
+    if missing_p0_task_ids:
+        review_blockers.append(
+            f"Missing captured P0 evidence: {', '.join(missing_p0_task_ids)}"
+        )
+    return EvidenceAutopilotCoverageSummary(
+        totalTasks=len(tasks),
+        capturedTaskIds=ordered_captured_task_ids,
+        missingP0TaskIds=missing_p0_task_ids,
+        operatorTaskIds=operator_task_ids,
+        readyForCounselorReview=not missing_p0_task_ids,
+        reviewBlockers=review_blockers,
     )
 
 

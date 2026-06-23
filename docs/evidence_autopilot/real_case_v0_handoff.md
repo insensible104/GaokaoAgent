@@ -10,10 +10,11 @@ Date: 2026-06-24
 - Added `real_case_fixture` API state so the UI can distinguish reviewed fixture evidence from demo snapshot and backend fallback.
 - Routed captured evidence through Evidence Autopilot, Opportunity Radar, and the report output.
 - Added an opt-in backend official-source provider contract, with SCUT plan/charter evidence, historical admission score evidence, and school-source major-profile evidence as the first implementations.
+- Added a backend `evidenceCoverage` summary so the API exposes captured tasks, missing P0 gates, operator/manual-review tasks, and counselor-review blockers.
 
 ## What This Proves
 
-The system can carry one reviewed public evidence fixture through the opportunity-research loop. The backend can also run an opt-in official-source provider registry, isolate provider failures, and capture SCUT public official plan/charter evidence, one public official score-history card, and three school-source major-profile cards when `enableOfficialSourceProvider` is explicitly enabled.
+The system can carry one reviewed public evidence fixture through the opportunity-research loop. The backend can also run an opt-in official-source provider registry, isolate provider failures, capture SCUT public official plan/charter evidence, one public official score-history card, and three school-source major-profile cards when `enableOfficialSourceProvider` is explicitly enabled. The API now reports whether remaining P0 evidence gaps still block counselor review.
 
 ## What This Does Not Prove
 
@@ -22,6 +23,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not prove improved 2026 admission results.
 - It does not validate generalized live web or PDF retrieval beyond the narrow SCUT score-history provider.
 - It does not validate WeChat, Boss, or other operator evidence.
+- It does not make a case counselor-ready while `evidenceCoverage.missingP0TaskIds` remains non-empty.
 
 ## Verification Commands
 
@@ -43,7 +45,7 @@ npm run build
 Set-Location ..
 
 Set-Location backend
-.\.venv\Scripts\python.exe -m pytest src/test_evidence_autopilot_api_smoke.py src/test_backend_api_status_smoke.py -q
+.\.venv\Scripts\python.exe -m pytest src/test_evidence_autopilot_coverage_smoke.py src/test_official_source_provider_smoke.py src/test_evidence_autopilot_api_smoke.py src/test_backend_api_status_smoke.py -q
 Set-Location ..
 
 git diff --check
@@ -60,6 +62,8 @@ git diff --check
 - Manual live SCUT provider check captured `official-plan-charter` from the 2026 charter and admissions-plan page.
 - Manual live SCUT provider check captured `faculty-research-direction`, `undergrad-access`, and `graduate-progression` from WUSIE school pages.
 - Provider registry smoke test passed: provider cards and warnings merge without fabricating captured evidence.
+- Evidence coverage smoke test passed: `evidenceCoverage` is exposed by both the builder and FastAPI endpoint, and missing P0 tasks keep counselor review blocked.
+- Backend focused smoke tests passed: 25 passed, 1 existing Pydantic deprecation warning.
 - `git diff --check` passed.
 
 ## Remaining Work

@@ -77,6 +77,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend API adapter rejects malformed backend evidence cards.
 - Only `captured_candidate` cards can become provider results.
 - Backend can generate candidate-specific research tasks and placeholders.
+- Backend now returns an `evidenceCoverage` gate summary with captured task IDs, missing P0 task IDs, operator/manual-review tasks, review blockers, and counselor-review readiness.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 
 ### Partially implemented
@@ -178,3 +179,15 @@ The first narrow live provider now exists on the backend:
 - Current scope: SCUT 2026 admissions-plan/charter boundary, the 2025 Guangdong physics ordinary-batch historical score row for `工科试验班(智能装备与先进制造)`, and WUSIE school pages for curriculum/faculty, undergraduate platform access, and school-described progression paths
 
 This is intentionally not a general crawler. It proves that official SCUT and school pages can be parsed into `captured_candidate` cards with URL, excerpt, capture time, confidence, and review action. It also establishes a provider registry that can merge cards and warnings without letting a failed provider fabricate evidence or break task generation. It still does not prove 2026 admission probability, final Guangdong professional-group placement, graduate-school outcomes, employment outcomes, or generalized source coverage.
+
+### 2026-06-24 Evidence Coverage Gate
+
+The backend API now exposes `evidenceCoverage` on every Evidence Autopilot response:
+
+- `capturedTaskIds`: tasks backed by a captured card with URL and excerpt
+- `missingP0TaskIds`: P0 evidence gates that still block counselor review
+- `operatorTaskIds`: WeChat, job-market, and manual-review tasks that require compliant human capture
+- `readyForCounselorReview`: false until P0 gaps are closed
+- `reviewBlockers`: machine-readable reasons the case is not yet deliverable
+
+This is a product-control improvement, not an outcome claim. It helps PathFinder stop expanding the case when the immediate blocker is simply missing P0 evidence.
