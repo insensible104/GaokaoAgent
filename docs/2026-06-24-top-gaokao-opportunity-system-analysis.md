@@ -82,6 +82,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Backend accepts request-scoped `reviewedEvidenceCards` so compliant human-captured operator evidence can enter the same coverage gate without pretending that an uncollected task is verified.
 - Backend now has a JSONL reviewed-evidence ledger endpoint that generates `reviewId` values and creates `operator-review://...` source IDs for cards without public URLs.
 - Evidence Autopilot can now load reviewed-evidence ledger cards by `caseId` and merge only matching cards back into coverage.
+- Frontend API adapter can now opt into case-scoped ledger readback by sending `caseId` and `enableReviewedEvidenceLedger`.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 
 ### Partially implemented
@@ -215,3 +216,5 @@ This moves operator evidence from ephemeral request payloads toward an audit tra
 Evidence Autopilot research requests can now opt into reviewed-evidence ledger readback with `caseId` and `enableReviewedEvidenceLedger`. The backend loads matching JSONL records, merges only those reviewed cards into the current evidence cards, and updates `evidenceCoverage` accordingly. Records from other cases are ignored.
 
 This closes the first persistence loop: operator evidence can be submitted, assigned a review ID, stored, and later reused in the same case's research run. The remaining gap is case-level evidence management: listing prior records, attaching screenshots, reviewer permissioning, and showing these records in the delivery UI.
+
+The frontend adapter now exposes this backend capability as explicit request options rather than embedding case state into the core school/major context. That keeps the target context stable while allowing case-scoped evidence reuse when the caller has a real case ID.

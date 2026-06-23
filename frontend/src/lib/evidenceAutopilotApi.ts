@@ -61,15 +61,35 @@ type FetchLike = (url: string, init: RequestInit) => Promise<{
   json(): Promise<unknown>;
 }>;
 
+export interface EvidenceAutopilotResearchPayloadOptions {
+  caseId?: string;
+  enableReviewedEvidenceLedger?: boolean;
+}
+
 export function buildEvidenceAutopilotResearchPayload(
   context: DeepEvidenceCollectionContext,
+  options: EvidenceAutopilotResearchPayloadOptions = {},
 ) {
-  return {
+  const payload: {
+    province: string;
+    schoolName: string;
+    majorName: string;
+    targetYear: number;
+    caseId?: string;
+    enableReviewedEvidenceLedger?: boolean;
+  } = {
     province: context.province,
     schoolName: context.schoolName,
     majorName: context.majorName,
     targetYear: context.targetYear,
   };
+  if (options.caseId) {
+    payload.caseId = options.caseId;
+  }
+  if (options.enableReviewedEvidenceLedger) {
+    payload.enableReviewedEvidenceLedger = true;
+  }
+  return payload;
 }
 
 export function mapBackendEvidenceCardsToProviderResults(
@@ -127,10 +147,14 @@ export function buildEvidenceAutopilotRealCaseState({
 
 export async function fetchEvidenceAutopilotResearch({
   context,
+  caseId,
+  enableReviewedEvidenceLedger,
   fetchImpl = fetch,
   fallback,
 }: {
   context: DeepEvidenceCollectionContext;
+  caseId?: string;
+  enableReviewedEvidenceLedger?: boolean;
   fetchImpl?: FetchLike;
   fallback?: {
     plan: DeepEvidenceCollectionPlan;
@@ -142,7 +166,10 @@ export async function fetchEvidenceAutopilotResearch({
     const response = await fetchImpl(buildApiUrl("/api/evidence-autopilot/research"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildEvidenceAutopilotResearchPayload(context)),
+      body: JSON.stringify(buildEvidenceAutopilotResearchPayload(context, {
+        caseId,
+        enableReviewedEvidenceLedger,
+      })),
     });
     if (!response.ok) {
       throw new Error(`backend returned HTTP ${response.status ?? "error"}`);

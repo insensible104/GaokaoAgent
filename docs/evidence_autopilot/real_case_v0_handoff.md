@@ -15,6 +15,7 @@ Date: 2026-06-24
 - Added backend `reviewedEvidenceCards` input so compliant human-captured job-market, WeChat, or manual-review evidence can close P0 gates only when it includes task match, URL/review ID, excerpt, capture time, confidence, and review action.
 - Added `POST /api/evidence-autopilot/reviewed-evidence` and a JSONL reviewed-evidence ledger. The endpoint generates a `reviewId`, appends an audit record, and converts missing source URLs into `operator-review://<reviewId>` source IDs for downstream Evidence Autopilot use.
 - Added case-scoped reviewed-evidence ledger readback. When a research request supplies `caseId` and `enableReviewedEvidenceLedger`, Evidence Autopilot loads matching reviewed cards from the ledger and merges them into the same coverage gate.
+- Updated the frontend Evidence Autopilot API adapter so callers can pass `caseId` and `enableReviewedEvidenceLedger` into backend research requests without changing the school/major context model.
 
 ## What This Proves
 
@@ -73,6 +74,7 @@ git diff --check
 - Reviewed-evidence smoke test passed: accepted reviewed cards can close operator/manual P0 gates, while incomplete reviewed cards are rejected and keep P0 blocked.
 - Reviewed-evidence ledger smoke test passed: API and store generate `reviewId`, write JSONL, and create `operator-review://...` source IDs when a card has no public URL.
 - Ledger readback smoke test passed: only cards matching the requested `caseId` are merged back into Evidence Autopilot coverage.
+- Frontend API adapter smoke test passed: `caseId` and `enableReviewedEvidenceLedger` are included only when explicitly requested.
 - Backend focused smoke tests passed: 31 passed, 1 existing Pydantic deprecation warning.
 - `git diff --check` passed.
 

@@ -58,6 +58,17 @@ const context = {
   targetYear: 2026,
 };
 assert.deepEqual(api.buildEvidenceAutopilotResearchPayload(context), context);
+assert.deepEqual(
+  api.buildEvidenceAutopilotResearchPayload(context, {
+    caseId: "scut-im-v0",
+    enableReviewedEvidenceLedger: true,
+  }),
+  {
+    ...context,
+    caseId: "scut-im-v0",
+    enableReviewedEvidenceLedger: true,
+  },
+);
 
 const backendResponse = {
   success: true,
@@ -116,10 +127,16 @@ assert.deepEqual(providerResults[0], {
 
 const connected = await api.fetchEvidenceAutopilotResearch({
   context,
+  caseId: "scut-im-v0",
+  enableReviewedEvidenceLedger: true,
   fetchImpl: async (url, init) => {
     assert.equal(url, "https://api.test/api/evidence-autopilot/research");
     assert.equal(init.method, "POST");
-    assert.deepEqual(JSON.parse(init.body), context);
+    assert.deepEqual(JSON.parse(init.body), {
+      ...context,
+      caseId: "scut-im-v0",
+      enableReviewedEvidenceLedger: true,
+    });
     return {
       ok: true,
       async json() {
