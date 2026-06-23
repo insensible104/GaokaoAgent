@@ -88,12 +88,13 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Report template can show Evidence Autopilot / Opportunity Radar content.
 - Report template now carries a reviewed-evidence audit trail into the Deep Opportunity page, including case-scoped review IDs, source IDs/URLs, and `reviewAction` notes from captured Real Case v0 evidence.
 - Report payload can now accept live `reviewedEvidenceRecords` and convert captured case-scoped ledger records into the same audit trail before falling back to fixture evidence.
+- A4 report preview now attempts to load case-scoped reviewed-evidence records when a case id is available from delivery manifests or the game matrix, then persists those records into the preview payload.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and can consume live ledger records through payload, but it still needs automatic case fetch, screenshot/redaction handling, and a reviewer workflow to become credible as a production delivery artifact.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches, but it still needs screenshot/redaction handling, a reviewer workflow, and a case evidence browser to become credible as a production delivery artifact.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -236,3 +237,9 @@ The frontend API adapter now has a typed fetch path for this listing endpoint. T
 The report template now accepts `PathFinderReportPayload.evidenceAutopilot.reviewedEvidenceRecords`. Captured ledger records are converted into report audit trail rows with `reviewId`, `caseId`, task ID, source ID/URL, confidence, capture time, and `reviewAction`. Incomplete operator-review placeholders remain excluded from the report trail.
 
 This closes the next handoff gap between the case-scoped listing endpoint and the Chinese deliverable report. It is still not a full delivery UI: the report route does not fetch records by case ID on its own, and there is still no screenshot attachment store, redaction workflow, or reviewer permission model.
+
+### 2026-06-24 Reviewed Evidence Report Preview Wiring
+
+The A4 report preview entry now resolves a reviewed-evidence case id from the latest delivery manifest first, then from `game_matrix.case_id`, `game_matrix.caseId`, `game_matrix.id`, or matching volunteer-plan fields. If a case id is present, it calls the typed reviewed-evidence listing adapter and writes `evidenceAutopilot.reviewedEvidenceRecords` into `pathfinder-report-preview` session storage.
+
+This moves the ledger from "available to a future report caller" to "attempted by the actual report preview entry." The fallback remains conservative: if the ledger is unavailable, the preview still opens with `status: ledger_unavailable` and does not pretend reviewed operator evidence was captured.

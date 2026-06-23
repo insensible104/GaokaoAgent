@@ -20,6 +20,7 @@ Date: 2026-06-24
 - Added a frontend API adapter for the reviewed-evidence listing endpoint, with response validation before records can be used by future delivery views.
 - Added a report-level reviewed-evidence audit trail for the Deep Opportunity report page. It surfaces case-scoped review IDs, source IDs/URLs, and `reviewAction` notes from captured Real Case v0 evidence instead of leaving the ledger only in backend/API state.
 - Added a report payload contract for live reviewed-evidence records. When `PathFinderReportPayload.evidenceAutopilot.reviewedEvidenceRecords` is supplied, the Deep Opportunity report uses those case-scoped ledger records before falling back to the Real Case v0 fixture trail.
+- Wired the A4 report preview entry to attempt case-scoped reviewed-evidence ledger loading when a case id is available from the delivery manifest or game matrix. Ledger failures keep the report preview available and carry an explicit `ledger_unavailable` boundary in the payload.
 
 ## What This Proves
 
@@ -35,7 +36,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not make a case counselor-ready while `evidenceCoverage.missingP0TaskIds` remains non-empty.
 - It does not accept incomplete operator notes as evidence; cards without source URL/review ID and excerpt remain missing evidence.
 - It does not yet provide a full reviewer workflow with authentication, screenshots, redaction, or case-level evidence browsing.
-- The report audit trail can consume live case ledger records through payload, but the report page does not yet fetch `GET /api/evidence-autopilot/reviewed-evidence/{case_id}` by itself.
+- The report preview can attempt case-scoped ledger loading, but there is still no full case evidence browser, screenshot attachment store, redaction workflow, or reviewer permission model.
 
 ## Verification Commands
 
@@ -85,6 +86,7 @@ git diff --check
 - Backend focused smoke tests passed: 23 passed, 1 existing Pydantic deprecation warning.
 - Report reviewed-evidence audit trail smoke test passed: Deep Opportunity report now exposes case-scoped audit trail labels, generated review IDs, `operator-review://` fallback source IDs, and review actions.
 - Report payload behavior test passed: live `reviewedEvidenceRecords` are converted into case-scoped audit trail rows, while incomplete operator-review placeholders are excluded.
+- Report preview wiring smoke test passed: App resolves a reviewed-evidence case id, calls the listing adapter, and persists `evidenceAutopilot.reviewedEvidenceRecords` into the preview payload.
 - `git diff --check` passed.
 
 ## Remaining Work

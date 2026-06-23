@@ -171,6 +171,8 @@ export type PathFinderReportPayload = {
   evidenceAutopilot?: {
     caseId?: string;
     reviewedEvidenceRecords?: ReportReviewedEvidenceRecord[];
+    claimBoundary?: string;
+    status?: "live_ledger" | "ledger_unavailable" | "fixture_fallback";
   } | null;
   deliveryProfile?: {
     score?: number;

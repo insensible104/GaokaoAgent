@@ -21,6 +21,7 @@ interface BackendEvidenceCard {
   excerpt: string;
   capturedAt: string;
   confidence: EvidenceAutopilotProviderResult["confidence"];
+  reviewAction: string;
 }
 
 const VALID_CARD_STATUSES = new Set(["requires_capture", "operator_review", "captured_candidate"]);
