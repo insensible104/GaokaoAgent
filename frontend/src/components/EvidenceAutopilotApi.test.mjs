@@ -58,6 +58,7 @@ assert.equal(typeof api.fetchReviewedEvidenceRecords, "function");
 assert.equal(typeof api.uploadReviewedEvidenceAttachment, "function");
 assert.equal(typeof api.buildOperatorReviewedEvidenceCard, "function");
 assert.equal(typeof api.submitReviewedEvidenceCard, "function");
+assert.equal(typeof api.captureAndSubmitOperatorReviewedEvidence, "function");
 
 const context = {
   province: "广东",
@@ -334,6 +335,97 @@ assert.equal(
   "operator-review://review-20260624T010000Z-def67890",
 );
 assert.equal(submittedReviewedCard.reviewedEvidenceCard.attachments[0].attachmentId, uploadedAttachment.attachment.attachmentId);
+
+const captureWorkflowCalls = [];
+const captureWorkflow = await api.captureAndSubmitOperatorReviewedEvidence({
+  targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+  caseId: "scut-im-v0",
+  reviewer: "operator-a",
+  attachmentPayload: {
+    caseId: "scut-im-v0",
+    taskId: "employment-market",
+    reviewerId: "operator-a",
+    kind: "screenshot",
+    contentType: "image/png",
+    contentBase64: "ZmFrZS13b3JrZmxvdy1zY3JlZW5zaG90",
+    capturedAt: "2026-06-24T02:00:00Z",
+    redactionStatus: "redacted",
+    redactionChecklist: completeRedactionChecklist,
+    originalFileName: "workflow-job-sample.png",
+  },
+  card: {
+    taskId: "employment-market",
+    claim: "employment_market",
+    sourceTitle: "Workflow reviewed job-market sample",
+    sourceType: "job",
+    excerpt: "Workflow visible job sample describes robotics integration responsibilities.",
+    capturedAt: "2026-06-24T02:00:00Z",
+    confidence: "medium",
+    reviewAction: "Use as operator-captured job sample only; do not infer employment certainty.",
+    redactionStatus: "redacted",
+    reviewerIdentity: {
+      reviewerId: "operator-a",
+      displayName: "Operator A",
+      role: "operator",
+    },
+  },
+  fetchImpl: async (url, init) => {
+    captureWorkflowCalls.push({ url, body: JSON.parse(init.body) });
+    if (url.endsWith("/reviewed-evidence/attachments")) {
+      return {
+        ok: true,
+        async json() {
+          return {
+            success: true,
+            attachment: {
+              attachmentId: "att-20260624T020000Z-workflow",
+              kind: "screenshot",
+              storageRef: "reviewed-evidence/scut-im-v0/att-20260624T020000Z-workflow.png",
+              capturedAt: "2026-06-24T02:00:00Z",
+              redactionStatus: "redacted",
+              redactionChecklist: completeRedactionChecklist,
+            },
+            byteSize: 24,
+            sha256: "b".repeat(64),
+            metadataPath: "C:/PathFinder/backend/logs/evidence_autopilot/attachments/reviewed-evidence/scut-im-v0/att-20260624T020000Z-workflow.png.json",
+          };
+        },
+      };
+    }
+    if (url.endsWith("/reviewed-evidence")) {
+      assert.equal(init.method, "POST");
+      assert.equal(captureWorkflowCalls[1].body.card.attachments[0].attachmentId, "att-20260624T020000Z-workflow");
+      assert.equal(captureWorkflowCalls[1].body.card.redactionStatus, "redacted");
+      assert.equal(captureWorkflowCalls[1].body.card.reviewerIdentity.reviewerId, "operator-a");
+      return {
+        ok: true,
+        async json() {
+          return {
+            success: true,
+            reviewId: "review-20260624T020000Z-workflow",
+            reviewedEvidenceCard: {
+              ...captureWorkflowCalls[1].body.card,
+              sourceUrl: "operator-review://review-20260624T020000Z-workflow",
+            },
+            ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+            recordedAt: "2026-06-24T02:00:00Z",
+          };
+        },
+      };
+    }
+    throw new Error(`Unexpected workflow URL ${url}`);
+  },
+});
+assert.equal(captureWorkflow.upload.success, true);
+assert.equal(captureWorkflow.submission.success, true);
+assert.equal(captureWorkflow.reviewedEvidenceCard.sourceUrl, "operator-review://review-20260624T020000Z-workflow");
+assert.deepEqual(
+  captureWorkflowCalls.map((call) => call.url),
+  [
+    "https://api.test/api/evidence-autopilot/reviewed-evidence/attachments",
+    "https://api.test/api/evidence-autopilot/reviewed-evidence",
+  ],
+);
 
 assert.throws(
   () => api.buildOperatorReviewedEvidenceCard({

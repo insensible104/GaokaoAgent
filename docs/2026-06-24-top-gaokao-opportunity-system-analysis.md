@@ -102,13 +102,14 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend now has a typed attachment upload adapter that posts operator-captured attachment payloads and rejects malformed backend upload responses before they can be used by capture UI.
 - Frontend now has typed helpers to compose uploaded attachments into an operator-reviewed card and submit that card to the reviewed-evidence ledger endpoint, with pre-submit checks for reviewer identity, attachment presence, and completed redaction status.
 - Frontend attachment contracts now preserve `redactionChecklist` so a future capture/redaction UI can use the same upload and evidence-card path without inventing a parallel proof format.
+- Frontend now has a typed capture workflow helper that combines attachment upload, gated operator-card construction, and ledger submission into one auditable path for future capture UI.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata, checklist confirmation, and sidecar/hash validation at submission and readback to close P0 gates. The remaining production gaps are capture/redaction UI, authentication, permission enforcement, and a polished capture workflow.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata, checklist confirmation, and sidecar/hash validation at submission and readback to close P0 gates. A typed capture workflow exists, but the remaining production gaps are capture/redaction UI, authentication, permission enforcement, and a polished reviewer experience.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -307,3 +308,9 @@ Operator-reviewed attachments marked `redacted` now require an explicit checklis
 The checklist is stored in the attachment metadata sidecar, returned on `ReviewedEvidenceAttachment`, and preserved by the frontend API adapter. This makes redaction a structured audit field rather than a free-text or status-only claim.
 
 This still does not prove the screenshot was visually redacted correctly. It is a contract and audit trail for future reviewer UI and permission controls.
+
+### 2026-06-24 Operator Capture Workflow Helper
+
+The frontend API layer now exposes one workflow helper for operator-reviewed evidence capture. It uploads the attachment, validates the returned `ReviewedEvidenceAttachment`, builds the operator-reviewed evidence card with reviewer identity and redaction checklist, then submits that card to the reviewed-evidence ledger.
+
+This reduces the chance that future capture UI bypasses one of the evidence gates. It is still not the UI itself and still relies on the backend ledger and attachment audit gates for enforcement.

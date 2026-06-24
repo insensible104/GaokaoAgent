@@ -174,6 +174,20 @@ export interface ReviewedEvidenceSubmissionResponse {
   recordedAt: string;
 }
 
+export interface OperatorReviewedEvidenceCaptureInput {
+  targetLabel: string;
+  caseId?: string;
+  reviewer: string;
+  attachmentPayload: ReviewedEvidenceAttachmentUploadPayload;
+  card: Omit<OperatorReviewedEvidenceCardInput, "attachments">;
+}
+
+export interface OperatorReviewedEvidenceCaptureResult {
+  upload: ReviewedEvidenceAttachmentUploadResponse;
+  submission: ReviewedEvidenceSubmissionResponse;
+  reviewedEvidenceCard: BackendEvidenceCard;
+}
+
 type FetchLike = (url: string, init: RequestInit) => Promise<{
   ok: boolean;
   status?: number;
@@ -424,6 +438,40 @@ export async function submitReviewedEvidenceCard({
     throw new Error(`backend returned HTTP ${response.status ?? "error"}`);
   }
   return reviewedEvidenceSubmissionFromJson(await response.json());
+}
+
+export async function captureAndSubmitOperatorReviewedEvidence({
+  targetLabel,
+  caseId,
+  reviewer,
+  attachmentPayload,
+  card,
+  fetchImpl = fetch,
+}: OperatorReviewedEvidenceCaptureInput & {
+  fetchImpl?: FetchLike;
+}): Promise<OperatorReviewedEvidenceCaptureResult> {
+  const upload = await uploadReviewedEvidenceAttachment({
+    payload: attachmentPayload,
+    fetchImpl,
+  });
+  const reviewedEvidenceCard = buildOperatorReviewedEvidenceCard({
+    ...card,
+    attachments: [upload.attachment],
+  });
+  const submission = await submitReviewedEvidenceCard({
+    payload: {
+      targetLabel,
+      caseId,
+      reviewer,
+      card: reviewedEvidenceCard,
+    },
+    fetchImpl,
+  });
+  return {
+    upload,
+    submission,
+    reviewedEvidenceCard: submission.reviewedEvidenceCard,
+  };
 }
 
 function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
