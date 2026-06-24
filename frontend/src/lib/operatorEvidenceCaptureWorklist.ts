@@ -32,6 +32,16 @@ export interface OperatorEvidenceCaptureWorklist {
   claimBoundary: string;
 }
 
+export interface OperatorEvidenceCaptureGate {
+  protocol: "operator_evidence_capture_gate_v1";
+  status: "clear" | "needs_capture" | "blocked";
+  blocksClientDelivery: boolean;
+  totalItems: number;
+  blockingItemCount: number;
+  blockedReason: string;
+  claimBoundary: string;
+}
+
 const OPERATOR_CAPTURE_CLAIMS = new Set([
   "employment_market",
   "wechat_public_account",
@@ -64,6 +74,48 @@ export function buildOperatorEvidenceCaptureWorklist({
     items,
     claimBoundary:
       "Operator evidence capture worklist only organizes missing or invalid capture tasks; it does not collect evidence, bypass platform limits, or prove admission/employment outcomes.",
+  };
+}
+
+export function buildOperatorEvidenceCaptureGate(
+  worklist: OperatorEvidenceCaptureWorklist,
+): OperatorEvidenceCaptureGate {
+  const blockingItems = worklist.items.filter((item) => item.blocking);
+  if (blockingItems.length > 0) {
+    return {
+      protocol: "operator_evidence_capture_gate_v1",
+      status: "blocked",
+      blocksClientDelivery: true,
+      totalItems: worklist.totalItems,
+      blockingItemCount: blockingItems.length,
+      blockedReason: `Blocking operator evidence still needs capture: ${blockingItems
+        .map((item) => item.taskId)
+        .join(", ")}.`,
+      claimBoundary:
+        "Operator capture blocking status is a delivery-readiness control; it does not prove admission or employment outcomes.",
+    };
+  }
+  if (worklist.items.length > 0) {
+    return {
+      protocol: "operator_evidence_capture_gate_v1",
+      status: "needs_capture",
+      blocksClientDelivery: false,
+      totalItems: worklist.totalItems,
+      blockingItemCount: 0,
+      blockedReason: "Only non-blocking operator evidence capture items remain.",
+      claimBoundary:
+        "Non-blocking operator capture status is a reviewer workflow signal; it does not prove admission or employment outcomes.",
+    };
+  }
+  return {
+    protocol: "operator_evidence_capture_gate_v1",
+    status: "clear",
+    blocksClientDelivery: false,
+    totalItems: 0,
+    blockingItemCount: 0,
+    blockedReason: "No operator evidence capture items remain.",
+    claimBoundary:
+      "Clear operator capture status only means this capture worklist has no open items; it does not prove admission or employment outcomes.",
   };
 }
 

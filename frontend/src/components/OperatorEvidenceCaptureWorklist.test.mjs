@@ -34,6 +34,7 @@ const worklist = loadTsModule(fs.readFileSync(helperPath, "utf8"), {
 });
 
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureWorklist, "function");
+assert.equal(typeof worklist.buildOperatorEvidenceCaptureGate, "function");
 
 const plan = {
   protocol: "deep_evidence_collection_plan_v1",
@@ -153,6 +154,23 @@ assert.equal(
   "ready operator records should not become capture work items",
 );
 assert.deepEqual(view.missingP0TaskIds.sort(), ["employment-market", "official-plan-charter"]);
+
+const gate = worklist.buildOperatorEvidenceCaptureGate(result);
+assert.equal(gate.protocol, "operator_evidence_capture_gate_v1");
+assert.equal(gate.status, "blocked");
+assert.equal(gate.blocksClientDelivery, true);
+assert.equal(gate.blockingItemCount, 1);
+assert.match(gate.blockedReason, /employment-market/);
+assert.match(gate.claimBoundary, /does not prove admission/i);
+
+const nonBlockingGate = worklist.buildOperatorEvidenceCaptureGate({
+  ...result,
+  blockingItemCount: 0,
+  items: result.items.filter((item) => !item.blocking),
+});
+assert.equal(nonBlockingGate.status, "needs_capture");
+assert.equal(nonBlockingGate.blocksClientDelivery, false);
+assert.match(nonBlockingGate.blockedReason, /non-blocking/i);
 
 console.log("Operator evidence capture worklist test passed");
 

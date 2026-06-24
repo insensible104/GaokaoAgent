@@ -20,7 +20,10 @@ for (const token of [
   "fetchReviewedEvidenceRecords",
   "buildDeliveryReviewedEvidencePlan",
   "buildOperatorEvidenceCaptureWorklist",
+  "buildOperatorEvidenceCaptureGate",
   "captureAndSubmitOperatorReviewedEvidence",
+  "operatorCaptureGate",
+  "blocksClientDelivery",
   "reviewedEvidenceRecords",
   "reviewedEvidenceError",
   "case-scoped reviewed evidence",
@@ -59,6 +62,7 @@ const worklist = loadTsModule(fs.readFileSync(worklistPath, "utf8"), {
 
 assert.equal(typeof helper.buildDeliveryReviewedEvidencePlan, "function");
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureWorklist, "function");
+assert.equal(typeof worklist.buildOperatorEvidenceCaptureGate, "function");
 
 const plan = helper.buildDeliveryReviewedEvidencePlan({
   profile: {
@@ -117,6 +121,9 @@ const captureWorklist = worklist.buildOperatorEvidenceCaptureWorklist({
 
 assert.equal(captureWorklist.blockingItemCount, 1);
 assert.equal(captureWorklist.items[0].workflowFunction, "captureAndSubmitOperatorReviewedEvidence");
+
+const captureGate = worklist.buildOperatorEvidenceCaptureGate(captureWorklist);
+assert.equal(captureGate.blocksClientDelivery, true);
 
 console.log("Internal delivery reviewed evidence wiring test passed");
 

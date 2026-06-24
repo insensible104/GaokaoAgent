@@ -15,7 +15,10 @@ import { buildApiUrl } from "@/lib/api";
 import { ReviewedEvidenceCaseBrowserPanel } from "@/components/ReviewedEvidenceCaseBrowserPanel";
 import { buildDeliveryReviewedEvidencePlan } from "@/lib/deliveryReviewedEvidencePlan";
 import { fetchReviewedEvidenceRecords, type ReviewedEvidenceRecord } from "@/lib/evidenceAutopilotApi";
-import { buildOperatorEvidenceCaptureWorklist } from "@/lib/operatorEvidenceCaptureWorklist";
+import {
+  buildOperatorEvidenceCaptureGate,
+  buildOperatorEvidenceCaptureWorklist,
+} from "@/lib/operatorEvidenceCaptureWorklist";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameMatrix, MajorGroupRow } from "@/components/GameMatrixView";
 
@@ -527,6 +530,10 @@ export function InternalDeliveryReview({
       records: reviewedEvidenceRecords,
     });
   }, [preview, reviewedEvidencePlan, reviewedEvidenceRecords]);
+  const operatorCaptureGate = useMemo(
+    () => (operatorCaptureWorklist ? buildOperatorEvidenceCaptureGate(operatorCaptureWorklist) : null),
+    [operatorCaptureWorklist]
+  );
   const orderedArtifacts = useMemo(() => {
     if (!preview) return [];
     const preferredOrder = [
@@ -554,8 +561,10 @@ export function InternalDeliveryReview({
     },
     [orderedArtifacts, preview]
   );
-  const clientDeliveryAllowed = preview?.manifest.client_delivery?.allowed ?? true;
+  const clientDeliveryAllowed =
+    (preview?.manifest.client_delivery?.allowed ?? true) && !(operatorCaptureGate?.blocksClientDelivery ?? false);
   const clientDeliveryBlockedReason =
+    (operatorCaptureGate?.blocksClientDelivery ? operatorCaptureGate.blockedReason : undefined) ||
     preview?.manifest.client_delivery?.blocked_reason ||
     "客户确认包暂不可下载，请先修订内部质检问题。";
 
