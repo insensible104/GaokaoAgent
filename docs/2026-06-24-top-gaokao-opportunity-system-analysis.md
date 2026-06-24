@@ -115,6 +115,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewer handoff now turns the current evidence state into an internal reviewer work order: open operator tasks, capture packet, closure workflow contract, reviewer checklist, and family-facing gate.
 - The Real Case reviewer handoff brief now renders that work order as internal Chinese Markdown, so the next reviewer can read the required capture fields, execution contract, rejection rules, and claim boundaries without opening raw JSON.
 - The Real Case reviewer handoff bootstrap now runs public reviewed-evidence bootstrap and returns the internal reviewer handoff plus Markdown brief from the fixture and plan.
+- The Real Case reviewer handoff artifact manifest now packages that internal Markdown brief and machine-readable bootstrap snapshot as reviewer-only artifacts while preserving the family-facing block and claim boundaries.
 
 ### Partially implemented
 
@@ -429,3 +430,9 @@ This is the right kind of delivery polish at the current stage because it improv
 The handoff path now has an executable entrypoint from the Real Case fixture. It submits completed public fixture evidence through the reviewed-evidence ledger, reads the case records back, builds the reviewer handoff, and renders the internal Markdown brief.
 
 This removes a manual assembly step: the next reviewer does not need to know how to stitch ledger bootstrap records into a capture packet. The remaining open task is still explicit: `employment-market` must be captured through the operator workflow before the case can move beyond internal review. This does not validate the missing source or turn the work order into a recommendation.
+
+### 2026-06-24 Real Case Reviewer Handoff Artifact Manifest
+
+The reviewer handoff can now be packaged as an internal artifact manifest. The manifest contains two reviewer-only artifacts: the Markdown work order and the machine-readable bootstrap snapshot. Both carry `familyFacingAllowed: false`, the open `employment-market` blocker, and the same admission/employment claim boundary.
+
+This is a delivery-system improvement, not a new evidence claim. It makes the next reviewer handoff portable and auditable without pretending the case is family-facing, counselor-ready, or validated against admission or employment outcomes.

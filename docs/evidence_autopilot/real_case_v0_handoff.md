@@ -55,6 +55,7 @@ Date: 2026-06-24
 - Added a Real Case reviewer handoff helper. It turns the current reviewed public evidence state into an internal reviewer packet with open operator tasks, capture packet, closure workflow contract, reviewer checklist, and claim boundary.
 - Added a Real Case reviewer handoff brief helper. It renders the machine-readable handoff into an internal Chinese Markdown brief with `待补证据`, execution contract, rejection rules, review checklist, and boundaries.
 - Added a Real Case reviewer handoff bootstrap helper. It submits the completed public fixture evidence through the reviewed-evidence ledger, reads the case records back, and returns the reviewer handoff plus internal Markdown brief.
+- Added a Real Case reviewer handoff artifact manifest helper. It packages the internal Markdown brief and machine-readable bootstrap snapshot as reviewer-only artifacts with a family-facing block and explicit claim boundary.
 
 ## What This Proves
 
@@ -81,11 +82,13 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - The Real Case reviewer handoff is not a delivery report. It is an internal work order that tells a reviewer what remains to capture and how to execute the closure workflow without producing family-facing opportunity wording.
 - The Real Case reviewer handoff brief is still internal. It makes the next reviewer action readable, but it is not a student/parent report and does not prove admission probability, employment outcomes, source freshness, or source representativeness.
 - The Real Case reviewer handoff bootstrap is an executable entrypoint for preparing the work order from public reviewed fixture evidence. It still does not collect operator evidence, verify job-market representativeness, or make the case deliverable.
+- The Real Case reviewer handoff artifact manifest is an internal packaging contract only. It does not make the work order family-facing, does not close `employment-market`, and does not turn the case into a recommendation.
 
 ## Verification Commands
 
 ```powershell
 node frontend/src/components/EvidenceAutopilotRealCaseProvider.test.mjs
+node frontend/src/components/EvidenceAutopilotRealCaseReviewerHandoffArtifact.test.mjs
 node frontend/src/components/EvidenceAutopilotApi.test.mjs
 node frontend/src/components/EvidenceAutopilotResultNormalizer.test.mjs
 node frontend/src/components/DeepOpportunityRealCase.test.mjs
@@ -161,6 +164,7 @@ git diff --check
 - Real Case reviewer handoff test passed: the handoff exposes only `employment-market` as the open operator task, carries the capture packet and `executeRealCaseOperatorClosureWorkflow` contract, and keeps family-facing output blocked.
 - Real Case reviewer handoff brief test passed: the same handoff can render an internal Chinese Markdown brief with open evidence task, required fields, execution contract, rejection rules, review checklist, and explicit non-claim boundaries.
 - Real Case reviewer handoff bootstrap test passed: the fixture can run public reviewed-evidence bootstrap and directly produce the reviewer handoff plus internal brief, with `employment-market` still the only open operator task.
+- Real Case reviewer handoff artifact manifest test passed: the bootstrap result is packaged into reviewer-only Markdown and JSON artifacts with family-facing output blocked and admission/employment claim boundaries preserved.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.
 
