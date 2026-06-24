@@ -104,6 +104,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend attachment contracts now preserve `redactionChecklist` so a future capture/redaction UI can use the same upload and evidence-card path without inventing a parallel proof format.
 - Frontend now has a typed capture workflow helper that combines attachment upload, gated operator-card construction, and ledger submission into one auditable path for future capture UI.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
+- Frontend now has an operator evidence capture worklist model and a small internal delivery summary. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items that point reviewers to `captureAndSubmitOperatorReviewedEvidence` instead of leaving the gap implicit.
 
 ### Partially implemented
 
@@ -314,3 +315,11 @@ This still does not prove the screenshot was visually redacted correctly. It is 
 The frontend API layer now exposes one workflow helper for operator-reviewed evidence capture. It uploads the attachment, validates the returned `ReviewedEvidenceAttachment`, builds the operator-reviewed evidence card with reviewer identity and redaction checklist, then submits that card to the reviewed-evidence ledger.
 
 This reduces the chance that future capture UI bypasses one of the evidence gates. It is still not the UI itself and still relies on the backend ledger and attachment audit gates for enforcement.
+
+### 2026-06-24 Operator Capture Worklist
+
+The frontend now derives an operator capture worklist from the reviewed-evidence case browser. It filters missing or invalid semi-closed/manual evidence tasks, ranks them by priority, marks P0 items as blocking, carries attachment requirements, and records whether the next action is first capture or recapture after an invalid attachment audit.
+
+Internal delivery review now shows a compact worklist summary when these tasks remain open. This is deliberately not a new large UI surface. It is a reviewer control that says which evidence gaps still require the existing `captureAndSubmitOperatorReviewedEvidence` path before a case can be treated as report-ready.
+
+The boundary is strict: the worklist does not collect evidence, bypass platform limits, visually inspect redaction, authenticate reviewers, or prove employment/admission outcomes. It only prevents missing operator evidence from being hidden behind a polished report preview.

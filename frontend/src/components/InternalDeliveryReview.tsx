@@ -15,6 +15,7 @@ import { buildApiUrl } from "@/lib/api";
 import { ReviewedEvidenceCaseBrowserPanel } from "@/components/ReviewedEvidenceCaseBrowserPanel";
 import { buildDeliveryReviewedEvidencePlan } from "@/lib/deliveryReviewedEvidencePlan";
 import { fetchReviewedEvidenceRecords, type ReviewedEvidenceRecord } from "@/lib/evidenceAutopilotApi";
+import { buildOperatorEvidenceCaptureWorklist } from "@/lib/operatorEvidenceCaptureWorklist";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameMatrix, MajorGroupRow } from "@/components/GameMatrixView";
 
@@ -329,6 +330,7 @@ const statusLabel: Record<string, string> = {
 
 const CLIENT_FACING_ARTIFACT_IDS = new Set(["expectation_packet", "final_report"]);
 const CLIENT_FACING_AUDIENCES = new Set(["client_confirmation", "client_final"]);
+const OPERATOR_CAPTURE_WORKFLOW = "captureAndSubmitOperatorReviewedEvidence";
 
 function statusTone(status: string | undefined) {
   if (!status) return "border-slate-300 bg-slate-50 text-slate-700";
@@ -516,6 +518,15 @@ export function InternalDeliveryReview({
     () => buildDeliveryReviewedEvidencePlan({ profile, gameMatrix }),
     [profile, gameMatrix]
   );
+  const operatorCaptureWorklist = useMemo(() => {
+    const caseId = preview?.manifest.case_id || preview?.case_id;
+    if (!caseId) return null;
+    return buildOperatorEvidenceCaptureWorklist({
+      caseId,
+      plan: reviewedEvidencePlan,
+      records: reviewedEvidenceRecords,
+    });
+  }, [preview, reviewedEvidencePlan, reviewedEvidenceRecords]);
   const orderedArtifacts = useMemo(() => {
     if (!preview) return [];
     const preferredOrder = [
@@ -1239,6 +1250,22 @@ export function InternalDeliveryReview({
               records={reviewedEvidenceRecords}
               plan={reviewedEvidencePlan}
             />
+            {operatorCaptureWorklist && operatorCaptureWorklist.totalItems > 0 ? (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <div className="font-medium">operator capture worklist</div>
+                <p className="mt-1">
+                  {operatorCaptureWorklist.blockingItemCount} blocking / {operatorCaptureWorklist.totalItems} item(s)
+                  must use {OPERATOR_CAPTURE_WORKFLOW}.
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {operatorCaptureWorklist.items.slice(0, 3).map((item) => (
+                    <li key={item.taskId} className="break-words">
+                      {item.taskId} - {item.priority} - {item.captureStatus} - {item.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-lg border border-slate-200 p-4">

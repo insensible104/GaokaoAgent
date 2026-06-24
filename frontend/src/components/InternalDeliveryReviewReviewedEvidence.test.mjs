@@ -8,15 +8,19 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "..");
 const componentPath = path.join(here, "InternalDeliveryReview.tsx");
 const helperPath = path.join(root, "lib", "deliveryReviewedEvidencePlan.ts");
+const worklistPath = path.join(root, "lib", "operatorEvidenceCaptureWorklist.ts");
 
 assert.equal(fs.existsSync(componentPath), true, "InternalDeliveryReview should exist");
 assert.equal(fs.existsSync(helperPath), true, "delivery reviewed evidence plan helper should exist");
+assert.equal(fs.existsSync(worklistPath), true, "operator evidence capture worklist helper should exist");
 
 const source = fs.readFileSync(componentPath, "utf8");
 for (const token of [
   "ReviewedEvidenceCaseBrowserPanel",
   "fetchReviewedEvidenceRecords",
   "buildDeliveryReviewedEvidencePlan",
+  "buildOperatorEvidenceCaptureWorklist",
+  "captureAndSubmitOperatorReviewedEvidence",
   "reviewedEvidenceRecords",
   "reviewedEvidenceError",
   "case-scoped reviewed evidence",
@@ -36,8 +40,25 @@ const helper = loadTsModule(fs.readFileSync(helperPath, "utf8"), {
     }),
   },
 });
+const worklist = loadTsModule(fs.readFileSync(worklistPath, "utf8"), {
+  "./reviewedEvidenceCaseBrowser": {
+    buildReviewedEvidenceCaseBrowser: () => ({
+      taskGroups: [
+        {
+          taskId: "employment-market",
+          claim: "employment_market",
+          title: "Employment market",
+          priority: "P0",
+          status: "missing",
+          records: [],
+        },
+      ],
+    }),
+  },
+});
 
 assert.equal(typeof helper.buildDeliveryReviewedEvidencePlan, "function");
+assert.equal(typeof worklist.buildOperatorEvidenceCaptureWorklist, "function");
 
 const plan = helper.buildDeliveryReviewedEvidencePlan({
   profile: {
@@ -73,6 +94,29 @@ const fallbackPlan = helper.buildDeliveryReviewedEvidencePlan({
 });
 
 assert.match(fallbackPlan.targetLabel, /Guangdong 2026 delivery case target 数据工程/);
+
+const captureWorklist = worklist.buildOperatorEvidenceCaptureWorklist({
+  caseId: "delivery-case-001",
+  plan: {
+    protocol: "deep_evidence_collection_plan_v1",
+    targetLabel: "Delivery target",
+    tasks: [
+      {
+        id: "employment-market",
+        claim: "employment_market",
+        title: "Employment market",
+        priority: "P0",
+        outputFields: ["岗位名称", "城市"],
+      },
+    ],
+    reviewGates: [],
+    claimBoundary: "test boundary",
+  },
+  records: [],
+});
+
+assert.equal(captureWorklist.blockingItemCount, 1);
+assert.equal(captureWorklist.items[0].workflowFunction, "captureAndSubmitOperatorReviewedEvidence");
 
 console.log("Internal delivery reviewed evidence wiring test passed");
 

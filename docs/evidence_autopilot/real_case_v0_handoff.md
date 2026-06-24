@@ -37,6 +37,7 @@ Date: 2026-06-24
 - Added a redaction checklist contract for operator-reviewed attachments. Attachments marked `redacted` now require checklist confirmation that student personal info, private contact info, account identifiers, and third-party personal info were handled, plus reviewer confirmation, before upload succeeds.
 - Preserved the redaction checklist through the backend attachment metadata sidecar, returned `ReviewedEvidenceAttachment`, and frontend upload adapter so later capture UI can reuse the same audited path.
 - Added a typed frontend capture workflow helper for operator-reviewed evidence. It runs the same path future UI should use: upload reviewed attachment, build the gated operator-reviewed card, and submit the card to the reviewed-evidence ledger.
+- Added an operator evidence capture worklist model and a compact internal delivery summary. Missing or invalid operator/manual evidence tasks are now listed with blocking status, recapture reason, required attachment kinds, and the `captureAndSubmitOperatorReviewedEvidence` workflow that future capture UI must use.
 
 ## What This Proves
 
@@ -54,6 +55,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not yet provide a full reviewer workflow with authentication, redaction UI, or permission enforcement.
 - The report preview can attempt case-scoped ledger loading, but there is still no full redaction workflow or reviewer permission model.
 - The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata, redaction checklist confirmation, and sidecar/hash validation at submission and readback. Binary attachment storage and a typed upload-to-ledger workflow now exist, but there is still no frontend capture/redaction UI, authentication, or permission enforcement system.
+- The operator capture worklist organizes missing or invalid capture tasks for internal reviewers. It does not collect evidence, bypass platform limits, visually verify redaction, authenticate reviewers, or prove admission/employment outcomes.
 
 ## Verification Commands
 
@@ -118,6 +120,8 @@ git diff --check
 - Reviewed-evidence case browser test passed: invalid attachment audit records are treated as pending capture and keep P0 tasks out of `ready_for_report`.
 - Redaction checklist gate test passed: `redacted` attachment uploads without checklist confirmation are rejected, while complete checklists are persisted in attachment metadata and returned to the frontend.
 - Frontend capture workflow test passed: one helper uploads a reviewed attachment, composes the gated operator card, and submits it to the ledger through existing API contracts.
+- Operator evidence capture worklist test passed: missing or invalid operator evidence tasks are converted into blocking/non-blocking work items that point to the existing capture workflow.
+- Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and exposes the required capture workflow when case-scoped evidence is incomplete.
 - `git diff --check` passed.
 
 ## Remaining Work
