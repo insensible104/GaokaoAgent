@@ -30,6 +30,7 @@ Date: 2026-06-24
 - Added `POST /api/evidence-autopilot/reviewed-evidence/attachments` and a local reviewed-evidence attachment store. The endpoint decodes base64 screenshot/PDF/image payloads, writes the binary file, writes a JSON metadata sidecar with case/task/reviewer IDs and SHA-256, and returns a `ReviewedEvidenceAttachment` that can be attached to an operator-review card.
 - Added a frontend typed adapter for the attachment upload endpoint. It posts the operator-captured attachment payload, validates the returned `ReviewedEvidenceAttachment`, byte size, SHA-256, and metadata path, and gives future capture UI a stable API seam without adding a new screen.
 - Added frontend helpers to compose and submit operator-reviewed evidence cards. The helper refuses missing reviewer identity, missing attachments, and pending redaction before posting to the reviewed-evidence ledger endpoint.
+- Added backend attachment existence validation before operator-reviewed evidence can enter the ledger or close an Evidence Autopilot P0 gate. A fake `storageRef` string without a corresponding stored file is rejected.
 
 ## What This Proves
 
@@ -105,6 +106,7 @@ git diff --check
 - Reviewed-evidence attachment store test passed: binary attachment bytes and JSON metadata sidecars are persisted, and the upload endpoint returns a reusable `storageRef`, `attachmentId`, byte size, and SHA-256.
 - Frontend Evidence Autopilot API adapter test passed: attachment upload requests post to the backend endpoint and reject malformed upload responses.
 - Frontend reviewed-evidence submit adapter test passed: uploaded attachments can be composed into an operator-reviewed card and posted to the ledger endpoint, while missing reviewer identity is rejected before submission.
+- Attachment existence gate test passed: fake operator-review `storageRef` values are rejected before ledger append and cannot close P0 gates through request-scoped `reviewedEvidenceCards`.
 - `git diff --check` passed.
 
 ## Remaining Work

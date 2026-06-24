@@ -76,3 +76,98 @@ def test_reviewed_evidence_attachment_endpoint_persists_to_configured_dir(tmp_pa
         "/api/evidence-autopilot/reviewed-evidence/attachments"
         in main.get_runtime_status()["entrypoints"]["api"]
     )
+
+
+def test_reviewed_evidence_submission_rejects_missing_operator_attachment_file(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", str(ledger_path))
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(tmp_path / "attachments"))
+    client = TestClient(main.app)
+
+    response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence",
+        json={
+            "targetLabel": "Guangdong 2026 SCUT intelligent manufacturing",
+            "caseId": "scut-im-v0",
+            "reviewer": "operator-a",
+            "card": operator_review_card(
+                attachments=[
+                    {
+                        "attachmentId": "att-missing",
+                        "kind": "screenshot",
+                        "storageRef": "reviewed-evidence/scut-im-v0/att-missing.png",
+                        "capturedAt": "2026-06-24T00:00:00Z",
+                        "redactionStatus": "redacted",
+                    }
+                ],
+            ),
+        },
+    )
+
+    assert response.status_code == 400
+    assert "attachment storageRef not found" in response.json()["detail"]
+    assert not ledger_path.exists()
+
+
+def test_reviewed_evidence_submission_accepts_uploaded_operator_attachment(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    attachment_root = tmp_path / "attachments"
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", str(ledger_path))
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(attachment_root))
+    client = TestClient(main.app)
+
+    upload_response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence/attachments",
+        json={
+            "caseId": "scut-im-v0",
+            "taskId": "employment-market",
+            "reviewerId": "operator-a",
+            "kind": "screenshot",
+            "contentType": "image/png",
+            "contentBase64": base64.b64encode(b"real screenshot").decode("ascii"),
+            "capturedAt": "2026-06-24T00:00:00Z",
+            "redactionStatus": "redacted",
+            "originalFileName": "job-sample.png",
+        },
+    )
+    assert upload_response.status_code == 200
+    attachment = upload_response.json()["attachment"]
+
+    submit_response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence",
+        json={
+            "targetLabel": "Guangdong 2026 SCUT intelligent manufacturing",
+            "caseId": "scut-im-v0",
+            "reviewer": "operator-a",
+            "card": operator_review_card(attachments=[attachment]),
+        },
+    )
+
+    assert submit_response.status_code == 200
+    payload = submit_response.json()
+    assert payload["success"] is True
+    assert payload["reviewedEvidenceCard"]["sourceUrl"].startswith("operator-review://review-")
+    assert payload["reviewedEvidenceCard"]["attachments"][0]["storageRef"] == attachment["storageRef"]
+    assert ledger_path.exists()
+
+
+def operator_review_card(attachments: list[dict]) -> dict:
+    return {
+        "taskId": "employment-market",
+        "claim": "employment_market",
+        "status": "captured_candidate",
+        "sourceTitle": "Reviewed job-market sample",
+        "sourceUrl": "",
+        "sourceType": "job",
+        "excerpt": "Visible job sample describes robotics integration responsibilities.",
+        "capturedAt": "2026-06-24T00:00:00Z",
+        "confidence": "medium",
+        "reviewAction": "Use as operator-captured job sample only; do not infer employment certainty.",
+        "attachments": attachments,
+        "redactionStatus": "redacted",
+        "reviewerIdentity": {
+            "reviewerId": "operator-a",
+            "displayName": "Operator A",
+            "role": "operator",
+        },
+    }

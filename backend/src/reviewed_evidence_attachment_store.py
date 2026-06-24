@@ -89,6 +89,33 @@ def save_reviewed_evidence_attachment(
     )
 
 
+def resolve_reviewed_evidence_attachment_path(
+    *,
+    storage_root: Path,
+    storage_ref: str,
+) -> Path:
+    """Resolve an attachment storageRef inside the configured attachment root."""
+    if not storage_ref.strip():
+        raise ValueError("attachment storageRef is required")
+    storage_root_resolved = storage_root.resolve()
+    attachment_path = (storage_root_resolved / storage_ref).resolve()
+    if not attachment_path.is_relative_to(storage_root_resolved):
+        raise ValueError("attachment storageRef must stay inside the attachment store")
+    return attachment_path
+
+
+def reviewed_evidence_attachment_exists(
+    *,
+    storage_root: Path,
+    storage_ref: str,
+) -> bool:
+    """Return whether a reviewed-evidence attachment file exists in the store."""
+    return resolve_reviewed_evidence_attachment_path(
+        storage_root=storage_root,
+        storage_ref=storage_ref,
+    ).is_file()
+
+
 def _decode_base64(content_base64: str) -> bytes:
     try:
         raw_bytes = base64.b64decode(content_base64, validate=True)

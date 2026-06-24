@@ -311,6 +311,7 @@ async def submit_reviewed_evidence(
     """Persist one human-reviewed evidence card with a generated review id."""
     from reviewed_evidence_store import append_reviewed_evidence_record
 
+    _validate_reviewed_evidence_submission_attachments(request.card)
     record = append_reviewed_evidence_record(
         ledger_path=_reviewed_evidence_ledger_path(),
         target_label=request.targetLabel,
@@ -386,6 +387,34 @@ def _reviewed_evidence_attachment_dir() -> Path:
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[1] / "logs" / "evidence_autopilot" / "attachments"
+
+
+def _validate_reviewed_evidence_submission_attachments(card: ReviewedEvidenceCard) -> None:
+    needs_attachment_check = (
+        not card.sourceUrl.strip()
+        or card.sourceUrl.startswith("operator-review://")
+    )
+    if not needs_attachment_check:
+        return
+    if not card.attachments:
+        return
+
+    from reviewed_evidence_attachment_store import reviewed_evidence_attachment_exists
+
+    attachment_root = _reviewed_evidence_attachment_dir()
+    for attachment in card.attachments:
+        try:
+            exists = reviewed_evidence_attachment_exists(
+                storage_root=attachment_root,
+                storage_ref=attachment.storageRef,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not exists:
+            raise HTTPException(
+                status_code=400,
+                detail=f"attachment storageRef not found: {attachment.storageRef}",
+            )
 
 
 def _load_reviewed_evidence_ledger_cards(
@@ -477,12 +506,23 @@ def _has_operator_review_controls(card: ReviewedEvidenceCard) -> bool:
         return False
     if card.redactionStatus not in {"redacted", "not_required"}:
         return False
-    return any(
-        attachment.redactionStatus in {"redacted", "not_required"}
-        and attachment.storageRef.strip()
-        and attachment.attachmentId.strip()
-        for attachment in card.attachments
-    )
+    return any(_is_valid_operator_attachment(attachment) for attachment in card.attachments)
+
+
+def _is_valid_operator_attachment(attachment: ReviewedEvidenceAttachment) -> bool:
+    if attachment.redactionStatus not in {"redacted", "not_required"}:
+        return False
+    if not attachment.storageRef.strip() or not attachment.attachmentId.strip():
+        return False
+    from reviewed_evidence_attachment_store import reviewed_evidence_attachment_exists
+
+    try:
+        return reviewed_evidence_attachment_exists(
+            storage_root=_reviewed_evidence_attachment_dir(),
+            storage_ref=attachment.storageRef,
+        )
+    except ValueError:
+        return False
 
 
 def _build_evidence_coverage(

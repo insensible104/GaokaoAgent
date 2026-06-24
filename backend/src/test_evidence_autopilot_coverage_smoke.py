@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -74,7 +75,8 @@ def test_coverage_summary_counts_captured_cards_but_keeps_remaining_blocks() -> 
     assert coverage.readyForCounselorReview is False
 
 
-def test_reviewed_evidence_cards_can_close_operator_p0_gates() -> None:
+def test_reviewed_evidence_cards_can_close_operator_p0_gates(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(tmp_path))
     request = EvidenceAutopilotResearchRequest(
         province="Guangdong",
         schoolName="South China University of Technology",
@@ -93,7 +95,7 @@ def test_reviewed_evidence_cards_can_close_operator_p0_gates() -> None:
                 "capturedAt": "2026-06-24",
                 "confidence": "medium",
                 "reviewAction": "Use as operator-captured job sample only; do not infer employment certainty.",
-                **review_controls("job-market-screenshot"),
+                **review_controls("job-market-screenshot", tmp_path),
             },
             {
                 "taskId": "counter-evidence",
@@ -106,7 +108,7 @@ def test_reviewed_evidence_cards_can_close_operator_p0_gates() -> None:
                 "capturedAt": "2026-06-24",
                 "confidence": "medium",
                 "reviewAction": "Use as a counter-evidence check log only; rerun before final delivery.",
-                **review_controls("counter-evidence-screenshot"),
+                **review_controls("counter-evidence-screenshot", tmp_path),
             },
         ],
     )
@@ -188,7 +190,38 @@ def test_operator_review_card_requires_attachment_redaction_and_identity_for_p0_
     assert "Rejected reviewed evidence cards" in response.claimBoundary
 
 
-def test_research_response_can_merge_case_scoped_reviewed_evidence_ledger(tmp_path) -> None:
+def test_operator_review_card_requires_existing_attachment_file_for_p0_gate() -> None:
+    request = EvidenceAutopilotResearchRequest(
+        province="Guangdong",
+        schoolName="South China University of Technology",
+        majorName="intelligent manufacturing",
+        targetYear=2026,
+        reviewedEvidenceCards=[
+            {
+                "taskId": "employment-market",
+                "claim": "employment_market",
+                "status": "captured_candidate",
+                "sourceTitle": "Reviewed job-market sample",
+                "sourceUrl": "operator-review://boss/2026-06-24/scut-im-001",
+                "sourceType": "job",
+                "excerpt": "Reviewed visible job sample links intelligent manufacturing work to robotics integration.",
+                "capturedAt": "2026-06-24",
+                "confidence": "medium",
+                "reviewAction": "Use as operator-captured job sample only; do not infer employment certainty.",
+                **review_controls("missing-job-market-screenshot"),
+            }
+        ],
+    )
+
+    response = build_evidence_autopilot_research_response(request)
+
+    assert "employment-market" in response.evidenceCoverage.missingP0TaskIds
+    assert "employment-market" not in response.evidenceCoverage.capturedTaskIds
+    assert "Rejected reviewed evidence cards" in response.claimBoundary
+
+
+def test_research_response_can_merge_case_scoped_reviewed_evidence_ledger(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(tmp_path))
     ledger_path = tmp_path / "reviewed_evidence.jsonl"
     append_reviewed_evidence_record(
         ledger_path=ledger_path,
@@ -197,6 +230,7 @@ def test_research_response_can_merge_case_scoped_reviewed_evidence_ledger(tmp_pa
             task_id="employment-market",
             claim="employment_market",
             source_type="job",
+            attachment_root=tmp_path,
         ),
         reviewer="operator-a",
         case_id="scut-im-v0",
@@ -208,6 +242,7 @@ def test_research_response_can_merge_case_scoped_reviewed_evidence_ledger(tmp_pa
             task_id="counter-evidence",
             claim="counter_evidence",
             source_type="discussion",
+            attachment_root=tmp_path,
         ),
         reviewer="operator-a",
         case_id="other-case",
@@ -285,6 +320,7 @@ class ReviewedCardFactory:
         task_id: str,
         claim: str,
         source_type: str,
+        attachment_root: Path,
     ) -> ReviewedEvidenceCard:
         return ReviewedEvidenceCard(
             taskId=task_id,
@@ -297,17 +333,22 @@ class ReviewedCardFactory:
             capturedAt="2026-06-24",
             confidence="medium",
             reviewAction="Use as reviewed operator evidence only.",
-            **review_controls(task_id),
+            **review_controls(task_id, attachment_root),
         )
 
 
-def review_controls(seed: str) -> dict:
+def review_controls(seed: str, attachment_root: Path | None = None) -> dict:
+    storage_ref = f"reviewed-evidence/{seed}.png"
+    if attachment_root is not None:
+        attachment_path = attachment_root / storage_ref
+        attachment_path.parent.mkdir(parents=True, exist_ok=True)
+        attachment_path.write_bytes(b"reviewed evidence screenshot")
     return {
         "attachments": [
             {
                 "attachmentId": f"attachment-{seed}",
                 "kind": "screenshot",
-                "storageRef": f"reviewed-evidence/{seed}.png",
+                "storageRef": storage_ref,
                 "capturedAt": "2026-06-24T00:00:00Z",
                 "redactionStatus": "redacted",
             }

@@ -95,6 +95,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The compact reviewed-evidence panel now shows record-level source ID, reviewer, and review action so internal reviewers can audit evidence provenance without opening the raw JSONL ledger.
 - Operator-review evidence now has attachment/redaction/identity gates. A card using `operator-review://...` must carry at least one attachment, a non-pending redaction status, and a structured reviewer identity before it can close a P0 evidence gate.
 - Backend now has a local reviewed-evidence attachment store and upload endpoint. It persists binary screenshot/PDF/image payloads, emits `ReviewedEvidenceAttachment` metadata, and writes SHA-256 sidecars for audit.
+- Backend now rejects fake operator-review attachment references. A `storageRef` must resolve to an existing file in the configured attachment store before the reviewed card can enter the ledger or close an Evidence Autopilot P0 gate.
 - Frontend now has a typed attachment upload adapter that posts operator-captured attachment payloads and rejects malformed backend upload responses before they can be used by capture UI.
 - Frontend now has typed helpers to compose uploaded attachments into an operator-reviewed card and submit that card to the reviewed-evidence ledger endpoint, with pre-submit checks for reviewer identity, attachment presence, and completed redaction status.
 
@@ -222,7 +223,7 @@ This gives the system a compliant path for Boss, WeChat, and counter-evidence wo
 
 The backend now exposes `POST /api/evidence-autopilot/reviewed-evidence`. It appends one reviewed evidence card to a JSONL ledger, generates a `reviewId`, and returns a normalized card. If the submitted operator card has no public source URL, the endpoint assigns `operator-review://<reviewId>` so downstream Evidence Autopilot can reference an auditable source ID instead of an empty field.
 
-This moves operator evidence from ephemeral request payloads toward an audit trail. It is still not a complete evidence-management system: there is no attachment store, no reviewer permission model, and no UI for browsing prior submissions.
+This moves operator evidence from ephemeral request payloads toward an audit trail. It is still not a complete evidence-management system: attachment storage exists, but there is no reviewer permission model, redaction workflow, or polished capture UI.
 
 ### 2026-06-24 Case-Scoped Ledger Readback
 
@@ -272,7 +273,7 @@ This moves reviewed evidence from a standalone model into the delivery workflow.
 
 ### 2026-06-24 Operator-Review Control Gate
 
-Operator-review evidence now carries an explicit control contract: attachments, redaction status, and reviewer identity. Backend merge logic rejects `operator-review://...` reviewed cards from P0 closure unless they include at least one attachment, a redacted or not-required redaction status, and a structured reviewer identity.
+Operator-review evidence now carries an explicit control contract: attachments, redaction status, and reviewer identity. Backend merge logic rejects `operator-review://...` reviewed cards from P0 closure unless they include at least one attachment, a redacted or not-required redaction status, a structured reviewer identity, and an attachment `storageRef` that resolves to a real stored file.
 
 This is a quality-bar change. It prevents semi-closed evidence from becoming report-ready merely because someone typed an excerpt. The next slice added backend attachment storage, but the system still needs redaction UI, reviewer authentication, and permission enforcement before this is a complete production evidence-management workflow.
 
