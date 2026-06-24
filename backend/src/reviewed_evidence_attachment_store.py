@@ -116,6 +116,43 @@ def reviewed_evidence_attachment_exists(
     ).is_file()
 
 
+def validate_reviewed_evidence_attachment(
+    *,
+    storage_root: Path,
+    attachment: ReviewedEvidenceAttachment,
+) -> bool:
+    """Validate a reviewed-evidence attachment against its stored metadata."""
+    attachment_path = resolve_reviewed_evidence_attachment_path(
+        storage_root=storage_root,
+        storage_ref=attachment.storageRef,
+    )
+    if not attachment_path.is_file():
+        raise ValueError(f"attachment storageRef not found: {attachment.storageRef}")
+
+    metadata_path = attachment_path.with_suffix(attachment_path.suffix + ".json")
+    if not metadata_path.is_file():
+        raise ValueError(f"attachment metadata sidecar not found: {attachment.storageRef}")
+
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"attachment metadata sidecar is invalid JSON: {attachment.storageRef}") from exc
+
+    _require_metadata_match(metadata, "attachmentId", attachment.attachmentId, attachment.storageRef)
+    _require_metadata_match(metadata, "storageRef", attachment.storageRef, attachment.storageRef)
+    _require_metadata_match(metadata, "kind", attachment.kind, attachment.storageRef)
+    _require_metadata_match(metadata, "capturedAt", attachment.capturedAt, attachment.storageRef)
+    _require_metadata_match(metadata, "redactionStatus", attachment.redactionStatus, attachment.storageRef)
+
+    recorded_sha256 = str(metadata.get("sha256", ""))
+    if not re.fullmatch(r"[0-9a-f]{64}", recorded_sha256):
+        raise ValueError(f"attachment sha256 metadata is invalid: {attachment.storageRef}")
+    actual_sha256 = hashlib.sha256(attachment_path.read_bytes()).hexdigest()
+    if recorded_sha256 != actual_sha256:
+        raise ValueError(f"attachment sha256 mismatch: {attachment.storageRef}")
+    return True
+
+
 def _decode_base64(content_base64: str) -> bytes:
     try:
         raw_bytes = base64.b64decode(content_base64, validate=True)
@@ -146,3 +183,13 @@ def _suffix_for(content_type: str, original_file_name: str | None) -> str:
         "image/webp": ".webp",
         "application/pdf": ".pdf",
     }.get(content_type.lower().strip(), ".bin")
+
+
+def _require_metadata_match(
+    metadata: dict,
+    field_name: str,
+    expected: str,
+    storage_ref: str,
+) -> None:
+    if str(metadata.get(field_name, "")) != str(expected):
+        raise ValueError(f"attachment metadata {field_name} mismatch: {storage_ref}")

@@ -31,6 +31,7 @@ Date: 2026-06-24
 - Added a frontend typed adapter for the attachment upload endpoint. It posts the operator-captured attachment payload, validates the returned `ReviewedEvidenceAttachment`, byte size, SHA-256, and metadata path, and gives future capture UI a stable API seam without adding a new screen.
 - Added frontend helpers to compose and submit operator-reviewed evidence cards. The helper refuses missing reviewer identity, missing attachments, and pending redaction before posting to the reviewed-evidence ledger endpoint.
 - Added backend attachment existence validation before operator-reviewed evidence can enter the ledger or close an Evidence Autopilot P0 gate. A fake `storageRef` string without a corresponding stored file is rejected.
+- Tightened backend attachment audit validation. Operator-reviewed evidence now requires the stored binary, a JSON metadata sidecar, matching `attachmentId` / `storageRef` / `kind` / `capturedAt` / `redactionStatus`, and a sidecar SHA-256 that matches the stored file before the card can enter the ledger or close an Evidence Autopilot P0 gate.
 
 ## What This Proves
 
@@ -47,7 +48,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not accept incomplete operator notes as evidence; cards without source URL/review ID and excerpt remain missing evidence.
 - It does not yet provide a full reviewer workflow with authentication, redaction UI, or permission enforcement.
 - The report preview can attempt case-scoped ledger loading, but there is still no full redaction workflow or reviewer permission model.
-- The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata. Binary attachment storage and frontend submit contracts now exist, but there is still no frontend capture/redaction UI, authentication, or permission enforcement system.
+- The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata plus sidecar/hash validation. Binary attachment storage and frontend submit contracts now exist, but there is still no frontend capture/redaction UI, authentication, or permission enforcement system.
 
 ## Verification Commands
 
@@ -107,6 +108,7 @@ git diff --check
 - Frontend Evidence Autopilot API adapter test passed: attachment upload requests post to the backend endpoint and reject malformed upload responses.
 - Frontend reviewed-evidence submit adapter test passed: uploaded attachments can be composed into an operator-reviewed card and posted to the ledger endpoint, while missing reviewer identity is rejected before submission.
 - Attachment existence gate test passed: fake operator-review `storageRef` values are rejected before ledger append and cannot close P0 gates through request-scoped `reviewedEvidenceCards`.
+- Attachment metadata audit gate test passed: operator-review attachment submissions are rejected when the metadata sidecar is missing or when the sidecar SHA-256 does not match the stored binary.
 - `git diff --check` passed.
 
 ## Remaining Work

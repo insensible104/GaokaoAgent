@@ -399,22 +399,17 @@ def _validate_reviewed_evidence_submission_attachments(card: ReviewedEvidenceCar
     if not card.attachments:
         return
 
-    from reviewed_evidence_attachment_store import reviewed_evidence_attachment_exists
+    from reviewed_evidence_attachment_store import validate_reviewed_evidence_attachment
 
     attachment_root = _reviewed_evidence_attachment_dir()
     for attachment in card.attachments:
         try:
-            exists = reviewed_evidence_attachment_exists(
+            validate_reviewed_evidence_attachment(
                 storage_root=attachment_root,
-                storage_ref=attachment.storageRef,
+                attachment=attachment,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        if not exists:
-            raise HTTPException(
-                status_code=400,
-                detail=f"attachment storageRef not found: {attachment.storageRef}",
-            )
 
 
 def _load_reviewed_evidence_ledger_cards(
@@ -514,12 +509,12 @@ def _is_valid_operator_attachment(attachment: ReviewedEvidenceAttachment) -> boo
         return False
     if not attachment.storageRef.strip() or not attachment.attachmentId.strip():
         return False
-    from reviewed_evidence_attachment_store import reviewed_evidence_attachment_exists
+    from reviewed_evidence_attachment_store import validate_reviewed_evidence_attachment
 
     try:
-        return reviewed_evidence_attachment_exists(
+        return validate_reviewed_evidence_attachment(
             storage_root=_reviewed_evidence_attachment_dir(),
-            storage_ref=attachment.storageRef,
+            attachment=attachment,
         )
     except ValueError:
         return False

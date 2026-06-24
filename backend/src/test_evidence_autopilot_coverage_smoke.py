@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from datetime import date
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from evidence_autopilot_api import (
     build_evidence_autopilot_research_response,
 )
 from reviewed_evidence_store import append_reviewed_evidence_record
+from reviewed_evidence_attachment_store import save_reviewed_evidence_attachment
 
 
 def test_coverage_summary_marks_uncaptured_p0_tasks_as_not_ready() -> None:
@@ -339,20 +341,29 @@ class ReviewedCardFactory:
 
 def review_controls(seed: str, attachment_root: Path | None = None) -> dict:
     storage_ref = f"reviewed-evidence/{seed}.png"
+    attachment = {
+        "attachmentId": f"attachment-{seed}",
+        "kind": "screenshot",
+        "storageRef": storage_ref,
+        "capturedAt": "2026-06-24T00:00:00Z",
+        "redactionStatus": "redacted",
+    }
     if attachment_root is not None:
-        attachment_path = attachment_root / storage_ref
-        attachment_path.parent.mkdir(parents=True, exist_ok=True)
-        attachment_path.write_bytes(b"reviewed evidence screenshot")
+        saved = save_reviewed_evidence_attachment(
+            storage_root=attachment_root,
+            case_id=seed,
+            task_id=seed,
+            reviewer_id="operator-a",
+            kind="screenshot",
+            content_type="image/png",
+            content_base64=base64.b64encode(b"reviewed evidence screenshot").decode("ascii"),
+            captured_at="2026-06-24T00:00:00Z",
+            redaction_status="redacted",
+            original_file_name=f"{seed}.png",
+        )
+        attachment = saved.attachment.model_dump()
     return {
-        "attachments": [
-            {
-                "attachmentId": f"attachment-{seed}",
-                "kind": "screenshot",
-                "storageRef": storage_ref,
-                "capturedAt": "2026-06-24T00:00:00Z",
-                "redactionStatus": "redacted",
-            }
-        ],
+        "attachments": [attachment],
         "redactionStatus": "redacted",
         "reviewerIdentity": {
             "reviewerId": "operator-a",

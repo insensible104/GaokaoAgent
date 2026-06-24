@@ -109,6 +109,91 @@ def test_reviewed_evidence_submission_rejects_missing_operator_attachment_file(t
     assert not ledger_path.exists()
 
 
+def test_reviewed_evidence_submission_rejects_attachment_without_metadata_sidecar(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    attachment_root = tmp_path / "attachments"
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", str(ledger_path))
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(attachment_root))
+    client = TestClient(main.app)
+
+    upload_response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence/attachments",
+        json={
+            "caseId": "scut-im-v0",
+            "taskId": "employment-market",
+            "reviewerId": "operator-a",
+            "kind": "screenshot",
+            "contentType": "image/png",
+            "contentBase64": base64.b64encode(b"sidecar required").decode("ascii"),
+            "capturedAt": "2026-06-24T00:00:00Z",
+            "redactionStatus": "redacted",
+            "originalFileName": "job-sample.png",
+        },
+    )
+    assert upload_response.status_code == 200
+    attachment = upload_response.json()["attachment"]
+    stored_path = attachment_root / attachment["storageRef"]
+    stored_path.with_suffix(stored_path.suffix + ".json").unlink()
+
+    submit_response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence",
+        json={
+            "targetLabel": "Guangdong 2026 SCUT intelligent manufacturing",
+            "caseId": "scut-im-v0",
+            "reviewer": "operator-a",
+            "card": operator_review_card(attachments=[attachment]),
+        },
+    )
+
+    assert submit_response.status_code == 400
+    assert "attachment metadata sidecar not found" in submit_response.json()["detail"]
+    assert not ledger_path.exists()
+
+
+def test_reviewed_evidence_submission_rejects_attachment_with_tampered_hash(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    attachment_root = tmp_path / "attachments"
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", str(ledger_path))
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(attachment_root))
+    client = TestClient(main.app)
+
+    upload_response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence/attachments",
+        json={
+            "caseId": "scut-im-v0",
+            "taskId": "employment-market",
+            "reviewerId": "operator-a",
+            "kind": "screenshot",
+            "contentType": "image/png",
+            "contentBase64": base64.b64encode(b"hash checked").decode("ascii"),
+            "capturedAt": "2026-06-24T00:00:00Z",
+            "redactionStatus": "redacted",
+            "originalFileName": "job-sample.png",
+        },
+    )
+    assert upload_response.status_code == 200
+    attachment = upload_response.json()["attachment"]
+    stored_path = attachment_root / attachment["storageRef"]
+    metadata_path = stored_path.with_suffix(stored_path.suffix + ".json")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["sha256"] = "0" * 64
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+
+    submit_response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence",
+        json={
+            "targetLabel": "Guangdong 2026 SCUT intelligent manufacturing",
+            "caseId": "scut-im-v0",
+            "reviewer": "operator-a",
+            "card": operator_review_card(attachments=[attachment]),
+        },
+    )
+
+    assert submit_response.status_code == 400
+    assert "attachment sha256 mismatch" in submit_response.json()["detail"]
+    assert not ledger_path.exists()
+
+
 def test_reviewed_evidence_submission_accepts_uploaded_operator_attachment(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "reviewed_evidence.jsonl"
     attachment_root = tmp_path / "attachments"
