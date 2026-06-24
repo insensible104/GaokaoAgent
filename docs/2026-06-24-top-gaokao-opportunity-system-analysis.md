@@ -109,6 +109,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The reviewed-evidence case browser now distinguishes public URL proof from operator/manual proof. Public evidence can be report-ready from URL plus excerpt; operator/manual evidence requires attachment proof and a valid attachment audit before it can close a report-readiness gate.
 - The Real Case reviewed-evidence bootstrap now turns the fixture's completed public evidence into an executable ledger roundtrip: submit reviewed cards, fetch case-scoped records, and build a readiness browser view from the returned ledger state.
 - The Real Case opportunity audit packet now converts the bootstrap/browser state into a handoff-ready analysis object: supported reviewed claims, blocking P0 gaps, counter-evidence review records, next actions, and claim boundaries.
+- The Real Case report brief now converts the audit packet into an internal Chinese delivery brief, preserving reviewed-evidence sections, blocking gaps, counter-evidence review, next actions, and an explicit family-facing gate.
 
 ### Partially implemented
 
@@ -385,3 +386,9 @@ This moves the case from "fixture can be converted" to "fixture can be exercised
 The ledger bootstrap can now be converted into a structured Real Case audit packet. The packet records which reviewed claims are supported by ready public evidence, which P0 tasks still block report use, which counter-evidence records require counselor review, and what next actions are needed before any family-facing wording.
 
 For the current fixture, the packet status is intentionally blocked: public official/school/counter-evidence sources are ready, but `employment-market` remains a P0 gap because there is no compliant operator-captured job-market evidence. This is the product behavior we want for a top-tier opportunity research system: a partially supported opportunity hypothesis stays blocked rather than being over-presented as a recommendation. The packet does not decide admission probability, employment outcomes, source freshness, or student fit.
+
+### 2026-06-24 Real Case Report Brief
+
+The Real Case audit packet can now be converted into an internal Chinese report brief. The brief keeps the case in delivery language without changing the evidence boundary: it lists reviewed evidence, blocking gaps, counter-evidence review, and next actions, then marks whether family-facing wording is allowed.
+
+For the current fixture, `familyFacingAllowed` remains false because `employment-market` is still a P0 gap and counter-evidence needs counselor review. This is the right stopping behavior for PathFinder / GaokaoAgent: the system can prepare a counselor handoff, but it must not turn an incomplete opportunity hypothesis into a family-facing recommendation.
