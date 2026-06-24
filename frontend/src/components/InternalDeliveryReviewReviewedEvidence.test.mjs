@@ -10,11 +10,13 @@ const componentPath = path.join(here, "InternalDeliveryReview.tsx");
 const helperPath = path.join(root, "lib", "deliveryReviewedEvidencePlan.ts");
 const worklistPath = path.join(root, "lib", "operatorEvidenceCaptureWorklist.ts");
 const packetPath = path.join(root, "lib", "operatorEvidenceCapturePacket.ts");
+const roundtripPath = path.join(root, "lib", "operatorEvidenceCaptureRoundtrip.ts");
 
 assert.equal(fs.existsSync(componentPath), true, "InternalDeliveryReview should exist");
 assert.equal(fs.existsSync(helperPath), true, "delivery reviewed evidence plan helper should exist");
 assert.equal(fs.existsSync(worklistPath), true, "operator evidence capture worklist helper should exist");
 assert.equal(fs.existsSync(packetPath), true, "operator evidence capture packet helper should exist");
+assert.equal(fs.existsSync(roundtripPath), true, "operator evidence capture roundtrip helper should exist");
 
 const source = fs.readFileSync(componentPath, "utf8");
 for (const token of [
@@ -68,12 +70,20 @@ const packet = loadTsModule(fs.readFileSync(packetPath, "utf8"), {
   "./evidenceAutopilotApi": {},
   "./evidenceAutopilotProvider": {},
 });
+const roundtrip = loadTsModule(fs.readFileSync(roundtripPath, "utf8"), {
+  "./evidenceAutopilotApi": {
+    captureAndSubmitOperatorReviewedEvidence: async () => ({}),
+    fetchReviewedEvidenceRecords: async () => ({ records: [] }),
+  },
+  "./operatorEvidenceCaptureWorklist": worklist,
+});
 
 assert.equal(typeof helper.buildDeliveryReviewedEvidencePlan, "function");
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureWorklist, "function");
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureGate, "function");
 assert.equal(typeof packet.buildOperatorEvidenceCapturePacket, "function");
 assert.equal(typeof packet.fillOperatorEvidenceCapturePacketItem, "function");
+assert.equal(typeof roundtrip.executeOperatorEvidenceCaptureRoundtrip, "function");
 
 const plan = helper.buildDeliveryReviewedEvidencePlan({
   profile: {
