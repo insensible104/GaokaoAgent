@@ -114,6 +114,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case operator-closure workflow now starts from reviewer-filled `employment-market` capture input, runs public bootstrap plus operator capture through the existing API contracts, deduplicates full ledger readback by `reviewId`, and returns the closure review.
 - The Real Case reviewer handoff now turns the current evidence state into an internal reviewer work order: open operator tasks, capture packet, closure workflow contract, reviewer checklist, and family-facing gate.
 - The Real Case reviewer handoff brief now renders that work order as internal Chinese Markdown, so the next reviewer can read the required capture fields, execution contract, rejection rules, and claim boundaries without opening raw JSON.
+- The Real Case reviewer handoff bootstrap now runs public reviewed-evidence bootstrap and returns the internal reviewer handoff plus Markdown brief from the fixture and plan.
 
 ### Partially implemented
 
@@ -422,3 +423,9 @@ This is a product-convergence step. Instead of adding another surface, the syste
 The reviewer handoff can now be rendered into an internal Chinese Markdown brief. It keeps the same machine-readable source of truth, but makes it readable as a work order: what evidence remains, which fields must be filled, which workflow to execute, what to reject, and what cannot be claimed.
 
 This is the right kind of delivery polish at the current stage because it improves execution fidelity without widening the product. It still does not create a family-facing report, recommend the case, or validate the job-market source itself.
+
+### 2026-06-24 Real Case Reviewer Handoff Bootstrap
+
+The handoff path now has an executable entrypoint from the Real Case fixture. It submits completed public fixture evidence through the reviewed-evidence ledger, reads the case records back, builds the reviewer handoff, and renders the internal Markdown brief.
+
+This removes a manual assembly step: the next reviewer does not need to know how to stitch ledger bootstrap records into a capture packet. The remaining open task is still explicit: `employment-market` must be captured through the operator workflow before the case can move beyond internal review. This does not validate the missing source or turn the work order into a recommendation.

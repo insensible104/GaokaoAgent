@@ -41,6 +41,11 @@ const packet = loadTsModule(packetPath, {
   "./operatorEvidenceCaptureWorklist": worklist,
 });
 const handoffModule = loadTsModule(handoffPath, {
+  "./evidenceAutopilotRealCaseLedgerBootstrap": {
+    bootstrapRealCaseReviewedEvidenceLedger: async () => {
+      throw new Error("ledger bootstrap should not run in build-only handoff test");
+    },
+  },
   "./operatorEvidenceCaptureWorklist": worklist,
   "./operatorEvidenceCapturePacket": packet,
 });

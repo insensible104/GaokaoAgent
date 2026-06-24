@@ -2,12 +2,18 @@ import type { DeepEvidenceCollectionPlan } from "./deepEvidenceCollectionPlan";
 import type { ReviewedEvidenceRecord } from "./evidenceAutopilotApi";
 import type { EvidenceAutopilotRealCaseFixture } from "./evidenceAutopilotRealCaseProvider";
 import {
+  bootstrapRealCaseReviewedEvidenceLedger,
+  type RealCaseReviewedEvidenceLedgerBootstrapResult,
+} from "./evidenceAutopilotRealCaseLedgerBootstrap";
+import {
   buildOperatorEvidenceCapturePacket,
   type OperatorEvidenceCapturePacket,
 } from "./operatorEvidenceCapturePacket";
 import {
   buildOperatorEvidenceCaptureWorklist,
 } from "./operatorEvidenceCaptureWorklist";
+
+type FetchLike = Parameters<typeof bootstrapRealCaseReviewedEvidenceLedger>[0]["fetchImpl"];
 
 export interface RealCaseReviewerHandoff {
   protocol: "real_case_reviewer_handoff_v1";
@@ -40,6 +46,55 @@ export interface RealCaseReviewerHandoffBrief {
   sections: RealCaseReviewerHandoffBriefSection[];
   markdown: string;
   claimBoundary: string;
+}
+
+export interface RealCaseReviewerHandoffBootstrapResult {
+  protocol: "real_case_reviewer_handoff_bootstrap_v1";
+  caseId: string;
+  publicBootstrap: RealCaseReviewedEvidenceLedgerBootstrapResult;
+  handoff: RealCaseReviewerHandoff;
+  brief: RealCaseReviewerHandoffBrief;
+  claimBoundary: string;
+}
+
+export async function bootstrapRealCaseReviewerHandoff({
+  fixture,
+  caseId,
+  plan,
+  fetchImpl,
+}: {
+  fixture: EvidenceAutopilotRealCaseFixture;
+  caseId: string;
+  plan: DeepEvidenceCollectionPlan;
+  fetchImpl?: FetchLike;
+}): Promise<RealCaseReviewerHandoffBootstrapResult> {
+  if (fixture.caseId !== caseId) {
+    throw new Error("real case reviewer handoff bootstrap requires matching caseId");
+  }
+
+  const publicBootstrap = await bootstrapRealCaseReviewedEvidenceLedger({
+    fixture,
+    caseId,
+    plan,
+    fetchImpl,
+  });
+  const handoff = buildRealCaseReviewerHandoff({
+    fixture,
+    caseId,
+    plan,
+    records: publicBootstrap.listing.records,
+  });
+  const brief = buildRealCaseReviewerHandoffBrief(handoff);
+
+  return {
+    protocol: "real_case_reviewer_handoff_bootstrap_v1",
+    caseId,
+    publicBootstrap,
+    handoff,
+    brief,
+    claimBoundary:
+      "Real Case reviewer handoff bootstrap submits reviewed public fixture evidence and prepares an internal reviewer work order; it does not prove admission probability, does not prove employment outcomes, and does not replace source freshness or counselor review.",
+  };
 }
 
 export function buildRealCaseReviewerHandoff({
