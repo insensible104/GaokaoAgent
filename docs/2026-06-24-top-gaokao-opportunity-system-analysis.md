@@ -120,6 +120,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewer handoff delivery preview adapter now converts that internal bundle into the same `DeliveryPreview` shape consumed by `InternalDeliveryReview`, whose artifact ordering recognizes the handoff Markdown and JSON tabs.
 - The Real Case reviewer handoff delivery preview bootstrap now composes the whole internal path from reviewed public fixture evidence to `InternalDeliveryReview`-compatible preview in one call, while preserving the empty client-facing artifact list.
 - The Real Case operator-closure delivery preview now gives the paired post-capture view: after a valid `employment-market` operator capture, the P0 gap is mechanically cleared in the browser state, but the internal preview remains blocked by counter-evidence and counselor review.
+- The Real Case counselor review decision now separates evidence readiness from recommendation readiness with three internal outcomes: `reject`, `needs_more_evidence`, and `allow_internal_report_draft`. All three keep client and family-facing delivery blocked.
 
 ### Partially implemented
 
@@ -464,3 +465,9 @@ The important result is the negative gate as much as the artifact: the client-fa
 The same Real Case now has a post-capture internal preview path. Given a reviewer-filled `employment-market` capture input, the helper runs public-evidence bootstrap plus operator capture, recomputes the case browser, verifies that missing P0 tasks are empty, and emits two internal artifacts: an operator-closure brief and a JSON snapshot.
 
 This is the useful contrast to the handoff preview: before capture, `employment-market` blocks the case; after capture, the P0 operator gap is cleared, but client delivery is still blocked because counter-evidence and counselor review are unresolved. That distinction is central to the product thesis: evidence readiness is not the same thing as recommendation readiness.
+
+### 2026-06-24 Real Case Counselor Review Decision
+
+The operator-closed preview now has a counselor decision layer. A counselor can reject the case, request more evidence, or allow only an internal report draft after reviewing counter-evidence, source freshness, representativeness, and claim boundaries.
+
+This is deliberately stricter than a normal demo flow. Even the positive branch is `allow_internal_report_draft`, not client delivery. That keeps PathFinder / GaokaoAgent aligned with the core standard: a polished artifact is not a recommendation until the evidence, counter-evidence, and counselor-review boundary all support it.
