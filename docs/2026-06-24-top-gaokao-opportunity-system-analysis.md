@@ -118,6 +118,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewer handoff artifact manifest now packages that internal Markdown brief and machine-readable bootstrap snapshot as reviewer-only artifacts while preserving the family-facing block and claim boundaries.
 - The Real Case reviewer handoff delivery bundle composer now maps those reviewer-only artifacts into the existing delivery audience contract as `internal_review` artifacts and keeps client delivery blocked while `employment-market` remains open.
 - The Real Case reviewer handoff delivery preview adapter now converts that internal bundle into the same `DeliveryPreview` shape consumed by `InternalDeliveryReview`, whose artifact ordering recognizes the handoff Markdown and JSON tabs.
+- The Real Case reviewer handoff delivery preview bootstrap now composes the whole internal path from reviewed public fixture evidence to `InternalDeliveryReview`-compatible preview in one call, while preserving the empty client-facing artifact list.
 
 ### Partially implemented
 
@@ -450,3 +451,9 @@ This closes another handoff gap without widening the product: the system can pac
 The internal reviewer bundle can now be converted into the exact preview shape already used by `InternalDeliveryReview`: `success`, `message`, `case_id`, `output_dir`, `manifest`, and `artifacts`. The existing preview surface also recognizes `real_case_reviewer_handoff_markdown` and `real_case_reviewer_handoff_json` in its artifact ordering and tab labels.
 
 This makes the handoff practically consumable by the current internal preview/download contract without changing the client gate. The case still has no client-facing artifacts and remains blocked by `employment-market` until operator evidence and counselor review are complete.
+
+### 2026-06-24 Real Case Reviewer Handoff Delivery Preview Bootstrap
+
+The Real Case reviewer handoff can now be bootstrapped directly into an internal delivery preview. The helper executes the reviewed public-evidence ledger bootstrap, builds the reviewer handoff, packages the Markdown and JSON artifacts, converts them into the internal delivery bundle, and returns the `InternalDeliveryReview` preview shape plus the computed client-facing artifact list.
+
+The important result is the negative gate as much as the artifact: the client-facing artifact list is empty, and the preview remains blocked by `employment-market`. This removes a manual assembly step without claiming source freshness, job-market representativeness, admission probability, or employment outcomes.
