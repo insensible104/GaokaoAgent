@@ -161,12 +161,8 @@ function toBrowserRecord(
   const attachmentAuditStatus = record.attachmentAudit?.status ?? "not_checked";
   const attachmentAuditDetail = record.attachmentAudit?.findings
     ?.find((finding) => !finding.valid)
-    ?.detail ?? "attachment audit not checked";
-  const readyForReport = (
-    card.status === "captured_candidate"
-    && Boolean(card.excerpt.trim())
-    && attachmentAuditStatus !== "invalid"
-  );
+    ?.detail ?? attachmentAuditDetailFor(record, card, attachmentAuditStatus);
+  const readyForReport = isReadyForReport(record, card, attachmentAuditStatus);
   return {
     reviewId: record.reviewId,
     taskId: card.taskId,
@@ -186,6 +182,36 @@ function toBrowserRecord(
     attachmentAuditDetail,
     readyForReport,
   };
+}
+
+function isReadyForReport(
+  record: ReviewedEvidenceRecord,
+  card: ReviewedEvidenceCardWithClaim,
+  attachmentAuditStatus: string,
+): boolean {
+  if (card.status !== "captured_candidate" || !card.excerpt.trim()) return false;
+  if (attachmentAuditStatus === "invalid") return false;
+  if (hasPublicSourceUrl(card.sourceUrl)) return true;
+  return (card.attachments?.length ?? 0) > 0 && record.attachmentAudit?.status === "valid";
+}
+
+function attachmentAuditDetailFor(
+  record: ReviewedEvidenceRecord,
+  card: ReviewedEvidenceCardWithClaim,
+  attachmentAuditStatus: string,
+): string {
+  if (hasPublicSourceUrl(card.sourceUrl)) return "public source URL does not require attachment audit";
+  if ((card.attachments?.length ?? 0) > 0 && record.attachmentAudit?.status === "valid") {
+    return "operator attachment audit valid";
+  }
+  if (attachmentAuditStatus === "not_checked") {
+    return "operator-reviewed evidence requires a valid attachment audit or public URL";
+  }
+  return "attachment audit not checked";
+}
+
+function hasPublicSourceUrl(sourceUrl: string): boolean {
+  return /^https?:\/\//i.test(sourceUrl.trim());
 }
 
 function formatReviewerIdentity(identity: ReviewedEvidenceCardWithClaim["reviewerIdentity"]): string {

@@ -54,6 +54,7 @@ const records = [
       displayName: "Operator A",
       role: "operator",
     },
+    attachmentAudit: { status: "valid", validAttachmentCount: 1, invalidAttachmentCount: 0, findings: [] },
   }),
   reviewedRecord({
     reviewId: "review-live-002",
@@ -63,8 +64,18 @@ const records = [
     status: "captured_candidate",
     sourceTitle: "Counter evidence note",
     sourceUrl: "operator-review://review-live-002",
-    excerpt: "调剂风险提示：专业组内仍需复核黑名单专业。",
+    excerpt: "Transfer-risk note: the professional group still needs a blacklist-major review.",
     reviewAction: "Escalate before counselor signoff.",
+    attachments: [
+      {
+        attachmentId: "attachment-counter-001",
+        kind: "screenshot",
+        storageRef: "reviewed-evidence/counter-001.png",
+        capturedAt: "2026-06-24T00:00:00Z",
+        redactionStatus: "redacted",
+      },
+    ],
+    attachmentAudit: { status: "valid", validAttachmentCount: 1, invalidAttachmentCount: 0, findings: [] },
   }),
   reviewedRecord({
     reviewId: "review-live-003",
@@ -112,6 +123,17 @@ const records = [
       ],
     },
   }),
+  reviewedRecord({
+    reviewId: "review-live-unaudited-operator",
+    caseId: "scut-im-v0",
+    taskId: "operator-unaudited",
+    claim: "employment_market",
+    status: "captured_candidate",
+    sourceTitle: "Operator note without attachment proof",
+    sourceUrl: "operator-review://review-live-unaudited-operator",
+    excerpt: "This manual note has text but no attachment audit, so it must stay pending.",
+    reviewAction: "Attach source proof before report use.",
+  }),
 ];
 
 const plan = {
@@ -120,6 +142,7 @@ const plan = {
     { id: "employment-market", priority: "P0", claim: "employment_market", title: "Employment market" },
     { id: "counter-evidence", priority: "P0", claim: "counter_evidence", title: "Counter evidence" },
     { id: "employment-market-invalid", priority: "P0", claim: "employment_market", title: "Invalid employment market" },
+    { id: "operator-unaudited", priority: "P0", claim: "employment_market", title: "Unaudited operator evidence" },
     { id: "wechat-public-account", priority: "P1", claim: "wechat_public_account", title: "WeChat account" },
   ],
 };
@@ -132,13 +155,13 @@ const view = browser.buildReviewedEvidenceCaseBrowser({
 
 assert.equal(view.protocol, "reviewed_evidence_case_browser_v1");
 assert.equal(view.caseId, "scut-im-v0");
-assert.equal(view.totalRecords, 4, "only requested-case records should be counted");
+assert.equal(view.totalRecords, 5, "only requested-case records should be counted");
 assert.equal(view.capturedCount, 2);
-assert.equal(view.pendingCount, 2);
+assert.equal(view.pendingCount, 3);
 assert.equal(view.readyForReportCount, 2);
 assert.deepEqual(
   [...view.missingP0TaskIds].sort(),
-  ["employment-market-invalid", "official-plan-charter"],
+  ["employment-market-invalid", "official-plan-charter", "operator-unaudited"],
 );
 assert.equal(view.counterEvidenceHit, true);
 assert.equal(view.reviewRequired, true);
@@ -162,6 +185,12 @@ assert.equal(invalidEmployment.status, "needs_capture");
 assert.equal(invalidEmployment.records[0].readyForReport, false);
 assert.equal(invalidEmployment.records[0].attachmentAuditStatus, "invalid");
 assert.match(invalidEmployment.records[0].attachmentAuditDetail, /sha256 mismatch/);
+
+const unauditedOperator = view.taskGroups.find((group) => group.taskId === "operator-unaudited");
+assert.equal(unauditedOperator.status, "needs_capture");
+assert.equal(unauditedOperator.records[0].readyForReport, false);
+assert.equal(unauditedOperator.records[0].attachmentCount, 0);
+assert.match(unauditedOperator.records[0].attachmentAuditDetail, /valid attachment audit or public URL/i);
 
 console.log("Reviewed evidence case browser test passed");
 

@@ -106,6 +106,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
 - The system now has an operator evidence capture worklist model, capture packet model, packet fill helper, frontend roundtrip helper, backend roundtrip smoke, Real Case reviewed-evidence adapter, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
 - The Real Case v0 source fixture and source log now have a source-fidelity guard: provider tests fail if common mojibake tokens appear before fixture evidence is converted into provider results.
+- The reviewed-evidence case browser now distinguishes public URL proof from operator/manual proof. Public evidence can be report-ready from URL plus excerpt; operator/manual evidence requires attachment proof and a valid attachment audit before it can close a report-readiness gate.
 
 ### Partially implemented
 
@@ -364,3 +365,9 @@ This is a meaningful step toward one auditable case: real fixture evidence is no
 The Real Case v0 fixture and source log now use readable source titles and accepted excerpts instead of mojibake. The provider smoke reads both files before conversion and fails on common mojibake tokens, so a broken evidence artifact cannot quietly flow into provider results, reviewed-evidence submissions, or report-facing audit trails.
 
 This matters because a top-tier opportunity research system is only credible if the evidence trail is human-auditable. The guard does not verify that each URL is still current or that the excerpts remain live on the source pages; it only prevents corrupted local evidence text from being treated as a reviewable source packet.
+
+### 2026-06-24 Operator Evidence Proof Gate
+
+The reviewed-evidence case browser now prevents captured operator/manual notes from becoming `ready_for_report` unless they have source proof beyond text. A public `http(s)` source can still be used without attachments, but `operator-review://` or empty-source evidence must include at least one attachment and a valid readback-time attachment audit.
+
+This closes a delivery-readiness gap: an internal reviewer cannot accidentally clear a P0 operator evidence task by entering an excerpt-like note without the screenshot/PDF/page-capture proof that makes the claim auditable. The boundary remains narrow: it checks the local audit chain and attachment integrity; it does not decide whether the source itself proves employment, admission, or student fit.
