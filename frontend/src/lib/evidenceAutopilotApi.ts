@@ -11,11 +11,12 @@ export type EvidenceAutopilotBackendStatus =
   | "real_case_fixture";
 
 type BackendEvidenceCardStatus = "requires_capture" | "operator_review" | "captured_candidate";
-type ReviewedEvidenceRedactionStatus = "pending" | "redacted" | "not_required";
+export type ReviewedEvidenceAttachmentKind = "screenshot" | "page_capture" | "pdf" | "image" | "other";
+export type ReviewedEvidenceRedactionStatus = "pending" | "redacted" | "not_required";
 
-interface ReviewedEvidenceAttachment {
+export interface ReviewedEvidenceAttachment {
   attachmentId: string;
-  kind: "screenshot" | "page_capture" | "pdf" | "image" | "other";
+  kind: ReviewedEvidenceAttachmentKind;
   storageRef: string;
   capturedAt: string;
   redactionStatus: ReviewedEvidenceRedactionStatus;
@@ -46,6 +47,7 @@ const VALID_CARD_STATUSES = new Set(["requires_capture", "operator_review", "cap
 const VALID_SOURCE_TYPES = new Set(["official", "school", "paper", "job", "wechat", "discussion", "other"]);
 const VALID_CONFIDENCE_LEVELS = new Set(["high", "medium", "low"]);
 const VALID_REDACTION_STATUSES = new Set(["pending", "redacted", "not_required"]);
+const VALID_ATTACHMENT_KINDS = new Set(["screenshot", "page_capture", "pdf", "image", "other"]);
 
 export interface EvidenceAutopilotBackendResponse {
   success: boolean;
@@ -90,6 +92,26 @@ export interface ReviewedEvidenceListingResponse {
   caseId: string;
   recordCount: number;
   records: ReviewedEvidenceRecord[];
+}
+
+export interface ReviewedEvidenceAttachmentUploadPayload {
+  caseId: string;
+  taskId: string;
+  reviewerId: string;
+  kind: ReviewedEvidenceAttachment["kind"];
+  contentType: string;
+  contentBase64: string;
+  capturedAt: string;
+  redactionStatus: ReviewedEvidenceRedactionStatus;
+  originalFileName?: string;
+}
+
+export interface ReviewedEvidenceAttachmentUploadResponse {
+  success: boolean;
+  attachment: ReviewedEvidenceAttachment;
+  byteSize: number;
+  sha256: string;
+  metadataPath: string;
 }
 
 type FetchLike = (url: string, init: RequestInit) => Promise<{
@@ -261,6 +283,27 @@ export async function fetchReviewedEvidenceRecords({
   return reviewedEvidenceListingFromJson(await response.json());
 }
 
+export async function uploadReviewedEvidenceAttachment({
+  payload,
+  fetchImpl = fetch,
+}: {
+  payload: ReviewedEvidenceAttachmentUploadPayload;
+  fetchImpl?: FetchLike;
+}): Promise<ReviewedEvidenceAttachmentUploadResponse> {
+  const response = await fetchImpl(
+    buildApiUrl("/api/evidence-autopilot/reviewed-evidence/attachments"),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`backend returned HTTP ${response.status ?? "error"}`);
+  }
+  return reviewedEvidenceAttachmentUploadFromJson(await response.json());
+}
+
 function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
   if (!value || typeof value !== "object") {
     throw new Error("backend response was not an object");
@@ -293,6 +336,32 @@ function reviewedEvidenceListingFromJson(value: unknown): ReviewedEvidenceListin
   return response;
 }
 
+function reviewedEvidenceAttachmentUploadFromJson(
+  value: unknown,
+): ReviewedEvidenceAttachmentUploadResponse {
+  if (!value || typeof value !== "object") {
+    throw new Error("invalid reviewed evidence attachment upload response: not an object");
+  }
+  const response = value as ReviewedEvidenceAttachmentUploadResponse;
+  if (response.success !== true) {
+    throw new Error("invalid reviewed evidence attachment upload response: success");
+  }
+  if (!response.attachment || typeof response.attachment !== "object") {
+    throw new Error("invalid reviewed evidence attachment upload response: attachment");
+  }
+  assertValidReviewedEvidenceAttachment(response.attachment, "upload response");
+  if (typeof response.byteSize !== "number" || response.byteSize <= 0) {
+    throw new Error("invalid reviewed evidence attachment upload response: byteSize");
+  }
+  if (typeof response.sha256 !== "string" || !/^[a-f0-9]{64}$/i.test(response.sha256)) {
+    throw new Error("invalid reviewed evidence attachment upload response: sha256");
+  }
+  if (typeof response.metadataPath !== "string" || !response.metadataPath.trim()) {
+    throw new Error("invalid reviewed evidence attachment upload response: metadataPath");
+  }
+  return response;
+}
+
 function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number): void {
   if (!VALID_CARD_STATUSES.has(card.status)) {
     throw new Error(`invalid backend evidence card ${index + 1}: status ${card.status}`);
@@ -309,6 +378,12 @@ function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number
   if (card.attachments && !Array.isArray(card.attachments)) {
     throw new Error(`invalid backend evidence card ${index + 1}: attachments`);
   }
+  card.attachments?.forEach((attachment, attachmentIndex) => {
+    assertValidReviewedEvidenceAttachment(
+      attachment,
+      `backend evidence card ${index + 1} attachment ${attachmentIndex + 1}`,
+    );
+  });
   if (
     card.reviewerIdentity
     && (
@@ -318,6 +393,27 @@ function assertValidBackendEvidenceCard(card: BackendEvidenceCard, index: number
     )
   ) {
     throw new Error(`invalid backend evidence card ${index + 1}: reviewerIdentity`);
+  }
+}
+
+function assertValidReviewedEvidenceAttachment(
+  attachment: ReviewedEvidenceAttachment,
+  label: string,
+): void {
+  if (!attachment.attachmentId || typeof attachment.attachmentId !== "string") {
+    throw new Error(`invalid reviewed evidence attachment ${label}: attachmentId`);
+  }
+  if (!VALID_ATTACHMENT_KINDS.has(attachment.kind)) {
+    throw new Error(`invalid reviewed evidence attachment ${label}: kind`);
+  }
+  if (!attachment.storageRef || typeof attachment.storageRef !== "string") {
+    throw new Error(`invalid reviewed evidence attachment ${label}: storageRef`);
+  }
+  if (!attachment.capturedAt || typeof attachment.capturedAt !== "string") {
+    throw new Error(`invalid reviewed evidence attachment ${label}: capturedAt`);
+  }
+  if (!VALID_REDACTION_STATUSES.has(attachment.redactionStatus)) {
+    throw new Error(`invalid reviewed evidence attachment ${label}: redactionStatus`);
   }
 }
 

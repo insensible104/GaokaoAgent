@@ -95,19 +95,20 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The compact reviewed-evidence panel now shows record-level source ID, reviewer, and review action so internal reviewers can audit evidence provenance without opening the raw JSONL ledger.
 - Operator-review evidence now has attachment/redaction/identity gates. A card using `operator-review://...` must carry at least one attachment, a non-pending redaction status, and a structured reviewer identity before it can close a P0 evidence gate.
 - Backend now has a local reviewed-evidence attachment store and upload endpoint. It persists binary screenshot/PDF/image payloads, emits `ReviewedEvidenceAttachment` metadata, and writes SHA-256 sidecars for audit.
+- Frontend now has a typed attachment upload adapter that posts operator-captured attachment payloads and rejects malformed backend upload responses before they can be used by capture UI.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata to close P0 gates. The remaining production gaps are redaction UI, authentication, permission enforcement, and a polished capture workflow.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata to close P0 gates. The remaining production gaps are capture/redaction UI, authentication, permission enforcement, and a polished capture workflow.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
 
 - Real provider retrieval for official public sources.
 - Fully durable captured-evidence workflow for one real case.
-- Operator workflow for semi-closed evidence capture with redaction UI, reviewer identity enforcement, and screenshots wired into card submission.
+- Operator workflow for semi-closed evidence capture with capture/redaction UI, reviewer identity enforcement, and screenshots wired into card submission.
 - A verified real opportunity case that flows into card and report.
 - Outcome validation proving improved 2026 admission results.
 
@@ -279,3 +280,5 @@ This is a quality-bar change. It prevents semi-closed evidence from becoming rep
 The backend now exposes `POST /api/evidence-autopilot/reviewed-evidence/attachments`. It accepts a base64 screenshot/PDF/image payload, persists the binary attachment under a case-scoped `reviewed-evidence/<caseId>/...` storage reference, writes a JSON sidecar with case ID, task ID, reviewer ID, content type, byte size, SHA-256, capture time, and redaction status, and returns a `ReviewedEvidenceAttachment` object suitable for operator-review cards.
 
 This turns attachment evidence from a hand-written string into an auditable local asset. It still does not solve who is allowed to upload, whether the screenshot has been redacted correctly, or how reviewers attach the returned `storageRef` from a UI.
+
+The frontend API adapter now exposes this endpoint as `uploadReviewedEvidenceAttachment`. That gives future capture UI a typed path for uploading an attachment and receiving a validated `storageRef`, but it deliberately does not add a new UI surface in this slice.

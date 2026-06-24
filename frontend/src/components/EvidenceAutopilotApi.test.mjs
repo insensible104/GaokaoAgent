@@ -55,6 +55,7 @@ assert.equal(typeof api.mapBackendEvidenceCardsToProviderResults, "function");
 assert.equal(typeof api.fetchEvidenceAutopilotResearch, "function");
 assert.equal(typeof api.buildEvidenceAutopilotSnapshotFallback, "function");
 assert.equal(typeof api.fetchReviewedEvidenceRecords, "function");
+assert.equal(typeof api.uploadReviewedEvidenceAttachment, "function");
 
 const context = {
   province: "广东",
@@ -200,6 +201,89 @@ const reviewedListing = await api.fetchReviewedEvidenceRecords({
 assert.equal(reviewedListing.success, true);
 assert.equal(reviewedListing.recordCount, 1);
 assert.equal(reviewedListing.records[0].reviewedEvidenceCard.taskId, "employment-market");
+
+const uploadedAttachment = await api.uploadReviewedEvidenceAttachment({
+  payload: {
+    caseId: "scut-im-v0",
+    taskId: "employment-market",
+    reviewerId: "operator-a",
+    kind: "screenshot",
+    contentType: "image/png",
+    contentBase64: "ZmFrZS1zY3JlZW5zaG90",
+    capturedAt: "2026-06-24T00:00:00Z",
+    redactionStatus: "redacted",
+    originalFileName: "job-sample.png",
+  },
+  fetchImpl: async (url, init) => {
+    assert.equal(
+      url,
+      "https://api.test/api/evidence-autopilot/reviewed-evidence/attachments",
+    );
+    assert.equal(init.method, "POST");
+    assert.deepEqual(JSON.parse(init.body), {
+      caseId: "scut-im-v0",
+      taskId: "employment-market",
+      reviewerId: "operator-a",
+      kind: "screenshot",
+      contentType: "image/png",
+      contentBase64: "ZmFrZS1zY3JlZW5zaG90",
+      capturedAt: "2026-06-24T00:00:00Z",
+      redactionStatus: "redacted",
+      originalFileName: "job-sample.png",
+    });
+    return {
+      ok: true,
+      async json() {
+        return {
+          success: true,
+          attachment: {
+            attachmentId: "att-20260624T000000Z-abc12345",
+            kind: "screenshot",
+            storageRef: "reviewed-evidence/scut-im-v0/att-20260624T000000Z-abc12345.png",
+            capturedAt: "2026-06-24T00:00:00Z",
+            redactionStatus: "redacted",
+          },
+          byteSize: 15,
+          sha256: "a".repeat(64),
+          metadataPath: [
+            "C:/PathFinder/backend/logs/evidence_autopilot/attachments",
+            "reviewed-evidence/scut-im-v0/att-20260624T000000Z-abc12345.png.json",
+          ].join("/"),
+        };
+      },
+    };
+  },
+});
+assert.equal(uploadedAttachment.success, true);
+assert.equal(uploadedAttachment.attachment.storageRef.includes("reviewed-evidence/scut-im-v0/"), true);
+assert.equal(uploadedAttachment.sha256.length, 64);
+
+await assert.rejects(
+  () => api.uploadReviewedEvidenceAttachment({
+    payload: {
+      caseId: "scut-im-v0",
+      taskId: "employment-market",
+      reviewerId: "operator-a",
+      kind: "screenshot",
+      contentType: "image/png",
+      contentBase64: "ZmFrZS1zY3JlZW5zaG90",
+      capturedAt: "2026-06-24T00:00:00Z",
+      redactionStatus: "redacted",
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      async json() {
+        return {
+          success: true,
+          attachment: { storageRef: "" },
+          byteSize: "15",
+          sha256: "short",
+        };
+      },
+    }),
+  }),
+  /invalid reviewed evidence attachment upload response/i,
+);
 
 await assert.rejects(
   () => api.fetchReviewedEvidenceRecords({
