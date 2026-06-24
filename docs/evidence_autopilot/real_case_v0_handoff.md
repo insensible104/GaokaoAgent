@@ -43,6 +43,8 @@ Date: 2026-06-24
 - Added a packet fill helper. A reviewer-filled packet item now becomes a typed `captureAndSubmitOperatorReviewedEvidence` input only after source title, excerpt, capture time, attachment content, reviewer identity, and complete redaction checklist are present.
 - Added an operator capture roundtrip helper. It runs the filled packet input through attachment upload, reviewed-evidence ledger submission, case-scoped readback, worklist recomputation, and delivery gate recomputation.
 - Added a backend TestClient roundtrip smoke. It verifies real attachment storage, reviewed-evidence ledger append, case-scoped readback attachment audit, Evidence Autopilot ledger merge, and coverage-gate behavior for both valid and tampered operator evidence.
+- Added a Real Case v0 reviewed-evidence adapter. It converts only completed fixture cards with public URL and excerpt into case-scoped reviewed-evidence submissions, maps descriptive fixture claims to canonical Evidence Autopilot claim ids, and filters incomplete operator notes.
+- Extended the backend roundtrip smoke with the Real Case v0 `undergrad-access` public source. The smoke submits that source-log evidence to the reviewed ledger and verifies that Evidence Autopilot coverage accepts `undergrad-access` when ledger readback is enabled.
 
 ## What This Proves
 
@@ -60,7 +62,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not yet provide a full reviewer workflow with authentication, redaction UI, or permission enforcement.
 - The report preview can attempt case-scoped ledger loading, but there is still no full redaction workflow or reviewer permission model.
 - The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata, redaction checklist confirmation, and sidecar/hash validation at submission and readback. Binary attachment storage and a typed upload-to-ledger workflow now exist, but there is still no frontend capture/redaction UI, authentication, or permission enforcement system.
-- The operator capture worklist, packet, fill helper, frontend roundtrip helper, backend roundtrip smoke, and delivery gate organize missing or invalid capture tasks for internal reviewers. They do not collect evidence, bypass platform limits, visually verify redaction, authenticate reviewers, or prove admission/employment outcomes.
+- The operator capture worklist, packet, fill helper, frontend roundtrip helper, backend roundtrip smoke, Real Case reviewed-evidence adapter, and delivery gate organize missing or invalid capture tasks for internal reviewers. They do not collect evidence, bypass platform limits, visually verify redaction, authenticate reviewers, or prove admission/employment outcomes.
 
 ## Verification Commands
 
@@ -129,6 +131,8 @@ git diff --check
 - Operator evidence capture packet test passed: open operator/manual evidence tasks are converted into capture briefs, search prompts, redaction/rejection rules, attachment templates, ledger submission templates, and typed filled capture inputs when required reviewer/evidence fields are present.
 - Operator evidence capture roundtrip test passed: a filled packet input can call upload, ledger submission, case readback, worklist recomputation, and gate recomputation; a valid readback clears the P0 operator capture gate.
 - Backend operator evidence capture roundtrip smoke passed: FastAPI TestClient writes the attachment store and ledger, readback returns valid attachment audit, research coverage accepts the operator task, and tampered attachment readback blocks coverage again.
+- Real Case reviewed-evidence adapter test passed: completed source-log fixture cards become reviewed-evidence submissions with canonical claim ids, while incomplete operator notes are filtered out.
+- Backend Real Case ledger merge smoke passed: the `undergrad-access` public fixture source can be submitted to the reviewed ledger and then accepted by Evidence Autopilot coverage when case-scoped ledger readback is enabled.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.
 

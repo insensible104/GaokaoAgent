@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import json
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -172,6 +174,62 @@ def test_operator_evidence_capture_roundtrip_rejects_tampered_readback_for_cover
     assert "employment-market" in coverage["missingP0TaskIds"]
 
 
+def test_real_case_public_fixture_can_enter_reviewed_ledger_and_coverage(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "reviewed_evidence.jsonl"
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", str(ledger_path))
+    client = TestClient(main.app)
+    fixture = json.loads(
+        (Path(__file__).resolve().parents[2] / "data" / "evidence_autopilot" / "real_case_v0.json")
+        .read_text(encoding="utf-8")
+    )
+    undergrad_card = next(
+        card
+        for card in fixture["evidenceCards"]
+        if card["taskId"] == "undergrad-access" and card["status"] == "captured_candidate"
+    )
+
+    submit = client.post(
+        "/api/evidence-autopilot/reviewed-evidence",
+        json={
+            "targetLabel": real_case_target_label(fixture),
+            "caseId": fixture["caseId"],
+            "reviewer": "real-case-v0-source-log",
+            "card": {
+                "taskId": undergrad_card["taskId"],
+                "claim": "undergrad_access",
+                "status": "captured_candidate",
+                "sourceTitle": undergrad_card["sourceTitle"],
+                "sourceUrl": undergrad_card["sourceUrl"],
+                "sourceType": undergrad_card["sourceType"],
+                "excerpt": undergrad_card["excerpt"],
+                "capturedAt": undergrad_card["capturedAt"],
+                "confidence": undergrad_card["confidence"],
+                "reviewAction": undergrad_card["reviewAction"],
+                "attachments": [],
+                "redactionStatus": "not_required",
+            },
+        },
+    )
+    assert submit.status_code == 200
+
+    research = client.post(
+        "/api/evidence-autopilot/research",
+        json={
+            "province": fixture["candidate"]["province"],
+            "schoolName": fixture["target"]["schoolName"],
+            "majorName": fixture["target"]["majorName"],
+            "targetYear": fixture["candidate"]["targetYear"],
+            "caseId": fixture["caseId"],
+            "enableReviewedEvidenceLedger": True,
+        },
+    )
+    assert research.status_code == 200
+    coverage = research.json()["evidenceCoverage"]
+    assert "undergrad-access" in coverage["capturedTaskIds"]
+    assert "undergrad-access" not in coverage["missingP0TaskIds"]
+    assert "Reviewed evidence cards accepted: undergrad-access." in research.json()["claimBoundary"]
+
+
 def complete_redaction_checklist() -> dict:
     return {
         "studentPersonalInfoRemoved": True,
@@ -181,3 +239,10 @@ def complete_redaction_checklist() -> dict:
         "reviewerConfirmed": True,
         "notes": "Visible personal identifiers were checked before upload.",
     }
+
+
+def real_case_target_label(fixture: dict) -> str:
+    return (
+        f"{fixture['candidate']['province']} {fixture['candidate']['targetYear']} "
+        f"{fixture['target']['schoolName']} {fixture['target']['majorName']}"
+    )

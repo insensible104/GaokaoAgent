@@ -104,7 +104,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend attachment contracts now preserve `redactionChecklist` so a future capture/redaction UI can use the same upload and evidence-card path without inventing a parallel proof format.
 - Frontend now has a typed capture workflow helper that combines attachment upload, gated operator-card construction, and ledger submission into one auditable path for future capture UI.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
-- The system now has an operator evidence capture worklist model, capture packet model, packet fill helper, frontend roundtrip helper, backend roundtrip smoke, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
+- The system now has an operator evidence capture worklist model, capture packet model, packet fill helper, frontend roundtrip helper, backend roundtrip smoke, Real Case reviewed-evidence adapter, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
 
 ### Partially implemented
 
@@ -349,3 +349,11 @@ The backend now has a focused FastAPI TestClient smoke for the same operator evi
 The same smoke tampers with the stored attachment after ledger append and verifies that readback reports `attachmentAudit=invalid` and the research coverage gate puts `employment-market` back into `missingP0TaskIds`.
 
 This is important because the frontend contract is no longer the only proof. The backend persistence and readback-time audit path now has a regression test for both the happy path and the tamper path.
+
+### 2026-06-24 Real Case Reviewed-Evidence Adapter
+
+The Real Case v0 fixture can now be converted into reviewed-evidence submissions. The adapter only accepts completed `captured_candidate` cards with public URL, source title, excerpt, capture date, and review action. It maps the fixture's descriptive claims back to canonical Evidence Autopilot claim ids such as `undergrad_access`, `official_admission`, and `counter_evidence`, so backend coverage gates do not depend on prose strings.
+
+The backend roundtrip smoke now uses the real fixture's `undergrad-access` public school source. It submits the source-log evidence to the reviewed ledger and verifies that Evidence Autopilot coverage accepts `undergrad-access` when case-scoped ledger readback is enabled.
+
+This is a meaningful step toward one auditable case: real fixture evidence is no longer only a frontend provider result. It can enter the same reviewed ledger and coverage path as operator-captured evidence. It still does not prove lab access for a specific student, employment outcomes, or 2026 admission results.
