@@ -37,6 +37,16 @@ const browser = loadTsModule(browserPath);
 const auditPacket = loadTsModule(auditPacketPath);
 const reportBrief = loadTsModule(reportBriefPath);
 const operatorClosure = loadTsModule(operatorClosurePath, {
+  "./evidenceAutopilotRealCaseLedgerBootstrap": {
+    bootstrapRealCaseReviewedEvidenceLedger: async () => {
+      throw new Error("bootstrap should not run in build-only test");
+    },
+  },
+  "./operatorEvidenceCaptureRoundtrip": {
+    executeOperatorEvidenceCaptureRoundtrip: async () => {
+      throw new Error("roundtrip should not run in build-only test");
+    },
+  },
   "./reviewedEvidenceCaseBrowser": browser,
   "./evidenceAutopilotRealCaseAuditPacket": auditPacket,
   "./evidenceAutopilotRealCaseReportBrief": reportBrief,

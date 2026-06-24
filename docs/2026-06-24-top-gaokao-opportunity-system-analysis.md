@@ -111,6 +111,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case opportunity audit packet now converts the bootstrap/browser state into a handoff-ready analysis object: supported reviewed claims, blocking P0 gaps, counter-evidence review records, next actions, and claim boundaries.
 - The Real Case report brief now converts the audit packet into an internal Chinese delivery brief, preserving reviewed-evidence sections, blocking gaps, counter-evidence review, next actions, and an explicit family-facing gate.
 - The Real Case operator-closure helper now composes public reviewed evidence with a completed operator capture roundtrip, then rebuilds the readiness browser, audit packet, and report brief from the combined ledger state.
+- The Real Case operator-closure workflow now starts from reviewer-filled `employment-market` capture input, runs public bootstrap plus operator capture through the existing API contracts, deduplicates full ledger readback by `reviewId`, and returns the closure review.
 
 ### Partially implemented
 
@@ -401,3 +402,9 @@ The Real Case public-evidence bootstrap can now be combined with a completed ope
 The expected transition is precise: a valid operator-captured employment-market record clears the P0 blocking gap, but the case still stays out of family-facing delivery if counter-evidence requires counselor review. This is a useful product constraint because it separates "all P0 evidence tasks have records" from "the opportunity is ready to recommend."
 
 This slice still does not validate job-market representativeness, source freshness, employment outcomes, or the quality of the underlying source. It verifies workflow composition and readiness recomputation only.
+
+### 2026-06-24 Real Case Operator Closure Workflow
+
+The closure path can now start from the artifact a reviewer or future capture UI would actually produce: a filled `OperatorReviewedEvidenceCaptureInput` for `employment-market`. The workflow runs the public Real Case bootstrap, uploads the operator attachment, submits the reviewed evidence card, reads the case ledger back, deduplicates records by `reviewId`, and rebuilds the closure review.
+
+This matters because the real reviewed-evidence endpoint returns case-scoped ledger state, not just "the last operator record." Without deduplication, a workflow that composes public bootstrap records with full post-capture readback could double-count public evidence. The new workflow guards that accounting boundary while preserving the same claim boundary: readiness recomputation is not proof of admission probability, employment outcomes, source freshness, or source representativeness.
