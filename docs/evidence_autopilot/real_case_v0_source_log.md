@@ -28,7 +28,7 @@ Manufacturing-data and intelligent-manufacturing evidence may reveal a different
 - Captured at: 2026-06-24
 - Source type: official
 - Claim task id: official-plan-charter
-- Accepted excerpt: 2026 年招生专业和分组进一步优化，2025 年录取分数仅供了解。
+- Accepted excerpt: 2026 年招生专业和分组进一步优化，2025 年录取分数仅供参考。
 - Confidence: high
 - Review action: Re-check the final 2026 Guangdong provincial plan and group names before using the case in a delivered report.
 - What this does not prove: It does not prove a 2026 admission threshold, group stability, or that intelligent manufacturing will remain in the same professional group.

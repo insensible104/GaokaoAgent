@@ -7,10 +7,15 @@ import ts from "typescript";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "..", "..", "..");
 const fixturePath = path.join(root, "data", "evidence_autopilot", "real_case_v0.json");
+const sourceLogPath = path.join(root, "docs", "evidence_autopilot", "real_case_v0_source_log.md");
 const providerPath = path.join(here, "..", "lib", "evidenceAutopilotRealCaseProvider.ts");
+const mojibakePattern = /鍗|澶|鎷|瀛|骞|鐞|绉|绋|€|�/;
 
 assert.equal(fs.existsSync(fixturePath), true, "Real Case v0 fixture should exist");
+assert.equal(fs.existsSync(sourceLogPath), true, "Real Case v0 source log should exist");
 assert.equal(fs.existsSync(providerPath), true, "Real Case provider should exist");
+assert.doesNotMatch(fs.readFileSync(fixturePath, "utf8"), mojibakePattern, "Real Case fixture should not contain mojibake");
+assert.doesNotMatch(fs.readFileSync(sourceLogPath, "utf8"), mojibakePattern, "Real Case source log should not contain mojibake");
 
 function loadTsModule(source, requireMap = {}) {
   const output = ts.transpileModule(source, {

@@ -45,6 +45,7 @@ Date: 2026-06-24
 - Added a backend TestClient roundtrip smoke. It verifies real attachment storage, reviewed-evidence ledger append, case-scoped readback attachment audit, Evidence Autopilot ledger merge, and coverage-gate behavior for both valid and tampered operator evidence.
 - Added a Real Case v0 reviewed-evidence adapter. It converts only completed fixture cards with public URL and excerpt into case-scoped reviewed-evidence submissions, maps descriptive fixture claims to canonical Evidence Autopilot claim ids, and filters incomplete operator notes.
 - Extended the backend roundtrip smoke with the Real Case v0 `undergrad-access` public source. The smoke submits that source-log evidence to the reviewed ledger and verifies that Evidence Autopilot coverage accepts `undergrad-access` when ledger readback is enabled.
+- Cleaned the Real Case v0 fixture and source log so source titles and accepted excerpts are readable instead of mojibake. The provider smoke now guards both files against common mojibake tokens before converting fixture evidence into provider results.
 
 ## What This Proves
 
@@ -132,6 +133,7 @@ git diff --check
 - Operator evidence capture roundtrip test passed: a filled packet input can call upload, ledger submission, case readback, worklist recomputation, and gate recomputation; a valid readback clears the P0 operator capture gate.
 - Backend operator evidence capture roundtrip smoke passed: FastAPI TestClient writes the attachment store and ledger, readback returns valid attachment audit, research coverage accepts the operator task, and tampered attachment readback blocks coverage again.
 - Real Case reviewed-evidence adapter test passed: completed source-log fixture cards become reviewed-evidence submissions with canonical claim ids, while incomplete operator notes are filtered out.
+- Real Case source-fidelity guard passed: fixture and source log text no longer contain common mojibake tokens before provider conversion.
 - Backend Real Case ledger merge smoke passed: the `undergrad-access` public fixture source can be submitted to the reviewed ledger and then accepted by Evidence Autopilot coverage when case-scoped ledger readback is enabled.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.

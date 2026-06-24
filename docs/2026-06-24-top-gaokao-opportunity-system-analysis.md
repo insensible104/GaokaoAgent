@@ -105,6 +105,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend now has a typed capture workflow helper that combines attachment upload, gated operator-card construction, and ledger submission into one auditable path for future capture UI.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
 - The system now has an operator evidence capture worklist model, capture packet model, packet fill helper, frontend roundtrip helper, backend roundtrip smoke, Real Case reviewed-evidence adapter, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
+- The Real Case v0 source fixture and source log now have a source-fidelity guard: provider tests fail if common mojibake tokens appear before fixture evidence is converted into provider results.
 
 ### Partially implemented
 
@@ -357,3 +358,9 @@ The Real Case v0 fixture can now be converted into reviewed-evidence submissions
 The backend roundtrip smoke now uses the real fixture's `undergrad-access` public school source. It submits the source-log evidence to the reviewed ledger and verifies that Evidence Autopilot coverage accepts `undergrad-access` when case-scoped ledger readback is enabled.
 
 This is a meaningful step toward one auditable case: real fixture evidence is no longer only a frontend provider result. It can enter the same reviewed ledger and coverage path as operator-captured evidence. It still does not prove lab access for a specific student, employment outcomes, or 2026 admission results.
+
+### 2026-06-24 Real Case Source-Fidelity Guard
+
+The Real Case v0 fixture and source log now use readable source titles and accepted excerpts instead of mojibake. The provider smoke reads both files before conversion and fails on common mojibake tokens, so a broken evidence artifact cannot quietly flow into provider results, reviewed-evidence submissions, or report-facing audit trails.
+
+This matters because a top-tier opportunity research system is only credible if the evidence trail is human-auditable. The guard does not verify that each URL is still current or that the excerpts remain live on the source pages; it only prevents corrupted local evidence text from being treated as a reviewable source packet.
