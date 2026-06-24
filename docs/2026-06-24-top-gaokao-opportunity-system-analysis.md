@@ -107,6 +107,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The system now has an operator evidence capture worklist model, capture packet model, packet fill helper, frontend roundtrip helper, backend roundtrip smoke, Real Case reviewed-evidence adapter, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
 - The Real Case v0 source fixture and source log now have a source-fidelity guard: provider tests fail if common mojibake tokens appear before fixture evidence is converted into provider results.
 - The reviewed-evidence case browser now distinguishes public URL proof from operator/manual proof. Public evidence can be report-ready from URL plus excerpt; operator/manual evidence requires attachment proof and a valid attachment audit before it can close a report-readiness gate.
+- The Real Case reviewed-evidence bootstrap now turns the fixture's completed public evidence into an executable ledger roundtrip: submit reviewed cards, fetch case-scoped records, and build a readiness browser view from the returned ledger state.
 
 ### Partially implemented
 
@@ -371,3 +372,9 @@ This matters because a top-tier opportunity research system is only credible if 
 The reviewed-evidence case browser now prevents captured operator/manual notes from becoming `ready_for_report` unless they have source proof beyond text. A public `http(s)` source can still be used without attachments, but `operator-review://` or empty-source evidence must include at least one attachment and a valid readback-time attachment audit.
 
 This closes a delivery-readiness gap: an internal reviewer cannot accidentally clear a P0 operator evidence task by entering an excerpt-like note without the screenshot/PDF/page-capture proof that makes the claim auditable. The boundary remains narrow: it checks the local audit chain and attachment integrity; it does not decide whether the source itself proves employment, admission, or student fit.
+
+### 2026-06-24 Real Case Ledger Bootstrap
+
+The Real Case v0 public evidence now has a typed ledger bootstrap helper. It converts the fixture into reviewed-evidence submissions, posts every completed public source through the existing reviewed-evidence API, fetches the case-scoped ledger records back, and builds the reviewed-evidence browser readiness view from the returned records.
+
+This moves the case from "fixture can be converted" to "fixture can be exercised through the same ledger roundtrip a reviewer-facing workflow uses." In the tested state, public evidence becomes report-ready while `employment-market` remains a visible P0 gap because the fixture does not contain a compliant operator-captured job-market source. The helper still does not perform live search, verify URL freshness, collect semi-closed evidence, or prove admission/employment outcomes.
