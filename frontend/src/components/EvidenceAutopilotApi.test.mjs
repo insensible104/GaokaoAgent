@@ -56,6 +56,8 @@ assert.equal(typeof api.fetchEvidenceAutopilotResearch, "function");
 assert.equal(typeof api.buildEvidenceAutopilotSnapshotFallback, "function");
 assert.equal(typeof api.fetchReviewedEvidenceRecords, "function");
 assert.equal(typeof api.uploadReviewedEvidenceAttachment, "function");
+assert.equal(typeof api.buildOperatorReviewedEvidenceCard, "function");
+assert.equal(typeof api.submitReviewedEvidenceCard, "function");
 
 const context = {
   province: "广东",
@@ -257,6 +259,84 @@ const uploadedAttachment = await api.uploadReviewedEvidenceAttachment({
 assert.equal(uploadedAttachment.success, true);
 assert.equal(uploadedAttachment.attachment.storageRef.includes("reviewed-evidence/scut-im-v0/"), true);
 assert.equal(uploadedAttachment.sha256.length, 64);
+
+const operatorReviewedCard = api.buildOperatorReviewedEvidenceCard({
+  taskId: "employment-market",
+  claim: "employment_market",
+  sourceTitle: "Reviewed job-market sample",
+  sourceType: "job",
+  excerpt: "Visible job sample describes robotics integration responsibilities.",
+  capturedAt: "2026-06-24T00:00:00Z",
+  confidence: "medium",
+  reviewAction: "Use as operator-captured job sample only; do not infer employment certainty.",
+  attachments: [uploadedAttachment.attachment],
+  redactionStatus: "redacted",
+  reviewerIdentity: {
+    reviewerId: "operator-a",
+    displayName: "Operator A",
+    role: "operator",
+  },
+});
+assert.equal(operatorReviewedCard.status, "captured_candidate");
+assert.equal(operatorReviewedCard.sourceUrl, "");
+assert.equal(operatorReviewedCard.attachments.length, 1);
+assert.equal(operatorReviewedCard.reviewerIdentity.reviewerId, "operator-a");
+
+const submittedReviewedCard = await api.submitReviewedEvidenceCard({
+  payload: {
+    targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+    caseId: "scut-im-v0",
+    reviewer: "operator-a",
+    card: operatorReviewedCard,
+  },
+  fetchImpl: async (url, init) => {
+    assert.equal(url, "https://api.test/api/evidence-autopilot/reviewed-evidence");
+    assert.equal(init.method, "POST");
+    assert.deepEqual(JSON.parse(init.body), {
+      targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+      caseId: "scut-im-v0",
+      reviewer: "operator-a",
+      card: operatorReviewedCard,
+    });
+    return {
+      ok: true,
+      async json() {
+        return {
+          success: true,
+          reviewId: "review-20260624T010000Z-def67890",
+          reviewedEvidenceCard: {
+            ...operatorReviewedCard,
+            sourceUrl: "operator-review://review-20260624T010000Z-def67890",
+          },
+          ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+          recordedAt: "2026-06-24T01:00:00Z",
+        };
+      },
+    };
+  },
+});
+assert.equal(submittedReviewedCard.success, true);
+assert.equal(
+  submittedReviewedCard.reviewedEvidenceCard.sourceUrl,
+  "operator-review://review-20260624T010000Z-def67890",
+);
+assert.equal(submittedReviewedCard.reviewedEvidenceCard.attachments[0].attachmentId, uploadedAttachment.attachment.attachmentId);
+
+assert.throws(
+  () => api.buildOperatorReviewedEvidenceCard({
+    taskId: "employment-market",
+    claim: "employment_market",
+    sourceTitle: "Reviewed job-market sample",
+    sourceType: "job",
+    excerpt: "Visible job sample describes robotics integration responsibilities.",
+    capturedAt: "2026-06-24T00:00:00Z",
+    confidence: "medium",
+    reviewAction: "Use as operator-captured job sample only.",
+    attachments: [uploadedAttachment.attachment],
+    redactionStatus: "redacted",
+  }),
+  /reviewer identity/i,
+);
 
 await assert.rejects(
   () => api.uploadReviewedEvidenceAttachment({

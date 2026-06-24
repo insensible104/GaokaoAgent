@@ -13,6 +13,7 @@ export type EvidenceAutopilotBackendStatus =
 type BackendEvidenceCardStatus = "requires_capture" | "operator_review" | "captured_candidate";
 export type ReviewedEvidenceAttachmentKind = "screenshot" | "page_capture" | "pdf" | "image" | "other";
 export type ReviewedEvidenceRedactionStatus = "pending" | "redacted" | "not_required";
+export type ReviewedEvidenceReviewerRole = "operator" | "counselor" | "qa_reviewer" | "lead_counselor";
 
 export interface ReviewedEvidenceAttachment {
   attachmentId: string;
@@ -22,14 +23,15 @@ export interface ReviewedEvidenceAttachment {
   redactionStatus: ReviewedEvidenceRedactionStatus;
 }
 
-interface ReviewedEvidenceReviewerIdentity {
+export interface ReviewedEvidenceReviewerIdentity {
   reviewerId: string;
   displayName: string;
-  role: "operator" | "counselor" | "qa_reviewer" | "lead_counselor";
+  role: ReviewedEvidenceReviewerRole;
 }
 
-interface BackendEvidenceCard {
+export interface BackendEvidenceCard {
   taskId: string;
+  claim: string;
   status: BackendEvidenceCardStatus;
   sourceTitle: string;
   sourceUrl: string;
@@ -112,6 +114,35 @@ export interface ReviewedEvidenceAttachmentUploadResponse {
   byteSize: number;
   sha256: string;
   metadataPath: string;
+}
+
+export interface OperatorReviewedEvidenceCardInput {
+  taskId: string;
+  claim: string;
+  sourceTitle: string;
+  sourceType: EvidenceAutopilotProviderResult["sourceType"];
+  excerpt: string;
+  capturedAt: string;
+  confidence: EvidenceAutopilotProviderResult["confidence"];
+  reviewAction: string;
+  attachments: ReviewedEvidenceAttachment[];
+  redactionStatus: ReviewedEvidenceRedactionStatus;
+  reviewerIdentity?: ReviewedEvidenceReviewerIdentity;
+}
+
+export interface ReviewedEvidenceSubmissionPayload {
+  targetLabel: string;
+  card: BackendEvidenceCard;
+  reviewer: string;
+  caseId?: string;
+}
+
+export interface ReviewedEvidenceSubmissionResponse {
+  success: boolean;
+  reviewId: string;
+  reviewedEvidenceCard: BackendEvidenceCard;
+  ledgerPath: string;
+  recordedAt: string;
 }
 
 type FetchLike = (url: string, init: RequestInit) => Promise<{
@@ -304,6 +335,62 @@ export async function uploadReviewedEvidenceAttachment({
   return reviewedEvidenceAttachmentUploadFromJson(await response.json());
 }
 
+export function buildOperatorReviewedEvidenceCard(
+  input: OperatorReviewedEvidenceCardInput,
+): BackendEvidenceCard {
+  if (!input.reviewerIdentity) {
+    throw new Error("operator reviewed evidence requires reviewer identity");
+  }
+  if (!input.attachments.length) {
+    throw new Error("operator reviewed evidence requires at least one attachment");
+  }
+  if (input.redactionStatus === "pending") {
+    throw new Error("operator reviewed evidence requires a completed redaction status");
+  }
+  input.attachments.forEach((attachment, index) => {
+    assertValidReviewedEvidenceAttachment(attachment, `operator card attachment ${index + 1}`);
+    if (attachment.redactionStatus === "pending") {
+      throw new Error("operator reviewed evidence attachment requires a completed redaction status");
+    }
+  });
+  return {
+    taskId: input.taskId,
+    claim: input.claim,
+    status: "captured_candidate",
+    sourceTitle: input.sourceTitle,
+    sourceUrl: "",
+    sourceType: input.sourceType,
+    excerpt: input.excerpt,
+    capturedAt: input.capturedAt,
+    confidence: input.confidence,
+    reviewAction: input.reviewAction,
+    attachments: input.attachments,
+    redactionStatus: input.redactionStatus,
+    reviewerIdentity: input.reviewerIdentity,
+  };
+}
+
+export async function submitReviewedEvidenceCard({
+  payload,
+  fetchImpl = fetch,
+}: {
+  payload: ReviewedEvidenceSubmissionPayload;
+  fetchImpl?: FetchLike;
+}): Promise<ReviewedEvidenceSubmissionResponse> {
+  const response = await fetchImpl(
+    buildApiUrl("/api/evidence-autopilot/reviewed-evidence"),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`backend returned HTTP ${response.status ?? "error"}`);
+  }
+  return reviewedEvidenceSubmissionFromJson(await response.json());
+}
+
 function responseFromJson(value: unknown): EvidenceAutopilotBackendResponse {
   if (!value || typeof value !== "object") {
     throw new Error("backend response was not an object");
@@ -358,6 +445,30 @@ function reviewedEvidenceAttachmentUploadFromJson(
   }
   if (typeof response.metadataPath !== "string" || !response.metadataPath.trim()) {
     throw new Error("invalid reviewed evidence attachment upload response: metadataPath");
+  }
+  return response;
+}
+
+function reviewedEvidenceSubmissionFromJson(value: unknown): ReviewedEvidenceSubmissionResponse {
+  if (!value || typeof value !== "object") {
+    throw new Error("invalid reviewed evidence submission response: not an object");
+  }
+  const response = value as ReviewedEvidenceSubmissionResponse;
+  if (response.success !== true) {
+    throw new Error("invalid reviewed evidence submission response: success");
+  }
+  if (!response.reviewId || typeof response.reviewId !== "string") {
+    throw new Error("invalid reviewed evidence submission response: reviewId");
+  }
+  if (!response.reviewedEvidenceCard || typeof response.reviewedEvidenceCard !== "object") {
+    throw new Error("invalid reviewed evidence submission response: reviewedEvidenceCard");
+  }
+  assertValidBackendEvidenceCard(response.reviewedEvidenceCard, 0);
+  if (!response.ledgerPath || typeof response.ledgerPath !== "string") {
+    throw new Error("invalid reviewed evidence submission response: ledgerPath");
+  }
+  if (!response.recordedAt || typeof response.recordedAt !== "string") {
+    throw new Error("invalid reviewed evidence submission response: recordedAt");
   }
   return response;
 }

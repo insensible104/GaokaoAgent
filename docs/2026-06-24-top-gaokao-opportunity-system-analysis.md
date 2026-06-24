@@ -96,6 +96,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Operator-review evidence now has attachment/redaction/identity gates. A card using `operator-review://...` must carry at least one attachment, a non-pending redaction status, and a structured reviewer identity before it can close a P0 evidence gate.
 - Backend now has a local reviewed-evidence attachment store and upload endpoint. It persists binary screenshot/PDF/image payloads, emits `ReviewedEvidenceAttachment` metadata, and writes SHA-256 sidecars for audit.
 - Frontend now has a typed attachment upload adapter that posts operator-captured attachment payloads and rejects malformed backend upload responses before they can be used by capture UI.
+- Frontend now has typed helpers to compose uploaded attachments into an operator-reviewed card and submit that card to the reviewed-evidence ledger endpoint, with pre-submit checks for reviewer identity, attachment presence, and completed redaction status.
 
 ### Partially implemented
 
@@ -281,4 +282,6 @@ The backend now exposes `POST /api/evidence-autopilot/reviewed-evidence/attachme
 
 This turns attachment evidence from a hand-written string into an auditable local asset. It still does not solve who is allowed to upload, whether the screenshot has been redacted correctly, or how reviewers attach the returned `storageRef` from a UI.
 
-The frontend API adapter now exposes this endpoint as `uploadReviewedEvidenceAttachment`. That gives future capture UI a typed path for uploading an attachment and receiving a validated `storageRef`, but it deliberately does not add a new UI surface in this slice.
+The frontend API adapter now exposes this endpoint as `uploadReviewedEvidenceAttachment`. It also exposes `buildOperatorReviewedEvidenceCard` and `submitReviewedEvidenceCard`, so future capture UI can use one typed path for: upload attachment, compose a gated operator card, and submit it to the reviewed-evidence ledger.
+
+This is still a contract slice, not a complete workflow. There is no capture screen, redaction UI, reviewer authentication, or permission enforcement yet.
