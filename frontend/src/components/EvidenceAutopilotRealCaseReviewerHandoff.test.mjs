@@ -46,6 +46,7 @@ const handoffModule = loadTsModule(handoffPath, {
 });
 
 assert.equal(typeof handoffModule.buildRealCaseReviewerHandoff, "function");
+assert.equal(typeof handoffModule.buildRealCaseReviewerHandoffBrief, "function");
 
 const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
 const caseId = fixture.caseId;
@@ -138,6 +139,24 @@ assert.match(handoff.reviewerChecklist.join("\n"), /source freshness/i);
 assert.match(handoff.claimBoundary, /does not prove admission probability/i);
 assert.match(handoff.claimBoundary, /does not prove employment outcomes/i);
 assert.doesNotMatch(JSON.stringify(handoff), /推荐报考|保证录取|保证就业/);
+
+const brief = handoffModule.buildRealCaseReviewerHandoffBrief(handoff);
+
+assert.equal(brief.protocol, "real_case_reviewer_handoff_brief_v1");
+assert.equal(brief.caseId, caseId);
+assert.equal(brief.familyFacingAllowed, false);
+assert.match(brief.title, /内部/);
+assert.equal(brief.sections.some((section) => section.title === "待补证据"), true);
+assert.equal(brief.sections.some((section) => section.title === "执行合同"), true);
+assert.equal(brief.sections.some((section) => section.title === "拒收规则"), true);
+assert.match(brief.markdown, /employment-market/);
+assert.match(brief.markdown, /executeRealCaseOperatorClosureWorkflow/);
+assert.match(brief.markdown, /OperatorReviewedEvidenceCaptureInput/);
+assert.match(brief.markdown, /jobTitle/);
+assert.match(brief.markdown, /redaction checklist/i);
+assert.match(brief.markdown, /不证明录取概率/);
+assert.match(brief.markdown, /不证明就业结果/);
+assert.doesNotMatch(brief.markdown, /推荐报考|保证录取|保证就业/);
 
 assert.throws(
   () => handoffModule.buildRealCaseReviewerHandoff({

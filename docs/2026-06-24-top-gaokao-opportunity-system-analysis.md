@@ -113,6 +113,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case operator-closure helper now composes public reviewed evidence with a completed operator capture roundtrip, then rebuilds the readiness browser, audit packet, and report brief from the combined ledger state.
 - The Real Case operator-closure workflow now starts from reviewer-filled `employment-market` capture input, runs public bootstrap plus operator capture through the existing API contracts, deduplicates full ledger readback by `reviewId`, and returns the closure review.
 - The Real Case reviewer handoff now turns the current evidence state into an internal reviewer work order: open operator tasks, capture packet, closure workflow contract, reviewer checklist, and family-facing gate.
+- The Real Case reviewer handoff brief now renders that work order as internal Chinese Markdown, so the next reviewer can read the required capture fields, execution contract, rejection rules, and claim boundaries without opening raw JSON.
 
 ### Partially implemented
 
@@ -415,3 +416,9 @@ This matters because the real reviewed-evidence endpoint returns case-scoped led
 The system can now generate an internal reviewer handoff from the current Real Case evidence state. The handoff exposes the remaining open operator task, carries the `operator_evidence_capture_packet_v1`, names `executeRealCaseOperatorClosureWorkflow` as the execution contract, and keeps a checklist for redaction, source freshness, and rejection rules.
 
 This is a product-convergence step. Instead of adding another surface, the system now says exactly what the reviewer must do next before the case can move forward. It still blocks family-facing wording, because a capture work order is not a recommendation and does not prove admission probability or employment outcomes.
+
+### 2026-06-24 Real Case Reviewer Handoff Brief
+
+The reviewer handoff can now be rendered into an internal Chinese Markdown brief. It keeps the same machine-readable source of truth, but makes it readable as a work order: what evidence remains, which fields must be filled, which workflow to execute, what to reject, and what cannot be claimed.
+
+This is the right kind of delivery polish at the current stage because it improves execution fidelity without widening the product. It still does not create a family-facing report, recommend the case, or validate the job-market source itself.

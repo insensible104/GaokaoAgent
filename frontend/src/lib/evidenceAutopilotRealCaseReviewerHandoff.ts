@@ -27,6 +27,21 @@ export interface RealCaseReviewerHandoff {
   claimBoundary: string;
 }
 
+export interface RealCaseReviewerHandoffBriefSection {
+  title: string;
+  bullets: string[];
+}
+
+export interface RealCaseReviewerHandoffBrief {
+  protocol: "real_case_reviewer_handoff_brief_v1";
+  caseId: string;
+  title: string;
+  familyFacingAllowed: boolean;
+  sections: RealCaseReviewerHandoffBriefSection[];
+  markdown: string;
+  claimBoundary: string;
+}
+
 export function buildRealCaseReviewerHandoff({
   fixture,
   caseId,
@@ -78,4 +93,77 @@ export function buildRealCaseReviewerHandoff({
     claimBoundary:
       "Real Case reviewer handoff organizes internal operator capture and closure workflow only; it does not prove admission probability, does not prove employment outcomes, does not prove source freshness, and is not a family-facing recommendation.",
   };
+}
+
+export function buildRealCaseReviewerHandoffBrief(
+  handoff: RealCaseReviewerHandoff,
+): RealCaseReviewerHandoffBrief {
+  if (handoff.protocol !== "real_case_reviewer_handoff_v1") {
+    throw new Error("real case reviewer handoff brief requires real_case_reviewer_handoff_v1");
+  }
+
+  const sections: RealCaseReviewerHandoffBriefSection[] = [
+    {
+      title: "待补证据",
+      bullets: handoff.capturePacket.items.map((item) =>
+        `${item.taskId}：${item.captureBrief}；必填字段：${item.requiredOutputFields.join(", ")}`,
+      ),
+    },
+    {
+      title: "执行合同",
+      bullets: [
+        `workflow：${handoff.execution.workflowFunction}`,
+        `input：${handoff.execution.inputContract}`,
+        `valid capture 后预期状态：${handoff.execution.expectedStatusAfterValidCapture}`,
+        ...handoff.execution.notes,
+      ],
+    },
+    {
+      title: "拒收规则",
+      bullets: unique(handoff.capturePacket.items.flatMap((item) => item.rejectionRules)),
+    },
+    {
+      title: "复核清单",
+      bullets: handoff.reviewerChecklist,
+    },
+    {
+      title: "边界",
+      bullets: [
+        "不证明录取概率。",
+        "不证明就业结果。",
+        "不证明来源新鲜度或代表性。",
+        "不是家庭端推荐结论。",
+      ],
+    },
+  ];
+  const title = `内部 reviewer handoff：${handoff.targetLabel}`;
+  return {
+    protocol: "real_case_reviewer_handoff_brief_v1",
+    caseId: handoff.caseId,
+    title,
+    familyFacingAllowed: false,
+    sections,
+    markdown: toMarkdown(title, sections),
+    claimBoundary:
+      "Real Case reviewer handoff brief is an internal work order for evidence capture and closure execution only; it does not prove admission probability, does not prove employment outcomes, and is not a family-facing recommendation.",
+  };
+}
+
+function toMarkdown(
+  title: string,
+  sections: RealCaseReviewerHandoffBriefSection[],
+): string {
+  return [
+    `# ${title}`,
+    "",
+    ...sections.flatMap((section) => [
+      `## ${section.title}`,
+      ...section.bullets.map((bullet) => `- ${bullet}`),
+      "",
+    ]),
+  ].join("\n").trim();
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter((value) => value.trim()))];
 }
