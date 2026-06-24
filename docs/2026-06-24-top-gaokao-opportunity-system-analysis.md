@@ -119,6 +119,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewer handoff delivery bundle composer now maps those reviewer-only artifacts into the existing delivery audience contract as `internal_review` artifacts and keeps client delivery blocked while `employment-market` remains open.
 - The Real Case reviewer handoff delivery preview adapter now converts that internal bundle into the same `DeliveryPreview` shape consumed by `InternalDeliveryReview`, whose artifact ordering recognizes the handoff Markdown and JSON tabs.
 - The Real Case reviewer handoff delivery preview bootstrap now composes the whole internal path from reviewed public fixture evidence to `InternalDeliveryReview`-compatible preview in one call, while preserving the empty client-facing artifact list.
+- The Real Case operator-closure delivery preview now gives the paired post-capture view: after a valid `employment-market` operator capture, the P0 gap is mechanically cleared in the browser state, but the internal preview remains blocked by counter-evidence and counselor review.
 
 ### Partially implemented
 
@@ -457,3 +458,9 @@ This makes the handoff practically consumable by the current internal preview/do
 The Real Case reviewer handoff can now be bootstrapped directly into an internal delivery preview. The helper executes the reviewed public-evidence ledger bootstrap, builds the reviewer handoff, packages the Markdown and JSON artifacts, converts them into the internal delivery bundle, and returns the `InternalDeliveryReview` preview shape plus the computed client-facing artifact list.
 
 The important result is the negative gate as much as the artifact: the client-facing artifact list is empty, and the preview remains blocked by `employment-market`. This removes a manual assembly step without claiming source freshness, job-market representativeness, admission probability, or employment outcomes.
+
+### 2026-06-24 Real Case Operator-Closure Delivery Preview
+
+The same Real Case now has a post-capture internal preview path. Given a reviewer-filled `employment-market` capture input, the helper runs public-evidence bootstrap plus operator capture, recomputes the case browser, verifies that missing P0 tasks are empty, and emits two internal artifacts: an operator-closure brief and a JSON snapshot.
+
+This is the useful contrast to the handoff preview: before capture, `employment-market` blocks the case; after capture, the P0 operator gap is cleared, but client delivery is still blocked because counter-evidence and counselor review are unresolved. That distinction is central to the product thesis: evidence readiness is not the same thing as recommendation readiness.
