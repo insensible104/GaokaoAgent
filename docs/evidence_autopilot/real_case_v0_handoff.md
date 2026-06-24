@@ -52,6 +52,7 @@ Date: 2026-06-24
 - Added a Real Case report brief helper. It turns the audit packet into an internal Chinese delivery brief with reviewed-evidence sections, blocking gaps, counter-evidence review, next actions, and a family-facing gate.
 - Added a Real Case operator-closure helper. It composes public reviewed-evidence bootstrap records with an operator capture roundtrip, rebuilds the case browser, regenerates the audit packet, and regenerates the internal report brief.
 - Added a Real Case operator-closure workflow helper. It starts from a reviewer-filled operator capture input, runs public-evidence bootstrap, runs the operator capture roundtrip, deduplicates full ledger readback by `reviewId`, and returns the closure review.
+- Added a Real Case reviewer handoff helper. It turns the current reviewed public evidence state into an internal reviewer packet with open operator tasks, capture packet, closure workflow contract, reviewer checklist, and claim boundary.
 
 ## What This Proves
 
@@ -75,6 +76,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - The Real Case report brief is an internal handoff format. When P0 evidence is blocked or counter-evidence needs review, it explicitly prevents family-facing report wording instead of converting the case into a recommendation.
 - The Real Case operator-closure helper proves only that a valid operator-capture roundtrip can be included in Real Case readiness recomputation. It does not prove the captured job-market source is representative, current, or predictive of employment outcomes.
 - The Real Case operator-closure workflow proves only that filled capture input can traverse the existing API contracts and recompute readiness without double-counting ledger records. It does not judge the truth, representativeness, or freshness of the job-market source.
+- The Real Case reviewer handoff is not a delivery report. It is an internal work order that tells a reviewer what remains to capture and how to execute the closure workflow without producing family-facing opportunity wording.
 
 ## Verification Commands
 
@@ -152,6 +154,7 @@ git diff --check
 - Real Case report brief test passed: the brief reports an internal audit status, blocks family-facing use for the current P0 gap, preserves reviewed evidence and counter-evidence sections, and carries Chinese claim-boundary text.
 - Real Case operator-closure test passed: after a valid `employment-market` operator roundtrip is composed with public reviewed evidence, the audit packet clears P0 blocking gaps but stays in `requires_counter_evidence_review`, and the report brief remains non-family-facing.
 - Real Case operator-closure workflow test passed: a reviewer-filled `employment-market` capture input can run public bootstrap, attachment upload, reviewed-evidence submission, case readback, deduplicated closure review, audit packet, and report brief recomputation.
+- Real Case reviewer handoff test passed: the handoff exposes only `employment-market` as the open operator task, carries the capture packet and `executeRealCaseOperatorClosureWorkflow` contract, and keeps family-facing output blocked.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.
 
