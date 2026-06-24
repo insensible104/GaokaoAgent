@@ -125,4 +125,84 @@ assert.equal(wechat.blocking, false);
 assert.match(wechat.captureBrief, /public account/i);
 assert.match(wechat.rejectionRules.join("\n"), /login-only/i);
 
+assert.equal(typeof packetModule.fillOperatorEvidenceCapturePacketItem, "function");
+
+const filledInput = packetModule.fillOperatorEvidenceCapturePacketItem({
+  packet,
+  item: employment,
+  reviewer: {
+    reviewerId: "operator-a",
+    displayName: "Operator A",
+    role: "operator",
+  },
+  sourceTitle: "Public job listing for intelligent manufacturing engineer",
+  excerpt: "The public listing requires manufacturing data analysis, Python, and engineering workflow experience.",
+  capturedAt: "2026-06-24T08:00:00Z",
+  contentType: "image/png",
+  contentBase64: "c2NyZWVuc2hvdA==",
+  originalFileName: "job-listing.png",
+  redactionChecklist: {
+    studentPersonalInfoRemoved: true,
+    privateContactInfoRemoved: true,
+    accountIdentifiersRemoved: true,
+    thirdPartyPersonalInfoRemoved: true,
+    reviewerConfirmed: true,
+  },
+});
+
+assert.equal(filledInput.targetLabel, packet.targetLabel);
+assert.equal(filledInput.caseId, packet.caseId);
+assert.equal(filledInput.reviewer, "operator-a");
+assert.equal(filledInput.attachmentPayload.taskId, "employment-market");
+assert.equal(filledInput.attachmentPayload.reviewerId, "operator-a");
+assert.equal(filledInput.attachmentPayload.contentBase64, "c2NyZWVuc2hvdA==");
+assert.equal(filledInput.attachmentPayload.redactionChecklist.reviewerConfirmed, true);
+assert.equal(filledInput.card.taskId, "employment-market");
+assert.equal(filledInput.card.sourceTitle, "Public job listing for intelligent manufacturing engineer");
+assert.equal(filledInput.card.sourceType, "job");
+assert.equal(filledInput.card.excerpt.includes("Python"), true);
+assert.equal(filledInput.card.reviewerIdentity.displayName, "Operator A");
+
+assert.throws(
+  () => packetModule.fillOperatorEvidenceCapturePacketItem({
+    packet,
+    item: employment,
+    reviewer: { reviewerId: "operator-a", displayName: "Operator A", role: "operator" },
+    sourceTitle: "Public job listing",
+    excerpt: "",
+    capturedAt: "2026-06-24T08:00:00Z",
+    contentType: "image/png",
+    contentBase64: "c2NyZWVuc2hvdA==",
+    redactionChecklist: {
+      studentPersonalInfoRemoved: true,
+      privateContactInfoRemoved: true,
+      accountIdentifiersRemoved: true,
+      thirdPartyPersonalInfoRemoved: true,
+      reviewerConfirmed: true,
+    },
+  }),
+  /excerpt/i,
+);
+
+assert.throws(
+  () => packetModule.fillOperatorEvidenceCapturePacketItem({
+    packet,
+    item: employment,
+    reviewer: { reviewerId: "operator-a", displayName: "Operator A", role: "operator" },
+    sourceTitle: "Public job listing",
+    excerpt: "Valid public excerpt.",
+    capturedAt: "2026-06-24T08:00:00Z",
+    contentType: "image/png",
+    contentBase64: "c2NyZWVuc2hvdA==",
+    redactionChecklist: {
+      studentPersonalInfoRemoved: true,
+      privateContactInfoRemoved: true,
+      accountIdentifiersRemoved: true,
+      thirdPartyPersonalInfoRemoved: true,
+      reviewerConfirmed: false,
+    },
+  }),
+  /redaction checklist/i,
+);
+
 console.log("Operator evidence capture packet test passed");

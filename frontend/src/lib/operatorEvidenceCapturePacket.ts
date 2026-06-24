@@ -6,6 +6,7 @@ import type {
 import type {
   OperatorReviewedEvidenceCaptureInput,
   ReviewedEvidenceAttachmentKind,
+  ReviewedEvidenceReviewerIdentity,
   ReviewedEvidenceRedactionChecklist,
 } from "./evidenceAutopilotApi";
 import type { EvidenceAutopilotProviderResult } from "./evidenceAutopilotProvider";
@@ -38,6 +39,19 @@ export interface OperatorEvidenceCapturePacketItem {
   redactionChecklist: string[];
   rejectionRules: string[];
   submissionTemplate: OperatorReviewedEvidenceCaptureInput;
+}
+
+export interface OperatorEvidenceCapturePacketFillInput {
+  packet: OperatorEvidenceCapturePacket;
+  item: OperatorEvidenceCapturePacketItem;
+  reviewer: ReviewedEvidenceReviewerIdentity;
+  sourceTitle: string;
+  excerpt: string;
+  capturedAt: string;
+  contentType: string;
+  contentBase64: string;
+  originalFileName?: string;
+  redactionChecklist: ReviewedEvidenceRedactionChecklist;
 }
 
 const WORKFLOW_FUNCTION = "captureAndSubmitOperatorReviewedEvidence";
@@ -76,6 +90,52 @@ export function buildOperatorEvidenceCapturePacket({
     items,
     claimBoundary:
       "Operator evidence capture packet only organizes human capture instructions and submission templates; it does not collect evidence, bypass platform limits, validate visual redaction, or prove admission/employment outcomes.",
+  };
+}
+
+export function fillOperatorEvidenceCapturePacketItem({
+  packet,
+  item,
+  reviewer,
+  sourceTitle,
+  excerpt,
+  capturedAt,
+  contentType,
+  contentBase64,
+  originalFileName,
+  redactionChecklist,
+}: OperatorEvidenceCapturePacketFillInput): OperatorReviewedEvidenceCaptureInput {
+  assertNonEmpty(reviewer.reviewerId, "reviewerId");
+  assertNonEmpty(reviewer.displayName, "reviewer displayName");
+  assertNonEmpty(sourceTitle, "sourceTitle");
+  assertNonEmpty(excerpt, "excerpt");
+  assertNonEmpty(capturedAt, "capturedAt");
+  assertNonEmpty(contentType, "contentType");
+  assertNonEmpty(contentBase64, "contentBase64");
+  assertCompleteRedactionChecklist(redactionChecklist);
+
+  return {
+    targetLabel: packet.targetLabel,
+    caseId: packet.caseId,
+    reviewer: reviewer.reviewerId,
+    attachmentPayload: {
+      ...item.submissionTemplate.attachmentPayload,
+      reviewerId: reviewer.reviewerId,
+      contentType: contentType.trim(),
+      contentBase64: contentBase64.trim(),
+      capturedAt: capturedAt.trim(),
+      originalFileName,
+      redactionStatus: "redacted",
+      redactionChecklist,
+    },
+    card: {
+      ...item.submissionTemplate.card,
+      sourceTitle: sourceTitle.trim(),
+      excerpt: excerpt.trim(),
+      capturedAt: capturedAt.trim(),
+      redactionStatus: "redacted",
+      reviewerIdentity: reviewer,
+    },
   };
 }
 
@@ -224,4 +284,24 @@ function rejectionRulesFor(claim: string): string[] {
     ];
   }
   return shared;
+}
+
+function assertNonEmpty(value: string | undefined, field: string): void {
+  if (!value?.trim()) {
+    throw new Error(`operator evidence capture packet requires ${field}`);
+  }
+}
+
+function assertCompleteRedactionChecklist(checklist: ReviewedEvidenceRedactionChecklist): void {
+  for (const field of [
+    "studentPersonalInfoRemoved",
+    "privateContactInfoRemoved",
+    "accountIdentifiersRemoved",
+    "thirdPartyPersonalInfoRemoved",
+    "reviewerConfirmed",
+  ] as const) {
+    if (checklist[field] !== true) {
+      throw new Error(`operator evidence capture packet requires completed redaction checklist: ${field}`);
+    }
+  }
 }

@@ -104,7 +104,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend attachment contracts now preserve `redactionChecklist` so a future capture/redaction UI can use the same upload and evidence-card path without inventing a parallel proof format.
 - Frontend now has a typed capture workflow helper that combines attachment upload, gated operator-card construction, and ledger submission into one auditable path for future capture UI.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
-- Frontend now has an operator evidence capture worklist model, capture packet model, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
+- Frontend now has an operator evidence capture worklist model, capture packet model, packet fill helper, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
 
 ### Partially implemented
 
@@ -327,6 +327,8 @@ The boundary is strict: the worklist does not collect evidence, bypass platform 
 ### 2026-06-24 Operator Capture Packet
 
 The frontend now turns each open operator/manual evidence item into a capture packet. A packet item includes a capture brief, search prompts, required output fields, accepted attachment kinds, redaction checklist, rejection rules, and a typed submission template for `captureAndSubmitOperatorReviewedEvidence`.
+
+A packet item can also be filled into an executable capture input. The fill helper requires reviewer identity, source title, excerpt, capture time, attachment content, and a fully confirmed redaction checklist before it returns the payload that the existing upload-to-ledger workflow expects.
 
 This makes the next real-case step more executable: the reviewer no longer only sees that evidence is missing; they see what source class to capture, what to reject, and which exact attachment and card fields must be filled before ledger submission.
 

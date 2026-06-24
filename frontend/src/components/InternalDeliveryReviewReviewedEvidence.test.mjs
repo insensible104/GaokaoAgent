@@ -73,6 +73,7 @@ assert.equal(typeof helper.buildDeliveryReviewedEvidencePlan, "function");
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureWorklist, "function");
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureGate, "function");
 assert.equal(typeof packet.buildOperatorEvidenceCapturePacket, "function");
+assert.equal(typeof packet.fillOperatorEvidenceCapturePacketItem, "function");
 
 const plan = helper.buildDeliveryReviewedEvidencePlan({
   profile: {
@@ -138,6 +139,7 @@ assert.equal(captureGate.blocksClientDelivery, true);
 const capturePacket = packet.buildOperatorEvidenceCapturePacket({ worklist: captureWorklist });
 assert.equal(capturePacket.workflowFunction, "captureAndSubmitOperatorReviewedEvidence");
 assert.equal(capturePacket.items[0].submissionTemplate.attachmentPayload.taskId, "employment-market");
+assert.match(fs.readFileSync(packetPath, "utf8"), /fillOperatorEvidenceCapturePacketItem/);
 
 console.log("Internal delivery reviewed evidence wiring test passed");
 

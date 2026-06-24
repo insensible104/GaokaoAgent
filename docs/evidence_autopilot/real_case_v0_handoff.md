@@ -40,6 +40,7 @@ Date: 2026-06-24
 - Added an operator evidence capture worklist model and a compact internal delivery summary. Missing or invalid operator/manual evidence tasks are now listed with blocking status, recapture reason, required attachment kinds, and the `captureAndSubmitOperatorReviewedEvidence` workflow that future capture UI must use.
 - Added an operator capture delivery gate. P0 operator capture gaps now block client-facing bundle download even if the internal delivery preview is otherwise available.
 - Added an operator capture packet model. The packet turns each open operator/manual evidence task into a capture brief, search prompts, required output fields, attachment upload template, redaction checklist, rejection rules, and a `captureAndSubmitOperatorReviewedEvidence` submission template.
+- Added a packet fill helper. A reviewer-filled packet item now becomes a typed `captureAndSubmitOperatorReviewedEvidence` input only after source title, excerpt, capture time, attachment content, reviewer identity, and complete redaction checklist are present.
 
 ## What This Proves
 
@@ -57,7 +58,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - It does not yet provide a full reviewer workflow with authentication, redaction UI, or permission enforcement.
 - The report preview can attempt case-scoped ledger loading, but there is still no full redaction workflow or reviewer permission model.
 - The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata, redaction checklist confirmation, and sidecar/hash validation at submission and readback. Binary attachment storage and a typed upload-to-ledger workflow now exist, but there is still no frontend capture/redaction UI, authentication, or permission enforcement system.
-- The operator capture worklist, packet, and delivery gate organize missing or invalid capture tasks for internal reviewers. They do not collect evidence, bypass platform limits, visually verify redaction, authenticate reviewers, or prove admission/employment outcomes.
+- The operator capture worklist, packet, fill helper, and delivery gate organize missing or invalid capture tasks for internal reviewers. They do not collect evidence, bypass platform limits, visually verify redaction, authenticate reviewers, or prove admission/employment outcomes.
 
 ## Verification Commands
 
@@ -123,7 +124,7 @@ git diff --check
 - Redaction checklist gate test passed: `redacted` attachment uploads without checklist confirmation are rejected, while complete checklists are persisted in attachment metadata and returned to the frontend.
 - Frontend capture workflow test passed: one helper uploads a reviewed attachment, composes the gated operator card, and submits it to the ledger through existing API contracts.
 - Operator evidence capture worklist test passed: missing or invalid operator evidence tasks are converted into blocking/non-blocking work items that point to the existing capture workflow, and P0 gaps produce a client-delivery blocking gate.
-- Operator evidence capture packet test passed: open operator/manual evidence tasks are converted into capture briefs, search prompts, redaction/rejection rules, attachment templates, and ledger submission templates.
+- Operator evidence capture packet test passed: open operator/manual evidence tasks are converted into capture briefs, search prompts, redaction/rejection rules, attachment templates, ledger submission templates, and typed filled capture inputs when required reviewer/evidence fields are present.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.
 
