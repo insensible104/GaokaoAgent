@@ -116,6 +116,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewer handoff brief now renders that work order as internal Chinese Markdown, so the next reviewer can read the required capture fields, execution contract, rejection rules, and claim boundaries without opening raw JSON.
 - The Real Case reviewer handoff bootstrap now runs public reviewed-evidence bootstrap and returns the internal reviewer handoff plus Markdown brief from the fixture and plan.
 - The Real Case reviewer handoff artifact manifest now packages that internal Markdown brief and machine-readable bootstrap snapshot as reviewer-only artifacts while preserving the family-facing block and claim boundaries.
+- The Real Case reviewer handoff delivery bundle composer now maps those reviewer-only artifacts into the existing delivery audience contract as `internal_review` artifacts and keeps client delivery blocked while `employment-market` remains open.
 
 ### Partially implemented
 
@@ -436,3 +437,9 @@ This removes a manual assembly step: the next reviewer does not need to know how
 The reviewer handoff can now be packaged as an internal artifact manifest. The manifest contains two reviewer-only artifacts: the Markdown work order and the machine-readable bootstrap snapshot. Both carry `familyFacingAllowed: false`, the open `employment-market` blocker, and the same admission/employment claim boundary.
 
 This is a delivery-system improvement, not a new evidence claim. It makes the next reviewer handoff portable and auditable without pretending the case is family-facing, counselor-ready, or validated against admission or employment outcomes.
+
+### 2026-06-24 Real Case Reviewer Handoff Delivery Bundle
+
+The reviewer-only artifact manifest can now be converted into a delivery-compatible internal bundle. The composer emits the Markdown and JSON handoff as `internal_review` artifacts, sets `client_delivery.allowed=false`, records `employment-market` as the blocking gate, and returns no client-facing artifacts under the same audience rules used by the internal delivery review surface.
+
+This closes another handoff gap without widening the product: the system can package the next reviewer action as a bundle-like object, but it still refuses to behave like a family/client report until operator evidence and counselor review clear the remaining gates.
