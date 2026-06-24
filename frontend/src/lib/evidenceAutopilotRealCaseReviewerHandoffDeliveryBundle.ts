@@ -39,6 +39,15 @@ export interface RealCaseReviewerHandoffDeliveryBundle {
   claimBoundary: string;
 }
 
+export interface RealCaseReviewerHandoffDeliveryPreview {
+  success: true;
+  message: string;
+  case_id: string;
+  output_dir: string;
+  manifest: RealCaseReviewerHandoffDeliveryManifest;
+  artifacts: Record<string, string>;
+}
+
 const CLIENT_FACING_AUDIENCES = new Set(["client_confirmation", "client_final"]);
 
 export function buildRealCaseReviewerHandoffDeliveryBundle(
@@ -104,6 +113,23 @@ export function listRealCaseReviewerClientFacingArtifacts(
     const audience = audienceById.get(id);
     return audience ? CLIENT_FACING_AUDIENCES.has(audience) : false;
   });
+}
+
+export function buildRealCaseReviewerHandoffDeliveryPreview(
+  bundle: RealCaseReviewerHandoffDeliveryBundle,
+): RealCaseReviewerHandoffDeliveryPreview {
+  if (bundle.protocol !== "real_case_reviewer_handoff_delivery_bundle_v1") {
+    throw new Error("real case reviewer handoff delivery preview requires delivery bundle");
+  }
+
+  return {
+    success: true,
+    message: bundle.message,
+    case_id: bundle.caseId,
+    output_dir: `reviewer-handoff://${bundle.caseId}`,
+    manifest: bundle.manifest,
+    artifacts: bundle.artifacts,
+  };
 }
 
 function deliveryArtifactId(artifact: RealCaseReviewerHandoffArtifact): string {

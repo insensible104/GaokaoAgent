@@ -29,6 +29,7 @@ function loadTsModule(filePath, requireMap = {}) {
 const bundle = loadTsModule(bundlePath);
 
 assert.equal(typeof bundle.buildRealCaseReviewerHandoffDeliveryBundle, "function");
+assert.equal(typeof bundle.buildRealCaseReviewerHandoffDeliveryPreview, "function");
 assert.equal(typeof bundle.listRealCaseReviewerClientFacingArtifacts, "function");
 
 const artifactManifest = {
@@ -109,6 +110,15 @@ assert.match(deliveryBundle.claimBoundary, /does not prove employment outcomes/i
 
 const clientArtifacts = bundle.listRealCaseReviewerClientFacingArtifacts(deliveryBundle);
 assert.deepEqual(clientArtifacts, []);
+
+const deliveryPreview = bundle.buildRealCaseReviewerHandoffDeliveryPreview(deliveryBundle);
+assert.equal(deliveryPreview.success, true);
+assert.equal(deliveryPreview.case_id, "scut-intelligent-manufacturing-real-case-v0");
+assert.equal(deliveryPreview.output_dir, "reviewer-handoff://scut-intelligent-manufacturing-real-case-v0");
+assert.equal(deliveryPreview.manifest, deliveryBundle.manifest);
+assert.equal(deliveryPreview.artifacts.real_case_reviewer_handoff_markdown, artifactManifest.artifacts[0].content);
+assert.equal(deliveryPreview.artifacts.real_case_reviewer_handoff_json, artifactManifest.artifacts[1].content);
+assert.equal(deliveryPreview.manifest.client_delivery.allowed, false);
 
 assert.throws(
   () => bundle.buildRealCaseReviewerHandoffDeliveryBundle({

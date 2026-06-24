@@ -117,6 +117,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewer handoff bootstrap now runs public reviewed-evidence bootstrap and returns the internal reviewer handoff plus Markdown brief from the fixture and plan.
 - The Real Case reviewer handoff artifact manifest now packages that internal Markdown brief and machine-readable bootstrap snapshot as reviewer-only artifacts while preserving the family-facing block and claim boundaries.
 - The Real Case reviewer handoff delivery bundle composer now maps those reviewer-only artifacts into the existing delivery audience contract as `internal_review` artifacts and keeps client delivery blocked while `employment-market` remains open.
+- The Real Case reviewer handoff delivery preview adapter now converts that internal bundle into the same `DeliveryPreview` shape consumed by `InternalDeliveryReview`, whose artifact ordering recognizes the handoff Markdown and JSON tabs.
 
 ### Partially implemented
 
@@ -443,3 +444,9 @@ This is a delivery-system improvement, not a new evidence claim. It makes the ne
 The reviewer-only artifact manifest can now be converted into a delivery-compatible internal bundle. The composer emits the Markdown and JSON handoff as `internal_review` artifacts, sets `client_delivery.allowed=false`, records `employment-market` as the blocking gate, and returns no client-facing artifacts under the same audience rules used by the internal delivery review surface.
 
 This closes another handoff gap without widening the product: the system can package the next reviewer action as a bundle-like object, but it still refuses to behave like a family/client report until operator evidence and counselor review clear the remaining gates.
+
+### 2026-06-24 Real Case Reviewer Handoff Delivery Preview
+
+The internal reviewer bundle can now be converted into the exact preview shape already used by `InternalDeliveryReview`: `success`, `message`, `case_id`, `output_dir`, `manifest`, and `artifacts`. The existing preview surface also recognizes `real_case_reviewer_handoff_markdown` and `real_case_reviewer_handoff_json` in its artifact ordering and tab labels.
+
+This makes the handoff practically consumable by the current internal preview/download contract without changing the client gate. The case still has no client-facing artifacts and remains blocked by `employment-market` until operator evidence and counselor review are complete.

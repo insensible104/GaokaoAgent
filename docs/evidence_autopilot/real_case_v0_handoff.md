@@ -57,6 +57,7 @@ Date: 2026-06-24
 - Added a Real Case reviewer handoff bootstrap helper. It submits the completed public fixture evidence through the reviewed-evidence ledger, reads the case records back, and returns the reviewer handoff plus internal Markdown brief.
 - Added a Real Case reviewer handoff artifact manifest helper. It packages the internal Markdown brief and machine-readable bootstrap snapshot as reviewer-only artifacts with a family-facing block and explicit claim boundary.
 - Added a Real Case reviewer handoff delivery bundle composer. It maps the reviewer-only Markdown/JSON artifacts into the existing delivery audience contract as `internal_review` artifacts and keeps client delivery blocked while `employment-market` is open.
+- Added a Real Case reviewer handoff delivery preview adapter. It converts the internal bundle into the same preview shape used by `InternalDeliveryReview`, and the internal preview artifact ordering now recognizes the reviewer handoff Markdown and JSON tabs.
 
 ## What This Proves
 
@@ -85,6 +86,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - The Real Case reviewer handoff bootstrap is an executable entrypoint for preparing the work order from public reviewed fixture evidence. It still does not collect operator evidence, verify job-market representativeness, or make the case deliverable.
 - The Real Case reviewer handoff artifact manifest is an internal packaging contract only. It does not make the work order family-facing, does not close `employment-market`, and does not turn the case into a recommendation.
 - The Real Case reviewer handoff delivery bundle is not a client bundle. It deliberately produces no client-facing artifacts and leaves `client_delivery.allowed=false` until the operator and counselor-review gates are cleared.
+- The Real Case reviewer handoff delivery preview adapter only makes the internal bundle consumable by the existing reviewer preview/download contract. It does not add client download permission, evidence capture, source freshness validation, or counselor signoff.
 
 ## Verification Commands
 
@@ -92,6 +94,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 node frontend/src/components/EvidenceAutopilotRealCaseProvider.test.mjs
 node frontend/src/components/EvidenceAutopilotRealCaseReviewerHandoffArtifact.test.mjs
 node frontend/src/components/EvidenceAutopilotRealCaseReviewerHandoffDeliveryBundle.test.mjs
+node frontend/src/components/InternalDeliveryReviewReviewedEvidence.test.mjs
 node frontend/src/components/EvidenceAutopilotApi.test.mjs
 node frontend/src/components/EvidenceAutopilotResultNormalizer.test.mjs
 node frontend/src/components/DeepOpportunityRealCase.test.mjs
@@ -169,6 +172,7 @@ git diff --check
 - Real Case reviewer handoff bootstrap test passed: the fixture can run public reviewed-evidence bootstrap and directly produce the reviewer handoff plus internal brief, with `employment-market` still the only open operator task.
 - Real Case reviewer handoff artifact manifest test passed: the bootstrap result is packaged into reviewer-only Markdown and JSON artifacts with family-facing output blocked and admission/employment claim boundaries preserved.
 - Real Case reviewer handoff delivery bundle test passed: reviewer-only artifacts map to `internal_review`, client-facing artifact selection returns empty, and client delivery remains blocked by `employment-market`.
+- Real Case reviewer handoff delivery preview adapter test passed: the internal bundle can be converted into the `InternalDeliveryReview` preview shape, and the existing preview artifact ordering recognizes the reviewer handoff Markdown and JSON artifact ids.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.
 

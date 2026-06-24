@@ -363,6 +363,8 @@ function percent(value: number | undefined) {
 
 function artifactTitle(id: string) {
   const labels: Record<string, string> = {
+    real_case_reviewer_handoff_markdown: "Real Case reviewer handoff",
+    real_case_reviewer_handoff_json: "Real Case reviewer JSON",
     delivery_bundle: "交付包索引",
     intake_audit: "问诊审计",
     expectation_packet: "预期确认单",
@@ -543,6 +545,8 @@ export function InternalDeliveryReview({
     if (!preview) return [];
     const preferredOrder = [
       "delivery_bundle",
+      "real_case_reviewer_handoff_markdown",
+      "real_case_reviewer_handoff_json",
       "intake_audit",
       "expectation_packet",
       "plan_quality_audit",
