@@ -9,10 +9,12 @@ const root = path.join(here, "..");
 const componentPath = path.join(here, "InternalDeliveryReview.tsx");
 const helperPath = path.join(root, "lib", "deliveryReviewedEvidencePlan.ts");
 const worklistPath = path.join(root, "lib", "operatorEvidenceCaptureWorklist.ts");
+const packetPath = path.join(root, "lib", "operatorEvidenceCapturePacket.ts");
 
 assert.equal(fs.existsSync(componentPath), true, "InternalDeliveryReview should exist");
 assert.equal(fs.existsSync(helperPath), true, "delivery reviewed evidence plan helper should exist");
 assert.equal(fs.existsSync(worklistPath), true, "operator evidence capture worklist helper should exist");
+assert.equal(fs.existsSync(packetPath), true, "operator evidence capture packet helper should exist");
 
 const source = fs.readFileSync(componentPath, "utf8");
 for (const token of [
@@ -21,8 +23,10 @@ for (const token of [
   "buildDeliveryReviewedEvidencePlan",
   "buildOperatorEvidenceCaptureWorklist",
   "buildOperatorEvidenceCaptureGate",
+  "buildOperatorEvidenceCapturePacket",
   "captureAndSubmitOperatorReviewedEvidence",
   "operatorCaptureGate",
+  "operatorCapturePacket",
   "blocksClientDelivery",
   "reviewedEvidenceRecords",
   "reviewedEvidenceError",
@@ -59,10 +63,16 @@ const worklist = loadTsModule(fs.readFileSync(worklistPath, "utf8"), {
     }),
   },
 });
+const packet = loadTsModule(fs.readFileSync(packetPath, "utf8"), {
+  "./operatorEvidenceCaptureWorklist": worklist,
+  "./evidenceAutopilotApi": {},
+  "./evidenceAutopilotProvider": {},
+});
 
 assert.equal(typeof helper.buildDeliveryReviewedEvidencePlan, "function");
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureWorklist, "function");
 assert.equal(typeof worklist.buildOperatorEvidenceCaptureGate, "function");
+assert.equal(typeof packet.buildOperatorEvidenceCapturePacket, "function");
 
 const plan = helper.buildDeliveryReviewedEvidencePlan({
   profile: {
@@ -124,6 +134,10 @@ assert.equal(captureWorklist.items[0].workflowFunction, "captureAndSubmitOperato
 
 const captureGate = worklist.buildOperatorEvidenceCaptureGate(captureWorklist);
 assert.equal(captureGate.blocksClientDelivery, true);
+
+const capturePacket = packet.buildOperatorEvidenceCapturePacket({ worklist: captureWorklist });
+assert.equal(capturePacket.workflowFunction, "captureAndSubmitOperatorReviewedEvidence");
+assert.equal(capturePacket.items[0].submissionTemplate.attachmentPayload.taskId, "employment-market");
 
 console.log("Internal delivery reviewed evidence wiring test passed");
 

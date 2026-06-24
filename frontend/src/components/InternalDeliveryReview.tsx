@@ -19,6 +19,7 @@ import {
   buildOperatorEvidenceCaptureGate,
   buildOperatorEvidenceCaptureWorklist,
 } from "@/lib/operatorEvidenceCaptureWorklist";
+import { buildOperatorEvidenceCapturePacket } from "@/lib/operatorEvidenceCapturePacket";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameMatrix, MajorGroupRow } from "@/components/GameMatrixView";
 
@@ -532,6 +533,10 @@ export function InternalDeliveryReview({
   }, [preview, reviewedEvidencePlan, reviewedEvidenceRecords]);
   const operatorCaptureGate = useMemo(
     () => (operatorCaptureWorklist ? buildOperatorEvidenceCaptureGate(operatorCaptureWorklist) : null),
+    [operatorCaptureWorklist]
+  );
+  const operatorCapturePacket = useMemo(
+    () => (operatorCaptureWorklist ? buildOperatorEvidenceCapturePacket({ worklist: operatorCaptureWorklist }) : null),
     [operatorCaptureWorklist]
   );
   const orderedArtifacts = useMemo(() => {
@@ -1273,6 +1278,17 @@ export function InternalDeliveryReview({
                     </li>
                   ))}
                 </ul>
+                {operatorCapturePacket?.items[0] ? (
+                  <div className="mt-2 border-t border-amber-200 pt-2 text-xs leading-5">
+                    <div className="font-medium">capture packet: {operatorCapturePacket.items[0].taskId}</div>
+                    <div>{operatorCapturePacket.items[0].captureBrief}</div>
+                    <div>
+                      attachment template: {operatorCapturePacket.items[0].submissionTemplate.attachmentPayload.kind}
+                      {" -> "}
+                      {OPERATOR_CAPTURE_WORKFLOW}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
