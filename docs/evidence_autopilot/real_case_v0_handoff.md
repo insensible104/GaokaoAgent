@@ -48,6 +48,7 @@ Date: 2026-06-24
 - Cleaned the Real Case v0 fixture and source log so source titles and accepted excerpts are readable instead of mojibake. The provider smoke now guards both files against common mojibake tokens before converting fixture evidence into provider results.
 - Tightened the reviewed-evidence case browser readiness gate. Public URL evidence can still be report-ready without attachments, but operator/manual evidence now needs both attachment proof and a valid readback-time attachment audit before it can count as `ready_for_report`.
 - Added a Real Case reviewed-evidence ledger bootstrap helper. It submits every completed public fixture card through the existing reviewed-evidence endpoint, reads the case-scoped ledger back, and builds the reviewed-evidence browser readiness view from the returned records.
+- Added a Real Case opportunity audit packet helper. It turns the bootstrap readiness view into a structured handoff packet: supported reviewed claims, blocking P0 gaps, counter-evidence review records, next actions, and explicit claim boundaries.
 
 ## What This Proves
 
@@ -67,6 +68,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - The case evidence browser now has a compact reviewer surface inside internal delivery review, and operator-review cards are gated by attachment/redaction/identity metadata, redaction checklist confirmation, and sidecar/hash validation at submission and readback. Binary attachment storage and a typed upload-to-ledger workflow now exist, but there is still no frontend capture/redaction UI, authentication, or permission enforcement system.
 - The operator capture worklist, packet, fill helper, frontend roundtrip helper, backend roundtrip smoke, Real Case reviewed-evidence adapter, case-browser proof gate, and delivery gate organize missing or invalid capture tasks for internal reviewers. They do not collect evidence, bypass platform limits, visually verify redaction, authenticate reviewers, or prove admission/employment outcomes.
 - The Real Case ledger bootstrap is a typed orchestration helper for local/demo review. It does not perform live source search, prove source freshness, or replace counselor review.
+- The Real Case audit packet summarizes readiness state. It is not a recommendation, not a family-facing conclusion, and not proof of admission, employment, or student fit.
 
 ## Verification Commands
 
@@ -140,6 +142,7 @@ git diff --check
 - Backend Real Case ledger merge smoke passed: the `undergrad-access` public fixture source can be submitted to the reviewed ledger and then accepted by Evidence Autopilot coverage when case-scoped ledger readback is enabled.
 - Reviewed-evidence proof gate test passed: a captured operator note without public URL, attachment proof, and valid attachment audit remains `needs_capture` and cannot close a P0 report-readiness gate.
 - Real Case ledger bootstrap test passed: completed public fixture evidence is submitted through the reviewed-evidence API, read back from the case-scoped ledger, and converted into a browser readiness view that still exposes the missing `employment-market` P0 gap.
+- Real Case audit packet test passed: the packet reports `blocked_by_p0_gaps`, preserves supported public evidence claims, exposes the missing `employment-market` P0 gap, and requires counselor review for counter-evidence before family-facing wording.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.
 

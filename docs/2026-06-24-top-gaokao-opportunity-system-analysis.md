@@ -108,6 +108,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case v0 source fixture and source log now have a source-fidelity guard: provider tests fail if common mojibake tokens appear before fixture evidence is converted into provider results.
 - The reviewed-evidence case browser now distinguishes public URL proof from operator/manual proof. Public evidence can be report-ready from URL plus excerpt; operator/manual evidence requires attachment proof and a valid attachment audit before it can close a report-readiness gate.
 - The Real Case reviewed-evidence bootstrap now turns the fixture's completed public evidence into an executable ledger roundtrip: submit reviewed cards, fetch case-scoped records, and build a readiness browser view from the returned ledger state.
+- The Real Case opportunity audit packet now converts the bootstrap/browser state into a handoff-ready analysis object: supported reviewed claims, blocking P0 gaps, counter-evidence review records, next actions, and claim boundaries.
 
 ### Partially implemented
 
@@ -378,3 +379,9 @@ This closes a delivery-readiness gap: an internal reviewer cannot accidentally c
 The Real Case v0 public evidence now has a typed ledger bootstrap helper. It converts the fixture into reviewed-evidence submissions, posts every completed public source through the existing reviewed-evidence API, fetches the case-scoped ledger records back, and builds the reviewed-evidence browser readiness view from the returned records.
 
 This moves the case from "fixture can be converted" to "fixture can be exercised through the same ledger roundtrip a reviewer-facing workflow uses." In the tested state, public evidence becomes report-ready while `employment-market` remains a visible P0 gap because the fixture does not contain a compliant operator-captured job-market source. The helper still does not perform live search, verify URL freshness, collect semi-closed evidence, or prove admission/employment outcomes.
+
+### 2026-06-24 Real Case Opportunity Audit Packet
+
+The ledger bootstrap can now be converted into a structured Real Case audit packet. The packet records which reviewed claims are supported by ready public evidence, which P0 tasks still block report use, which counter-evidence records require counselor review, and what next actions are needed before any family-facing wording.
+
+For the current fixture, the packet status is intentionally blocked: public official/school/counter-evidence sources are ready, but `employment-market` remains a P0 gap because there is no compliant operator-captured job-market evidence. This is the product behavior we want for a top-tier opportunity research system: a partially supported opportunity hypothesis stays blocked rather than being over-presented as a recommendation. The packet does not decide admission probability, employment outcomes, source freshness, or student fit.
