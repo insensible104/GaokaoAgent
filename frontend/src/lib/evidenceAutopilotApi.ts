@@ -21,6 +21,16 @@ export interface ReviewedEvidenceAttachment {
   storageRef: string;
   capturedAt: string;
   redactionStatus: ReviewedEvidenceRedactionStatus;
+  redactionChecklist?: ReviewedEvidenceRedactionChecklist;
+}
+
+export interface ReviewedEvidenceRedactionChecklist {
+  studentPersonalInfoRemoved: boolean;
+  privateContactInfoRemoved: boolean;
+  accountIdentifiersRemoved: boolean;
+  thirdPartyPersonalInfoRemoved: boolean;
+  reviewerConfirmed: boolean;
+  notes?: string;
 }
 
 export type ReviewedEvidenceAttachmentAuditStatus = "valid" | "invalid" | "not_applicable";
@@ -123,6 +133,7 @@ export interface ReviewedEvidenceAttachmentUploadPayload {
   contentBase64: string;
   capturedAt: string;
   redactionStatus: ReviewedEvidenceRedactionStatus;
+  redactionChecklist?: ReviewedEvidenceRedactionChecklist;
   originalFileName?: string;
 }
 
@@ -370,6 +381,12 @@ export function buildOperatorReviewedEvidenceCard(
     if (attachment.redactionStatus === "pending") {
       throw new Error("operator reviewed evidence attachment requires a completed redaction status");
     }
+    if (attachment.redactionStatus === "redacted") {
+      assertValidReviewedEvidenceRedactionChecklist(
+        attachment.redactionChecklist,
+        `operator card attachment ${index + 1}`,
+      );
+    }
   });
   return {
     taskId: input.taskId,
@@ -458,6 +475,9 @@ function reviewedEvidenceAttachmentUploadFromJson(
     throw new Error("invalid reviewed evidence attachment upload response: attachment");
   }
   assertValidReviewedEvidenceAttachment(response.attachment, "upload response");
+  if (response.attachment.redactionStatus === "redacted") {
+    assertValidReviewedEvidenceRedactionChecklist(response.attachment.redactionChecklist, "upload response");
+  }
   if (typeof response.byteSize !== "number" || response.byteSize <= 0) {
     throw new Error("invalid reviewed evidence attachment upload response: byteSize");
   }
@@ -546,6 +566,26 @@ function assertValidReviewedEvidenceAttachment(
   }
   if (!VALID_REDACTION_STATUSES.has(attachment.redactionStatus)) {
     throw new Error(`invalid reviewed evidence attachment ${label}: redactionStatus`);
+  }
+}
+
+function assertValidReviewedEvidenceRedactionChecklist(
+  checklist: ReviewedEvidenceRedactionChecklist | undefined,
+  label: string,
+): void {
+  if (!checklist || typeof checklist !== "object") {
+    throw new Error(`invalid reviewed evidence attachment ${label}: redactionChecklist`);
+  }
+  for (const field of [
+    "studentPersonalInfoRemoved",
+    "privateContactInfoRemoved",
+    "accountIdentifiersRemoved",
+    "thirdPartyPersonalInfoRemoved",
+    "reviewerConfirmed",
+  ] as const) {
+    if (checklist[field] !== true) {
+      throw new Error(`invalid reviewed evidence attachment ${label}: redactionChecklist ${field}`);
+    }
   }
 }
 

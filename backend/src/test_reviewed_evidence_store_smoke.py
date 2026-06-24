@@ -248,6 +248,7 @@ def test_reviewed_evidence_listing_endpoint_revalidates_attachment_audit(tmp_pat
         content_base64=base64.b64encode(b"delivery-time audit").decode("ascii"),
         captured_at="2026-06-24T00:00:00Z",
         redaction_status="redacted",
+        redaction_checklist=complete_redaction_checklist(),
         original_file_name="job-sample.png",
     )
     submit_response = client.post(
@@ -289,3 +290,14 @@ def test_reviewed_evidence_listing_endpoint_revalidates_attachment_audit(tmp_pat
     assert audit["status"] == "invalid"
     assert audit["invalidAttachmentCount"] == 1
     assert "attachment sha256 mismatch" in audit["findings"][0]["detail"]
+
+
+def complete_redaction_checklist() -> dict:
+    return {
+        "studentPersonalInfoRemoved": True,
+        "privateContactInfoRemoved": True,
+        "accountIdentifiersRemoved": True,
+        "thirdPartyPersonalInfoRemoved": True,
+        "reviewerConfirmed": True,
+        "notes": "Visible personal identifiers were checked before upload.",
+    }

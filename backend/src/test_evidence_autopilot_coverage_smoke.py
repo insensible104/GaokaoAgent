@@ -359,6 +359,7 @@ def review_controls(seed: str, attachment_root: Path | None = None) -> dict:
             content_base64=base64.b64encode(b"reviewed evidence screenshot").decode("ascii"),
             captured_at="2026-06-24T00:00:00Z",
             redaction_status="redacted",
+            redaction_checklist=complete_redaction_checklist(),
             original_file_name=f"{seed}.png",
         )
         attachment = saved.attachment.model_dump()
@@ -370,4 +371,15 @@ def review_controls(seed: str, attachment_root: Path | None = None) -> dict:
             "displayName": "Operator A",
             "role": "operator",
         },
+    }
+
+
+def complete_redaction_checklist() -> dict:
+    return {
+        "studentPersonalInfoRemoved": True,
+        "privateContactInfoRemoved": True,
+        "accountIdentifiersRemoved": True,
+        "thirdPartyPersonalInfoRemoved": True,
+        "reviewerConfirmed": True,
+        "notes": "Visible personal identifiers were checked before upload.",
     }

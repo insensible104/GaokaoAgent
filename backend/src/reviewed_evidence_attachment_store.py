@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from evidence_autopilot_api import (
     ReviewedEvidenceAttachment,
     ReviewedEvidenceAttachmentKind,
+    ReviewedEvidenceRedactionChecklist,
     ReviewedEvidenceRedactionStatus,
 )
 
@@ -40,10 +41,15 @@ def save_reviewed_evidence_attachment(
     content_base64: str,
     captured_at: str,
     redaction_status: ReviewedEvidenceRedactionStatus,
+    redaction_checklist: ReviewedEvidenceRedactionChecklist | dict | None = None,
     original_file_name: str | None = None,
 ) -> SavedReviewedEvidenceAttachment:
     """Decode and persist one operator-reviewed attachment with sidecar metadata."""
     raw_bytes = _decode_base64(content_base64)
+    redaction_checklist_payload = _validate_redaction_checklist(
+        redaction_status=redaction_status,
+        redaction_checklist=redaction_checklist,
+    )
     attachment_id = _new_attachment_id()
     safe_case_id = _safe_path_segment(case_id)
     suffix = _suffix_for(content_type, original_file_name)
@@ -59,6 +65,7 @@ def save_reviewed_evidence_attachment(
         storageRef=storage_ref,
         capturedAt=captured_at,
         redactionStatus=redaction_status,
+        redactionChecklist=redaction_checklist,
     )
     metadata = {
         "attachmentId": attachment_id,
@@ -73,6 +80,7 @@ def save_reviewed_evidence_attachment(
         "storageRef": storage_ref,
         "capturedAt": captured_at,
         "redactionStatus": redaction_status,
+        "redactionChecklist": redaction_checklist_payload,
         "storedAt": datetime.now(timezone.utc).isoformat(),
     }
     metadata_path = storage_path.with_suffix(storage_path.suffix + ".json")
@@ -143,6 +151,13 @@ def validate_reviewed_evidence_attachment(
     _require_metadata_match(metadata, "kind", attachment.kind, attachment.storageRef)
     _require_metadata_match(metadata, "capturedAt", attachment.capturedAt, attachment.storageRef)
     _require_metadata_match(metadata, "redactionStatus", attachment.redactionStatus, attachment.storageRef)
+    redaction_checklist_payload = _validate_redaction_checklist(
+        redaction_status=attachment.redactionStatus,
+        redaction_checklist=attachment.redactionChecklist,
+        storage_ref=attachment.storageRef,
+    )
+    if metadata.get("redactionChecklist") != redaction_checklist_payload:
+        raise ValueError(f"attachment metadata redactionChecklist mismatch: {attachment.storageRef}")
 
     recorded_sha256 = str(metadata.get("sha256", ""))
     if not re.fullmatch(r"[0-9a-f]{64}", recorded_sha256):
@@ -161,6 +176,40 @@ def _decode_base64(content_base64: str) -> bytes:
     if not raw_bytes:
         raise ValueError("attachment content must not be empty")
     return raw_bytes
+
+
+def _validate_redaction_checklist(
+    *,
+    redaction_status: ReviewedEvidenceRedactionStatus,
+    redaction_checklist: ReviewedEvidenceRedactionChecklist | dict | None,
+    storage_ref: str = "attachment",
+) -> dict | None:
+    if redaction_status != "redacted":
+        return _redaction_checklist_payload(redaction_checklist) if redaction_checklist is not None else None
+    if redaction_checklist is None:
+        raise ValueError(f"redactionChecklist is required for redacted attachment: {storage_ref}")
+    payload = _redaction_checklist_payload(redaction_checklist)
+    required_fields = [
+        "studentPersonalInfoRemoved",
+        "privateContactInfoRemoved",
+        "accountIdentifiersRemoved",
+        "thirdPartyPersonalInfoRemoved",
+        "reviewerConfirmed",
+    ]
+    missing = [field for field in required_fields if payload.get(field) is not True]
+    if missing:
+        raise ValueError(
+            f"redactionChecklist must confirm {', '.join(missing)}: {storage_ref}"
+        )
+    return payload
+
+
+def _redaction_checklist_payload(
+    redaction_checklist: ReviewedEvidenceRedactionChecklist | dict,
+) -> dict:
+    if isinstance(redaction_checklist, dict):
+        return redaction_checklist
+    return redaction_checklist.model_dump()
 
 
 def _new_attachment_id() -> str:

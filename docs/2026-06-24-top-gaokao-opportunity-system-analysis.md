@@ -98,15 +98,17 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Backend now rejects fake operator-review attachment references. A `storageRef` must resolve to an existing file in the configured attachment store before the reviewed card can enter the ledger or close an Evidence Autopilot P0 gate.
 - Backend now validates reviewed-evidence attachment sidecars before accepting operator evidence. The stored binary, JSON metadata sidecar, submitted `ReviewedEvidenceAttachment` fields, and recorded SHA-256 must agree before an attachment can support ledger submission or P0 closure.
 - Backend reviewed-evidence listing now revalidates attachments at readback time and returns per-record `attachmentAudit`, so stale, deleted, or tampered attachments are visible before delivery review or report use.
+- Backend attachment upload now requires a redaction checklist when an operator marks an attachment as `redacted`; the checklist must confirm student personal info, private contact info, account identifiers, third-party personal info handling, and reviewer confirmation.
 - Frontend now has a typed attachment upload adapter that posts operator-captured attachment payloads and rejects malformed backend upload responses before they can be used by capture UI.
 - Frontend now has typed helpers to compose uploaded attachments into an operator-reviewed card and submit that card to the reviewed-evidence ledger endpoint, with pre-submit checks for reviewer identity, attachment presence, and completed redaction status.
+- Frontend attachment contracts now preserve `redactionChecklist` so a future capture/redaction UI can use the same upload and evidence-card path without inventing a parallel proof format.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata plus sidecar/hash validation at submission and readback to close P0 gates. The remaining production gaps are capture/redaction UI, authentication, permission enforcement, and a polished capture workflow.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata, checklist confirmation, and sidecar/hash validation at submission and readback to close P0 gates. The remaining production gaps are capture/redaction UI, authentication, permission enforcement, and a polished capture workflow.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -297,3 +299,11 @@ The case-scoped reviewed-evidence listing endpoint now attaches an `attachmentAu
 The frontend reviewed-evidence case browser now consumes this audit signal. Invalid attachment audit records stay visible for traceability, but they are downgraded to `needs_capture` and cannot count toward `ready_for_report` or close a P0 reviewer gate.
 
 This is a delivery-readiness improvement, not an outcome claim. It still does not implement reviewer authentication, permission enforcement, or a redaction UI.
+
+### 2026-06-24 Redaction Checklist Contract
+
+Operator-reviewed attachments marked `redacted` now require an explicit checklist before upload succeeds. The checklist records whether student personal info, private contact info, account identifiers, and third-party personal info were handled, and whether the reviewer confirmed the redaction state.
+
+The checklist is stored in the attachment metadata sidecar, returned on `ReviewedEvidenceAttachment`, and preserved by the frontend API adapter. This makes redaction a structured audit field rather than a free-text or status-only claim.
+
+This still does not prove the screenshot was visually redacted correctly. It is a contract and audit trail for future reviewer UI and permission controls.

@@ -14,7 +14,7 @@ const panelPath = path.join(here, "DeepOpportunityEvaluationPanel.tsx");
 
 assert.equal(fs.existsSync(apiPath), true, "Evidence Autopilot API adapter should exist");
 const apiSource = fs.readFileSync(apiPath, "utf8");
-for (const token of ["attachments", "redactionStatus", "reviewerIdentity"]) {
+for (const token of ["attachments", "redactionStatus", "redactionChecklist", "reviewerIdentity"]) {
   assert.match(apiSource, new RegExp(token), `API adapter should preserve reviewed evidence ${token}`);
 }
 
@@ -187,6 +187,15 @@ const reviewedRecordsResponse = {
   ],
 };
 
+const completeRedactionChecklist = {
+  studentPersonalInfoRemoved: true,
+  privateContactInfoRemoved: true,
+  accountIdentifiersRemoved: true,
+  thirdPartyPersonalInfoRemoved: true,
+  reviewerConfirmed: true,
+  notes: "Visible personal identifiers were checked before upload.",
+};
+
 const reviewedListing = await api.fetchReviewedEvidenceRecords({
   caseId: "scut-im-v0",
   fetchImpl: async (url, init) => {
@@ -214,6 +223,7 @@ const uploadedAttachment = await api.uploadReviewedEvidenceAttachment({
     contentBase64: "ZmFrZS1zY3JlZW5zaG90",
     capturedAt: "2026-06-24T00:00:00Z",
     redactionStatus: "redacted",
+    redactionChecklist: completeRedactionChecklist,
     originalFileName: "job-sample.png",
   },
   fetchImpl: async (url, init) => {
@@ -231,6 +241,7 @@ const uploadedAttachment = await api.uploadReviewedEvidenceAttachment({
       contentBase64: "ZmFrZS1zY3JlZW5zaG90",
       capturedAt: "2026-06-24T00:00:00Z",
       redactionStatus: "redacted",
+      redactionChecklist: completeRedactionChecklist,
       originalFileName: "job-sample.png",
     });
     return {
@@ -244,6 +255,7 @@ const uploadedAttachment = await api.uploadReviewedEvidenceAttachment({
             storageRef: "reviewed-evidence/scut-im-v0/att-20260624T000000Z-abc12345.png",
             capturedAt: "2026-06-24T00:00:00Z",
             redactionStatus: "redacted",
+            redactionChecklist: completeRedactionChecklist,
           },
           byteSize: 15,
           sha256: "a".repeat(64),
@@ -259,6 +271,7 @@ const uploadedAttachment = await api.uploadReviewedEvidenceAttachment({
 assert.equal(uploadedAttachment.success, true);
 assert.equal(uploadedAttachment.attachment.storageRef.includes("reviewed-evidence/scut-im-v0/"), true);
 assert.equal(uploadedAttachment.sha256.length, 64);
+assert.equal(uploadedAttachment.attachment.redactionChecklist.reviewerConfirmed, true);
 
 const operatorReviewedCard = api.buildOperatorReviewedEvidenceCard({
   taskId: "employment-market",

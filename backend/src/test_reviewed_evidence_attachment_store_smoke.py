@@ -24,6 +24,7 @@ def test_save_reviewed_evidence_attachment_writes_binary_and_metadata(tmp_path) 
         content_base64=base64.b64encode(raw_bytes).decode("ascii"),
         captured_at="2026-06-24T00:00:00Z",
         redaction_status="redacted",
+        redaction_checklist=complete_redaction_checklist(),
         original_file_name="job-sample.png",
     )
 
@@ -43,9 +44,44 @@ def test_save_reviewed_evidence_attachment_writes_binary_and_metadata(tmp_path) 
     assert metadata["reviewerId"] == "operator-a"
     assert metadata["sha256"] == saved.sha256
     assert metadata["redactionStatus"] == "redacted"
+    assert metadata["redactionChecklist"]["reviewerConfirmed"] is True
 
 
 def test_reviewed_evidence_attachment_endpoint_persists_to_configured_dir(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(tmp_path))
+    client = TestClient(main.app)
+
+    response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence/attachments",
+        json={
+            "caseId": "scut-im-v0",
+            "taskId": "employment-market",
+            "reviewerId": "operator-a",
+            "kind": "screenshot",
+            "contentType": "image/png",
+            "contentBase64": base64.b64encode(b"endpoint screenshot").decode("ascii"),
+            "capturedAt": "2026-06-24T00:00:00Z",
+            "redactionStatus": "redacted",
+            "redactionChecklist": complete_redaction_checklist(),
+            "originalFileName": "endpoint.png",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["attachment"]["attachmentId"].startswith("att-")
+    assert payload["attachment"]["storageRef"].startswith("reviewed-evidence/scut-im-v0/")
+    assert payload["attachment"]["redactionStatus"] == "redacted"
+    assert payload["byteSize"] == len(b"endpoint screenshot")
+    assert (tmp_path / payload["attachment"]["storageRef"]).is_file()
+    assert (
+        "/api/evidence-autopilot/reviewed-evidence/attachments"
+        in main.get_runtime_status()["entrypoints"]["api"]
+    )
+
+
+def test_reviewed_evidence_attachment_endpoint_rejects_redacted_without_checklist(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(tmp_path))
     client = TestClient(main.app)
 
@@ -64,18 +100,37 @@ def test_reviewed_evidence_attachment_endpoint_persists_to_configured_dir(tmp_pa
         },
     )
 
+    assert response.status_code == 400
+    assert "redactionChecklist is required" in response.json()["detail"]
+
+
+def test_reviewed_evidence_attachment_endpoint_persists_redaction_checklist(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(tmp_path))
+    client = TestClient(main.app)
+
+    response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence/attachments",
+        json={
+            "caseId": "scut-im-v0",
+            "taskId": "employment-market",
+            "reviewerId": "operator-a",
+            "kind": "screenshot",
+            "contentType": "image/png",
+            "contentBase64": base64.b64encode(b"endpoint screenshot").decode("ascii"),
+            "capturedAt": "2026-06-24T00:00:00Z",
+            "redactionStatus": "redacted",
+            "redactionChecklist": complete_redaction_checklist(),
+            "originalFileName": "endpoint.png",
+        },
+    )
+
     assert response.status_code == 200
     payload = response.json()
-    assert payload["success"] is True
-    assert payload["attachment"]["attachmentId"].startswith("att-")
-    assert payload["attachment"]["storageRef"].startswith("reviewed-evidence/scut-im-v0/")
-    assert payload["attachment"]["redactionStatus"] == "redacted"
-    assert payload["byteSize"] == len(b"endpoint screenshot")
-    assert (tmp_path / payload["attachment"]["storageRef"]).is_file()
-    assert (
-        "/api/evidence-autopilot/reviewed-evidence/attachments"
-        in main.get_runtime_status()["entrypoints"]["api"]
-    )
+    assert payload["attachment"]["redactionChecklist"]["reviewerConfirmed"] is True
+    stored_path = tmp_path / payload["attachment"]["storageRef"]
+    metadata = json.loads(stored_path.with_suffix(stored_path.suffix + ".json").read_text(encoding="utf-8"))
+    assert metadata["redactionChecklist"]["studentPersonalInfoRemoved"] is True
+    assert metadata["redactionChecklist"]["reviewerConfirmed"] is True
 
 
 def test_reviewed_evidence_submission_rejects_missing_operator_attachment_file(tmp_path, monkeypatch) -> None:
@@ -127,6 +182,7 @@ def test_reviewed_evidence_submission_rejects_attachment_without_metadata_sideca
             "contentBase64": base64.b64encode(b"sidecar required").decode("ascii"),
             "capturedAt": "2026-06-24T00:00:00Z",
             "redactionStatus": "redacted",
+            "redactionChecklist": complete_redaction_checklist(),
             "originalFileName": "job-sample.png",
         },
     )
@@ -168,6 +224,7 @@ def test_reviewed_evidence_submission_rejects_attachment_with_tampered_hash(tmp_
             "contentBase64": base64.b64encode(b"hash checked").decode("ascii"),
             "capturedAt": "2026-06-24T00:00:00Z",
             "redactionStatus": "redacted",
+            "redactionChecklist": complete_redaction_checklist(),
             "originalFileName": "job-sample.png",
         },
     )
@@ -212,6 +269,7 @@ def test_reviewed_evidence_submission_accepts_uploaded_operator_attachment(tmp_p
             "contentBase64": base64.b64encode(b"real screenshot").decode("ascii"),
             "capturedAt": "2026-06-24T00:00:00Z",
             "redactionStatus": "redacted",
+            "redactionChecklist": complete_redaction_checklist(),
             "originalFileName": "job-sample.png",
         },
     )
@@ -255,4 +313,15 @@ def operator_review_card(attachments: list[dict]) -> dict:
             "displayName": "Operator A",
             "role": "operator",
         },
+    }
+
+
+def complete_redaction_checklist() -> dict:
+    return {
+        "studentPersonalInfoRemoved": True,
+        "privateContactInfoRemoved": True,
+        "accountIdentifiersRemoved": True,
+        "thirdPartyPersonalInfoRemoved": True,
+        "reviewerConfirmed": True,
+        "notes": "Visible personal identifiers were checked before upload.",
     }

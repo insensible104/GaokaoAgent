@@ -27,6 +27,17 @@ ReviewedEvidenceRedactionStatus = Literal["pending", "redacted", "not_required"]
 ReviewedEvidenceReviewerRole = Literal["operator", "counselor", "qa_reviewer", "lead_counselor"]
 
 
+class ReviewedEvidenceRedactionChecklist(BaseModel):
+    """Operator checklist proving what was redacted before attachment use."""
+
+    studentPersonalInfoRemoved: bool = False
+    privateContactInfoRemoved: bool = False
+    accountIdentifiersRemoved: bool = False
+    thirdPartyPersonalInfoRemoved: bool = False
+    reviewerConfirmed: bool = False
+    notes: str | None = None
+
+
 class ReviewedEvidenceAttachment(BaseModel):
     """Attachment proof for semi-closed or operator-captured evidence."""
 
@@ -35,6 +46,7 @@ class ReviewedEvidenceAttachment(BaseModel):
     storageRef: str = Field(..., min_length=1)
     capturedAt: str = Field(..., min_length=1)
     redactionStatus: ReviewedEvidenceRedactionStatus = "pending"
+    redactionChecklist: ReviewedEvidenceRedactionChecklist | None = None
 
 
 class ReviewedEvidenceReviewerIdentity(BaseModel):
@@ -166,6 +178,7 @@ class ReviewedEvidenceAttachmentUploadRequest(BaseModel):
     contentBase64: str = Field(..., min_length=1)
     capturedAt: str = Field(..., min_length=1)
     redactionStatus: ReviewedEvidenceRedactionStatus
+    redactionChecklist: ReviewedEvidenceRedactionChecklist | None = None
     originalFileName: str | None = None
 
 
@@ -369,6 +382,7 @@ async def upload_reviewed_evidence_attachment(
             content_base64=request.contentBase64,
             captured_at=request.capturedAt,
             redaction_status=request.redactionStatus,
+            redaction_checklist=request.redactionChecklist,
             original_file_name=request.originalFileName,
         )
     except ValueError as exc:
