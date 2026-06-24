@@ -110,6 +110,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewed-evidence bootstrap now turns the fixture's completed public evidence into an executable ledger roundtrip: submit reviewed cards, fetch case-scoped records, and build a readiness browser view from the returned ledger state.
 - The Real Case opportunity audit packet now converts the bootstrap/browser state into a handoff-ready analysis object: supported reviewed claims, blocking P0 gaps, counter-evidence review records, next actions, and claim boundaries.
 - The Real Case report brief now converts the audit packet into an internal Chinese delivery brief, preserving reviewed-evidence sections, blocking gaps, counter-evidence review, next actions, and an explicit family-facing gate.
+- The Real Case operator-closure helper now composes public reviewed evidence with a completed operator capture roundtrip, then rebuilds the readiness browser, audit packet, and report brief from the combined ledger state.
 
 ### Partially implemented
 
@@ -392,3 +393,11 @@ For the current fixture, the packet status is intentionally blocked: public offi
 The Real Case audit packet can now be converted into an internal Chinese report brief. The brief keeps the case in delivery language without changing the evidence boundary: it lists reviewed evidence, blocking gaps, counter-evidence review, and next actions, then marks whether family-facing wording is allowed.
 
 For the current fixture, `familyFacingAllowed` remains false because `employment-market` is still a P0 gap and counter-evidence needs counselor review. This is the right stopping behavior for PathFinder / GaokaoAgent: the system can prepare a counselor handoff, but it must not turn an incomplete opportunity hypothesis into a family-facing recommendation.
+
+### 2026-06-24 Real Case Operator Closure
+
+The Real Case public-evidence bootstrap can now be combined with a completed operator-capture roundtrip for `employment-market`. The combined state rebuilds the case browser, regenerates the audit packet, and regenerates the internal report brief.
+
+The expected transition is precise: a valid operator-captured employment-market record clears the P0 blocking gap, but the case still stays out of family-facing delivery if counter-evidence requires counselor review. This is a useful product constraint because it separates "all P0 evidence tasks have records" from "the opportunity is ready to recommend."
+
+This slice still does not validate job-market representativeness, source freshness, employment outcomes, or the quality of the underlying source. It verifies workflow composition and readiness recomputation only.
