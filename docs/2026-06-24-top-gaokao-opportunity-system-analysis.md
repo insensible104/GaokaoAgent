@@ -104,7 +104,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Frontend attachment contracts now preserve `redactionChecklist` so a future capture/redaction UI can use the same upload and evidence-card path without inventing a parallel proof format.
 - Frontend now has a typed capture workflow helper that combines attachment upload, gated operator-card construction, and ledger submission into one auditable path for future capture UI.
 - Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
-- Frontend now has an operator evidence capture worklist model, capture packet model, packet fill helper, roundtrip helper, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
+- The system now has an operator evidence capture worklist model, capture packet model, packet fill helper, frontend roundtrip helper, backend roundtrip smoke, a small internal delivery summary, and a client-delivery gate. Missing or invalid operator/manual tasks are converted into blocking/non-blocking capture work items and executable packet items that point reviewers to `captureAndSubmitOperatorReviewedEvidence`; P0 gaps block client-facing bundle download instead of leaving the gap implicit.
 
 ### Partially implemented
 
@@ -341,3 +341,11 @@ The frontend now has a roundtrip helper for filled operator capture packets. It 
 This closes a previous contract gap. Before this slice, the system could create a filled capture input, but the acceptance check still had to be reasoned about manually. Now a test proves that a valid readback record with a valid attachment audit clears the P0 operator capture worklist and unblocks the operator evidence gate.
 
 The boundary remains unchanged: the roundtrip verifies workflow mechanics and audit propagation, not whether the original source is true, whether redaction pixels are visually correct, or whether the opportunity improves real admission outcomes.
+
+### 2026-06-24 Backend Operator Roundtrip Smoke
+
+The backend now has a focused FastAPI TestClient smoke for the same operator evidence path. It uploads a reviewed attachment into the configured attachment store, submits a reviewed evidence card to the JSONL ledger, reads the case-scoped record back with `attachmentAudit=valid`, and then runs Evidence Autopilot research with `enableReviewedEvidenceLedger=true` to verify that `employment-market` leaves `missingP0TaskIds`.
+
+The same smoke tampers with the stored attachment after ledger append and verifies that readback reports `attachmentAudit=invalid` and the research coverage gate puts `employment-market` back into `missingP0TaskIds`.
+
+This is important because the frontend contract is no longer the only proof. The backend persistence and readback-time audit path now has a regression test for both the happy path and the tamper path.
