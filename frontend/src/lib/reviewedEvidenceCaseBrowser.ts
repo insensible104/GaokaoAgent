@@ -25,6 +25,8 @@ export interface ReviewedEvidenceCaseBrowserRecord {
   attachmentCount: number;
   redactionStatus: string;
   reviewerIdentity: string;
+  attachmentAuditStatus: string;
+  attachmentAuditDetail: string;
   readyForReport: boolean;
 }
 
@@ -156,7 +158,15 @@ function toBrowserRecord(
   record: ReviewedEvidenceRecord,
   card: ReviewedEvidenceCardWithClaim,
 ): ReviewedEvidenceCaseBrowserRecord {
-  const readyForReport = card.status === "captured_candidate" && Boolean(card.excerpt.trim());
+  const attachmentAuditStatus = record.attachmentAudit?.status ?? "not_checked";
+  const attachmentAuditDetail = record.attachmentAudit?.findings
+    ?.find((finding) => !finding.valid)
+    ?.detail ?? "attachment audit not checked";
+  const readyForReport = (
+    card.status === "captured_candidate"
+    && Boolean(card.excerpt.trim())
+    && attachmentAuditStatus !== "invalid"
+  );
   return {
     reviewId: record.reviewId,
     taskId: card.taskId,
@@ -172,6 +182,8 @@ function toBrowserRecord(
     attachmentCount: card.attachments?.length ?? 0,
     redactionStatus: card.redactionStatus ?? "pending",
     reviewerIdentity: formatReviewerIdentity(card.reviewerIdentity),
+    attachmentAuditStatus,
+    attachmentAuditDetail,
     readyForReport,
   };
 }

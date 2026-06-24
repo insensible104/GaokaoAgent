@@ -88,6 +88,30 @@ const records = [
     excerpt: "Should not appear.",
     reviewAction: "Ignore.",
   }),
+  reviewedRecord({
+    reviewId: "review-live-invalid-attachment",
+    caseId: "scut-im-v0",
+    taskId: "employment-market-invalid",
+    claim: "employment_market",
+    status: "captured_candidate",
+    sourceTitle: "Tampered job-market sample",
+    sourceUrl: "operator-review://review-live-invalid-attachment",
+    excerpt: "This record has a stale attachment and must not become report-ready.",
+    reviewAction: "Re-upload and re-review the attachment before report use.",
+    attachmentAudit: {
+      status: "invalid",
+      validAttachmentCount: 0,
+      invalidAttachmentCount: 1,
+      findings: [
+        {
+          attachmentId: "attachment-job-invalid",
+          storageRef: "reviewed-evidence/job-invalid.png",
+          valid: false,
+          detail: "attachment sha256 mismatch: reviewed-evidence/job-invalid.png",
+        },
+      ],
+    },
+  }),
 ];
 
 const plan = {
@@ -95,6 +119,7 @@ const plan = {
     { id: "official-plan-charter", priority: "P0", claim: "official_admission", title: "Official plan" },
     { id: "employment-market", priority: "P0", claim: "employment_market", title: "Employment market" },
     { id: "counter-evidence", priority: "P0", claim: "counter_evidence", title: "Counter evidence" },
+    { id: "employment-market-invalid", priority: "P0", claim: "employment_market", title: "Invalid employment market" },
     { id: "wechat-public-account", priority: "P1", claim: "wechat_public_account", title: "WeChat account" },
   ],
 };
@@ -107,11 +132,14 @@ const view = browser.buildReviewedEvidenceCaseBrowser({
 
 assert.equal(view.protocol, "reviewed_evidence_case_browser_v1");
 assert.equal(view.caseId, "scut-im-v0");
-assert.equal(view.totalRecords, 3, "only requested-case records should be counted");
+assert.equal(view.totalRecords, 4, "only requested-case records should be counted");
 assert.equal(view.capturedCount, 2);
-assert.equal(view.pendingCount, 1);
+assert.equal(view.pendingCount, 2);
 assert.equal(view.readyForReportCount, 2);
-assert.deepEqual(view.missingP0TaskIds, ["official-plan-charter"]);
+assert.deepEqual(
+  [...view.missingP0TaskIds].sort(),
+  ["employment-market-invalid", "official-plan-charter"],
+);
 assert.equal(view.counterEvidenceHit, true);
 assert.equal(view.reviewRequired, true);
 assert.match(view.claimBoundary, /case-scoped reviewed evidence/i);
@@ -129,6 +157,12 @@ const wechat = view.taskGroups.find((group) => group.taskId === "wechat-public-a
 assert.equal(wechat.status, "needs_capture");
 assert.equal(wechat.records[0].reviewAction, "Collect visible screenshot before use.");
 
+const invalidEmployment = view.taskGroups.find((group) => group.taskId === "employment-market-invalid");
+assert.equal(invalidEmployment.status, "needs_capture");
+assert.equal(invalidEmployment.records[0].readyForReport, false);
+assert.equal(invalidEmployment.records[0].attachmentAuditStatus, "invalid");
+assert.match(invalidEmployment.records[0].attachmentAuditDetail, /sha256 mismatch/);
+
 console.log("Reviewed evidence case browser test passed");
 
 function reviewedRecord({
@@ -144,6 +178,7 @@ function reviewedRecord({
   attachments,
   redactionStatus,
   reviewerIdentity,
+  attachmentAudit,
 }) {
   return {
     reviewId,
@@ -167,5 +202,6 @@ function reviewedRecord({
     caseId,
     recordedAt: "2026-06-24T00:00:00Z",
     ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+    attachmentAudit,
   };
 }

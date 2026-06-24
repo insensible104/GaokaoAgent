@@ -88,6 +88,9 @@ export function ReviewedEvidenceCaseBrowserPanel({
                       attachmentCount: {record.attachmentCount} - redactionStatus: {record.redactionStatus}
                     </p>
                     <p className="mt-1">
+                      attachmentAudit: {record.attachmentAuditStatus} - {record.attachmentAuditDetail}
+                    </p>
+                    <p className="mt-1">
                       reviewer: {record.reviewer} - reviewerIdentity: {record.reviewerIdentity}
                     </p>
                     <p className="mt-1">

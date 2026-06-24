@@ -23,6 +23,23 @@ export interface ReviewedEvidenceAttachment {
   redactionStatus: ReviewedEvidenceRedactionStatus;
 }
 
+export type ReviewedEvidenceAttachmentAuditStatus = "valid" | "invalid" | "not_applicable";
+
+export interface ReviewedEvidenceAttachmentAuditFinding {
+  attachmentId: string;
+  storageRef: string;
+  valid: boolean;
+  detail: string;
+}
+
+export interface ReviewedEvidenceAttachmentAudit {
+  status: ReviewedEvidenceAttachmentAuditStatus;
+  validAttachmentCount: number;
+  invalidAttachmentCount: number;
+  checkedAt?: string;
+  findings: ReviewedEvidenceAttachmentAuditFinding[];
+}
+
 export interface ReviewedEvidenceReviewerIdentity {
   reviewerId: string;
   displayName: string;
@@ -87,6 +104,7 @@ export interface ReviewedEvidenceRecord {
   caseId: string;
   recordedAt: string;
   ledgerPath: string;
+  attachmentAudit?: ReviewedEvidenceAttachmentAudit;
 }
 
 export interface ReviewedEvidenceListingResponse {
@@ -419,6 +437,9 @@ function reviewedEvidenceListingFromJson(value: unknown): ReviewedEvidenceListin
       throw new Error(`invalid reviewed evidence record ${index + 1}: reviewedEvidenceCard`);
     }
     assertValidBackendEvidenceCard(record.reviewedEvidenceCard, index);
+    if (record.attachmentAudit) {
+      assertValidReviewedEvidenceAttachmentAudit(record.attachmentAudit, index);
+    }
   });
   return response;
 }
@@ -526,6 +547,31 @@ function assertValidReviewedEvidenceAttachment(
   if (!VALID_REDACTION_STATUSES.has(attachment.redactionStatus)) {
     throw new Error(`invalid reviewed evidence attachment ${label}: redactionStatus`);
   }
+}
+
+function assertValidReviewedEvidenceAttachmentAudit(
+  audit: ReviewedEvidenceAttachmentAudit,
+  index: number,
+): void {
+  if (!["valid", "invalid", "not_applicable"].includes(audit.status)) {
+    throw new Error(`invalid reviewed evidence record ${index + 1}: attachmentAudit status`);
+  }
+  if (typeof audit.validAttachmentCount !== "number" || typeof audit.invalidAttachmentCount !== "number") {
+    throw new Error(`invalid reviewed evidence record ${index + 1}: attachmentAudit counts`);
+  }
+  if (!Array.isArray(audit.findings)) {
+    throw new Error(`invalid reviewed evidence record ${index + 1}: attachmentAudit findings`);
+  }
+  audit.findings.forEach((finding, findingIndex) => {
+    if (
+      typeof finding.attachmentId !== "string"
+      || typeof finding.storageRef !== "string"
+      || typeof finding.valid !== "boolean"
+      || typeof finding.detail !== "string"
+    ) {
+      throw new Error(`invalid reviewed evidence record ${index + 1}: attachmentAudit finding ${findingIndex + 1}`);
+    }
+  });
 }
 
 function assertValidBackendCoverage(coverage: EvidenceAutopilotBackendCoverage): void {

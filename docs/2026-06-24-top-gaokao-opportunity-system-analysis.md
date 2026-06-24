@@ -97,14 +97,16 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - Backend now has a local reviewed-evidence attachment store and upload endpoint. It persists binary screenshot/PDF/image payloads, emits `ReviewedEvidenceAttachment` metadata, and writes SHA-256 sidecars for audit.
 - Backend now rejects fake operator-review attachment references. A `storageRef` must resolve to an existing file in the configured attachment store before the reviewed card can enter the ledger or close an Evidence Autopilot P0 gate.
 - Backend now validates reviewed-evidence attachment sidecars before accepting operator evidence. The stored binary, JSON metadata sidecar, submitted `ReviewedEvidenceAttachment` fields, and recorded SHA-256 must agree before an attachment can support ledger submission or P0 closure.
+- Backend reviewed-evidence listing now revalidates attachments at readback time and returns per-record `attachmentAudit`, so stale, deleted, or tampered attachments are visible before delivery review or report use.
 - Frontend now has a typed attachment upload adapter that posts operator-captured attachment payloads and rejects malformed backend upload responses before they can be used by capture UI.
 - Frontend now has typed helpers to compose uploaded attachments into an operator-reviewed card and submit that card to the reviewed-evidence ledger endpoint, with pre-submit checks for reviewer identity, attachment presence, and completed redaction status.
+- Frontend case browser now treats invalid attachment audit records as `needs_capture`, keeping affected P0 tasks out of `ready_for_report` until the operator evidence is repaired.
 
 ### Partially implemented
 
 - Backend-to-frontend bridge exists, but backend does not execute public web/PDF retrieval.
 - Snapshot provider stabilizes demo output, but it is not live evidence.
-- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata plus sidecar/hash validation to close P0 gates. The remaining production gaps are capture/redaction UI, authentication, permission enforcement, and a polished capture workflow.
+- Report integration exists and the preview entry can attempt case-scoped ledger fetches. The case browser model and compact reviewer panel are wired into internal delivery review, and operator-review cards now require attachment/redaction/identity metadata plus sidecar/hash validation at submission and readback to close P0 gates. The remaining production gaps are capture/redaction UI, authentication, permission enforcement, and a polished capture workflow.
 - Agent research logic exists historically, but it is not yet fully reused as a disciplined evidence planner.
 
 ### Not implemented yet
@@ -287,3 +289,11 @@ This turns attachment evidence from a hand-written string into an auditable loca
 The frontend API adapter now exposes this endpoint as `uploadReviewedEvidenceAttachment`. It also exposes `buildOperatorReviewedEvidenceCard` and `submitReviewedEvidenceCard`, so future capture UI can use one typed path for: upload attachment, compose a gated operator card, and submit it to the reviewed-evidence ledger.
 
 This is still a contract slice, not a complete workflow. There is no capture screen, redaction UI, reviewer authentication, or permission enforcement yet.
+
+### 2026-06-24 Readback-Time Attachment Audit
+
+The case-scoped reviewed-evidence listing endpoint now attaches an `attachmentAudit` summary to each record. It revalidates the stored binary, metadata sidecar, submitted attachment fields, and SHA-256 when the ledger is read, not only when evidence is submitted. If an attachment is deleted or tampered after ledger append, delivery review receives `status: invalid` with per-attachment findings.
+
+The frontend reviewed-evidence case browser now consumes this audit signal. Invalid attachment audit records stay visible for traceability, but they are downgraded to `needs_capture` and cannot count toward `ready_for_report` or close a P0 reviewer gate.
+
+This is a delivery-readiness improvement, not an outcome claim. It still does not implement reviewer authentication, permission enforcement, or a redaction UI.

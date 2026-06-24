@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -343,7 +344,7 @@ async def list_reviewed_evidence(
         success=True,
         caseId=case_id,
         recordCount=len(records),
-        records=[record.model_dump() for record in records],
+        records=[_reviewed_evidence_record_with_attachment_audit(record) for record in records],
     )
 
 
@@ -410,6 +411,58 @@ def _validate_reviewed_evidence_submission_attachments(card: ReviewedEvidenceCar
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _reviewed_evidence_record_with_attachment_audit(record) -> dict:
+    payload = record.model_dump()
+    payload["attachmentAudit"] = _build_attachment_audit(record.reviewedEvidenceCard)
+    return payload
+
+
+def _build_attachment_audit(card: ReviewedEvidenceCard) -> dict:
+    attachments = card.attachments
+    if not attachments:
+        return {
+            "status": "not_applicable",
+            "validAttachmentCount": 0,
+            "invalidAttachmentCount": 0,
+            "checkedAt": datetime.now(timezone.utc).isoformat(),
+            "findings": [],
+        }
+
+    from reviewed_evidence_attachment_store import validate_reviewed_evidence_attachment
+
+    findings = []
+    valid_count = 0
+    for attachment in attachments:
+        try:
+            validate_reviewed_evidence_attachment(
+                storage_root=_reviewed_evidence_attachment_dir(),
+                attachment=attachment,
+            )
+            valid = True
+            detail = "attachment audit passed"
+            valid_count += 1
+        except ValueError as exc:
+            valid = False
+            detail = str(exc)
+        findings.append(
+            {
+                "attachmentId": attachment.attachmentId,
+                "storageRef": attachment.storageRef,
+                "valid": valid,
+                "detail": detail,
+            }
+        )
+
+    invalid_count = len(attachments) - valid_count
+    return {
+        "status": "valid" if invalid_count == 0 else "invalid",
+        "validAttachmentCount": valid_count,
+        "invalidAttachmentCount": invalid_count,
+        "checkedAt": datetime.now(timezone.utc).isoformat(),
+        "findings": findings,
+    }
 
 
 def _load_reviewed_evidence_ledger_cards(

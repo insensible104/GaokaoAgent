@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 
 from fastapi.testclient import TestClient
@@ -13,6 +14,7 @@ from reviewed_evidence_store import (
     list_reviewed_evidence_records,
     load_reviewed_evidence_cards,
 )
+from reviewed_evidence_attachment_store import save_reviewed_evidence_attachment
 
 
 def test_append_reviewed_evidence_record_generates_review_id_and_ledger_entry(tmp_path) -> None:
@@ -227,3 +229,63 @@ def test_reviewed_evidence_listing_endpoint_filters_by_case_id(tmp_path, monkeyp
     assert payload["recordCount"] == 1
     assert payload["records"][0]["reviewedEvidenceCard"]["taskId"] == "employment-market"
     assert "/api/evidence-autopilot/reviewed-evidence/{case_id}" in main.get_runtime_status()["entrypoints"]["api"]
+
+
+def test_reviewed_evidence_listing_endpoint_revalidates_attachment_audit(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "api_reviewed_evidence.jsonl"
+    attachment_root = tmp_path / "attachments"
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_REVIEWED_LEDGER", str(ledger_path))
+    monkeypatch.setenv("EVIDENCE_AUTOPILOT_ATTACHMENT_DIR", str(attachment_root))
+    client = TestClient(main.app)
+
+    saved = save_reviewed_evidence_attachment(
+        storage_root=attachment_root,
+        case_id="scut-im-v0",
+        task_id="employment-market",
+        reviewer_id="operator-a",
+        kind="screenshot",
+        content_type="image/png",
+        content_base64=base64.b64encode(b"delivery-time audit").decode("ascii"),
+        captured_at="2026-06-24T00:00:00Z",
+        redaction_status="redacted",
+        original_file_name="job-sample.png",
+    )
+    submit_response = client.post(
+        "/api/evidence-autopilot/reviewed-evidence",
+        json={
+            "targetLabel": "Guangdong 2026 SCUT intelligent manufacturing",
+            "caseId": "scut-im-v0",
+            "reviewer": "operator-a",
+            "card": {
+                "taskId": "employment-market",
+                "claim": "employment_market",
+                "status": "captured_candidate",
+                "sourceTitle": "Reviewed source for employment-market",
+                "sourceUrl": "",
+                "sourceType": "job",
+                "excerpt": "Reviewed job evidence excerpt.",
+                "capturedAt": "2026-06-24",
+                "confidence": "medium",
+                "reviewAction": "Use only as operator-reviewed job evidence.",
+                "attachments": [saved.attachment.model_dump()],
+                "redactionStatus": "redacted",
+                "reviewerIdentity": {
+                    "reviewerId": "operator-a",
+                    "displayName": "Operator A",
+                    "role": "operator",
+                },
+            },
+        },
+    )
+    assert submit_response.status_code == 200
+
+    stored_path = attachment_root / saved.attachment.storageRef
+    stored_path.write_bytes(b"tampered after ledger append")
+    listing = client.get("/api/evidence-autopilot/reviewed-evidence/scut-im-v0")
+
+    assert listing.status_code == 200
+    payload = listing.json()
+    audit = payload["records"][0]["attachmentAudit"]
+    assert audit["status"] == "invalid"
+    assert audit["invalidAttachmentCount"] == 1
+    assert "attachment sha256 mismatch" in audit["findings"][0]["detail"]
