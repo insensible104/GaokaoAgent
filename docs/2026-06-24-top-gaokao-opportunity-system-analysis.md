@@ -121,6 +121,7 @@ This is enough infrastructure to stop broad expansion and start one real case.
 - The Real Case reviewer handoff delivery preview bootstrap now composes the whole internal path from reviewed public fixture evidence to `InternalDeliveryReview`-compatible preview in one call, while preserving the empty client-facing artifact list.
 - The Real Case operator-closure delivery preview now gives the paired post-capture view: after a valid `employment-market` operator capture, the P0 gap is mechanically cleared in the browser state, but the internal preview remains blocked by counter-evidence and counselor review.
 - The Real Case counselor review decision now separates evidence readiness from recommendation readiness with three internal outcomes: `reject`, `needs_more_evidence`, and `allow_internal_report_draft`. All three keep client and family-facing delivery blocked.
+- The Real Case counselor decision delivery preview now attaches that expert decision to the same internal preview contract as reviewer-only Markdown/JSON artifacts, records `counselor_decision_recorded`, and still emits an empty client-facing artifact list.
 
 ### Partially implemented
 
@@ -471,3 +472,9 @@ This is the useful contrast to the handoff preview: before capture, `employment-
 The operator-closed preview now has a counselor decision layer. A counselor can reject the case, request more evidence, or allow only an internal report draft after reviewing counter-evidence, source freshness, representativeness, and claim boundaries.
 
 This is deliberately stricter than a normal demo flow. Even the positive branch is `allow_internal_report_draft`, not client delivery. That keeps PathFinder / GaokaoAgent aligned with the core standard: a polished artifact is not a recommendation until the evidence, counter-evidence, and counselor-review boundary all support it.
+
+### 2026-06-25 Real Case Counselor Decision Delivery Preview
+
+The counselor decision layer can now be packaged into the existing internal delivery preview shape. The preview appends `real_case_counselor_decision_brief` and `real_case_counselor_decision_json` as `internal_review` artifacts, preserves the reviewed counter-evidence source titles in the audit JSON, and gives `InternalDeliveryReview` stable tab labels and ordering for the new artifacts.
+
+The boundary stays intentionally conservative: `allow_internal_report_draft` records an expert-reviewed internal drafting gate, not a family-facing recommendation. The preview status changes to `counselor_decision_recorded`, but `client_delivery.allowed` remains false and `clientFacingArtifacts` remains empty until a later explicit delivery signoff exists.

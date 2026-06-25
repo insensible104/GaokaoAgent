@@ -61,6 +61,7 @@ Date: 2026-06-24
 - Added a Real Case reviewer handoff delivery preview bootstrap helper. It runs public reviewed-evidence bootstrap, builds the reviewer handoff, packages reviewer-only artifacts, converts them into an internal delivery preview, and returns an empty client-facing artifact list while `employment-market` remains open.
 - Added a Real Case operator-closure delivery preview helper. It runs the public evidence bootstrap plus a reviewer-filled `employment-market` operator capture, clears the P0 operator gap in the recomputed browser, and packages an internal closure brief plus JSON snapshot while keeping client delivery blocked by counter-evidence and counselor review.
 - Added a Real Case counselor review decision helper. It turns the operator-closed internal preview into one of three audited internal outcomes: `reject`, `needs_more_evidence`, or `allow_internal_report_draft`, while keeping client and family-facing delivery blocked in every branch.
+- Added a Real Case counselor decision delivery preview helper. It appends the counselor decision brief and JSON snapshot to the existing internal preview contract as `internal_review` artifacts, records `counselor_decision_recorded`, and still returns no client-facing artifacts.
 
 ## What This Proves
 
@@ -93,6 +94,7 @@ The system can carry one reviewed public evidence fixture through the opportunit
 - The Real Case reviewer handoff delivery preview bootstrap is still an internal entrypoint. It does not capture `employment-market`, does not validate job-market representativeness, and does not prove admission or employment outcomes.
 - The Real Case operator-closure delivery preview is also internal only. It proves the typed operator capture path can clear the P0 gap mechanically, but it does not prove the captured job-market source is representative, current, or predictive, and it still blocks client delivery until counter-evidence and counselor review are complete.
 - The Real Case counselor review decision is not a final recommendation. Even `allow_internal_report_draft` only permits internal drafting with counter-evidence caveats; it does not authorize client delivery or family-facing opportunity wording.
+- The Real Case counselor decision delivery preview is internal only. It records expert review output for audit and drafting continuity, but it still does not authorize client delivery, family-facing wording, admission-probability claims, or employment-outcome claims.
 
 ## Verification Commands
 
@@ -103,6 +105,7 @@ node frontend/src/components/EvidenceAutopilotRealCaseReviewerHandoffDeliveryBun
 node frontend/src/components/EvidenceAutopilotRealCaseReviewerHandoffDeliveryPreviewBootstrap.test.mjs
 node frontend/src/components/EvidenceAutopilotRealCaseOperatorClosureDeliveryPreview.test.mjs
 node frontend/src/components/EvidenceAutopilotRealCaseCounselorReviewDecision.test.mjs
+node frontend/src/components/EvidenceAutopilotRealCaseCounselorDecisionDeliveryPreview.test.mjs
 node frontend/src/components/InternalDeliveryReviewReviewedEvidence.test.mjs
 node frontend/src/components/EvidenceAutopilotApi.test.mjs
 node frontend/src/components/EvidenceAutopilotResultNormalizer.test.mjs
@@ -185,6 +188,7 @@ git diff --check
 - Real Case reviewer handoff delivery preview bootstrap test passed: the fixture can run reviewed public evidence bootstrap through handoff, artifact manifest, internal delivery bundle, and delivery preview while keeping client-facing artifacts empty.
 - Real Case operator-closure delivery preview test passed: after valid `employment-market` operator capture, the internal preview has no missing P0 tasks but remains `requires_counter_evidence_review`, contains no client-facing artifacts, and keeps client delivery blocked.
 - Real Case counselor review decision test passed: counselor decisions split into `reject`, `needs_more_evidence`, and `allow_internal_report_draft`; internal draft permission still keeps client delivery and family-facing output blocked.
+- Real Case counselor decision delivery preview test passed: the counselor decision is attached to the internal delivery preview, the new artifacts remain `internal_review`, and client-facing artifacts remain empty.
 - Internal delivery reviewed-evidence wiring test passed: the internal review surface now imports the operator capture worklist and gate, exposes the required capture workflow when case-scoped evidence is incomplete, and blocks client-facing download when P0 operator evidence remains open.
 - `git diff --check` passed.
 
