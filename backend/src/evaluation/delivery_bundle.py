@@ -129,6 +129,7 @@ def build_delivery_bundle(
         "plan_quality_status": plan_quality_state,
         "plan_quality_score": plan_quality.get("total_score"),
         "expectation_status": expectation_state,
+        "client_signoff_checklist": expectation_packet.get("client_signoff_checklist", []),
         "report_quality_status": report_quality.get("status"),
         "report_quality_score": report_quality.get("total_score"),
         "client_delivery": {
@@ -316,6 +317,12 @@ def build_markdown_delivery_bundle(manifest: dict[str, Any]) -> str:
             f"| `{gate.get('gate', '')}` | `{gate.get('status', '')}` | "
             f"{gate.get('requirement', '')} |"
         )
+
+    lines.extend(["", "## 客户签收清单", "", "| Signoff | Status |", "| --- | --- |"])
+    for item in manifest.get("client_signoff_checklist", []) or []:
+        lines.append(f"| {item.get('label', '')} | `{item.get('status', '')}` |")
+    if not manifest.get("client_signoff_checklist"):
+        lines.append("| 无 | `not_provided` |")
 
     lines.extend(["", "## 下一步", ""])
     for idx, action in enumerate(manifest.get("next_actions", []) or [], 1):

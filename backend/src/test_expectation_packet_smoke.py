@@ -28,8 +28,12 @@ def test_expectation_packet_requires_unconfirmed_constraints() -> None:
     assert item_by_id["region_boundary"]["status"] == "known"
     assert item_by_id["school_major_tradeoff"]["status"] == "needs_confirmation"
     assert any("不承诺录取结果" in text for text in [packet["non_guarantee_clause"]])
+    signoff_by_id = {item["id"]: item for item in packet["client_signoff_checklist"]}
+    assert signoff_by_id["constraint_freeze"]["status"] == "pending_signature"
+    assert signoff_by_id["non_guarantee"]["required"] is True
     markdown = build_markdown_expectation_packet(packet)
     assert "志愿填报预期确认单" in markdown
+    assert "客户签收清单" in markdown
     assert "是否接受省外" in markdown
     assert "家长确认" in markdown
 
@@ -54,6 +58,9 @@ def test_expectation_packet_can_be_ready_when_core_constraints_known() -> None:
     assert item_by_id["rank_score_subject"]["status"] == "known"
     assert item_by_id["major_boundary"]["status"] == "known"
     assert item_by_id["adjustment_acceptance"]["status"] == "needs_confirmation"
+    signoff_ids = {item["id"] for item in packet["client_signoff_checklist"]}
+    assert "blacklist_hard_boundary" in signoff_ids
+    assert "region_tradeoff" in signoff_ids
 
 
 if __name__ == "__main__":

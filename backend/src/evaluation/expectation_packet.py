@@ -112,6 +112,60 @@ def _risk_disclosures(profile: UserProfile) -> list[str]:
     return disclosures
 
 
+def _client_signoff_checklist(profile: UserProfile) -> list[dict[str, Any]]:
+    checklist = [
+        {
+            "id": "constraint_freeze",
+            "label": "已确认本次推荐依据的地域、专业、院校层级、费用和调剂边界；若后续边界变化，需要重新评估。",
+            "required": True,
+            "status": "pending_signature",
+        },
+        {
+            "id": "adjustment_tail_risk",
+            "label": "已理解服从调剂、专业组混搭、尾部专业和非目标专业录取风险。",
+            "required": True,
+            "status": "pending_signature",
+        },
+        {
+            "id": "private_joint_fee_pathway",
+            "label": "已确认是否接受民办、中外合作、高收费、异地校区和特殊培养路径。",
+            "required": True,
+            "status": "pending_signature",
+        },
+        {
+            "id": "non_guarantee",
+            "label": "已理解系统和顾问提供的是数据辅助、风险解释和方案建议，不承诺录取结果。",
+            "required": True,
+            "status": "pending_signature",
+        },
+        {
+            "id": "official_final_review",
+            "label": "已确认最终填报前必须复核考试院数据、招生章程、体检限制、学费和校区信息。",
+            "required": True,
+            "status": "pending_signature",
+        },
+    ]
+    if profile.blacklist_majors:
+        checklist.append(
+            {
+                "id": "blacklist_hard_boundary",
+                "label": f"已确认黑名单专业（{_list_or_placeholder(profile.blacklist_majors)}）是硬边界。",
+                "required": True,
+                "status": "pending_signature",
+            }
+        )
+    if profile.preferred_cities or profile.excluded_cities:
+        checklist.append(
+            {
+                "id": "region_tradeoff",
+                "label": "已理解地域边界越硬，可选院校、专业和保底空间可能越窄。",
+                "required": True,
+                "status": "pending_signature",
+            }
+        )
+    return checklist
+
+
 def build_expectation_packet(profile: UserProfile) -> dict[str, Any]:
     """Build a structured expectation-management packet from a user profile."""
     items = _confirmation_items(profile)
@@ -139,6 +193,7 @@ def build_expectation_packet(profile: UserProfile) -> dict[str, Any]:
         },
         "confirmation_items": items,
         "risk_disclosures": _risk_disclosures(profile),
+        "client_signoff_checklist": _client_signoff_checklist(profile),
         "family_questions": [
             "是否接受省外？如果不接受，是否理解可选空间会明显变窄？",
             "是否接受民办、中外合作、高收费、异地校区或特殊培养路径？",
@@ -194,7 +249,17 @@ def build_markdown_expectation_packet(packet: dict[str, Any]) -> str:
             "",
             packet["non_guarantee_clause"],
             "",
-            "## 六、确认签字",
+            "## 六、客户签收清单",
+            "",
+        ]
+    )
+    for item in packet.get("client_signoff_checklist", []) or []:
+        lines.append(f"- [ ] {item['label']}（{item['status']}）")
+
+    lines.extend(
+        [
+            "",
+            "## 七、确认签字",
             "",
             "- 考生确认：__________ 日期：__________",
             "- 家长确认：__________ 日期：__________",

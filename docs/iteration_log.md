@@ -17,6 +17,42 @@ Each future iteration should record:
 | Validation | Commands/tests/builds actually run. |
 | Remaining Risk | What is still not proven or still manual. |
 
+## 2026-06-25: Structured Client Signoff Checklist
+
+### Goal
+
+Reduce paid-case disputes by making customer signoff requirements explicit and machine-readable.
+
+### Commits
+
+| Commit | Title |
+| --- | --- |
+| this commit | Add structured client signoff checklist |
+
+### What Changed
+
+- Added `client_signoff_checklist` to expectation packets.
+- Covered constraint freeze, adjustment/tail risk, 民办/中外合作/高收费路径, non-guarantee terms, and official final review.
+- Added conditional signoff rows for blacklisted majors and hard regional tradeoffs.
+- Carried the signoff checklist into `delivery_bundle.json`.
+- Rendered the checklist in `delivery_bundle.md`.
+- Updated smoke coverage for expectation packets and delivery bundles.
+
+### Why It Matters
+
+The 2025 service pain point was not only recommendation quality. It was also whether the family had clearly acknowledged hard constraints and tradeoffs before judging the recommendation. This turns those acknowledgements into structured delivery artifacts that can later be audited, displayed, and summarized across cases.
+
+### Validation
+
+| Command | Result |
+| --- | --- |
+| `uv run python -m pytest src/test_expectation_packet_smoke.py src/test_delivery_bundle_smoke.py src/test_backend_api_status_smoke.py` | 14 passed |
+
+### Remaining Risk
+
+- The checklist is still a Markdown/JSON artifact, not a signed PDF/DOCX workflow.
+- A human counselor still needs to confirm signatures were actually collected.
+
 ## 2026-06-17: Persisted Delivery Archive Review
 
 ### Goal

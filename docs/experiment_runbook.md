@@ -526,7 +526,10 @@ backend\.venv\Scripts\python.exe backend\scripts\gaokao_agent.py expectation-pac
 
 Use this before final recommendation delivery when the family has hard limits
 such as "省内 only", "不接受民办", "不接受中外合作", "专业黑名单", or a strong
-school-vs-major tradeoff preference.
+school-vs-major tradeoff preference. The packet includes a structured
+client-signoff checklist for constraint freeze, adjustment/tail risk,
+private/joint-program fee pathways, non-guarantee terms, and final official
+review.
 
 ## Delivery Bundle
 
@@ -556,7 +559,9 @@ The bundle writes:
 Bundle status can be `blocked`, `needs_revision`, `pending_signoff`, or
 `ready_to_deliver`. Missing `--plan-json` is treated as `needs_revision`
 because a final paid-case handoff must include a structural audit of the
-ordered volunteer plan.
+ordered volunteer plan. The bundle manifest also carries
+`client_signoff_checklist` so internal tools can verify which customer
+signatures are required before family-facing delivery.
 
 ## Delivery Portfolio Audit
 

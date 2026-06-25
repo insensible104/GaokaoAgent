@@ -95,6 +95,9 @@ def test_delivery_bundle_writes_client_artifacts() -> None:
         assert manifest["status"] == "pending_signoff"
         assert manifest["client_delivery"]["allowed"] is True
         assert manifest["client_delivery"]["status"] == "allowed"
+        signoff_ids = {item["id"] for item in manifest["client_signoff_checklist"]}
+        assert "constraint_freeze" in signoff_ids
+        assert "non_guarantee" in signoff_ids
         assert manifest["intake_status"] == "ready_for_recommendation"
         assert manifest["plan_quality_status"] == "pass"
         audiences = {item["id"]: item["audience"] for item in manifest["artifacts"]}
@@ -110,6 +113,7 @@ def test_delivery_bundle_writes_client_artifacts() -> None:
         assert (output_dir / "report_quality_audit.md").exists()
         assert (output_dir / "delivery_bundle.md").exists()
         assert "服务交付包" in (output_dir / "delivery_bundle.md").read_text(encoding="utf-8")
+        assert "客户签收清单" in (output_dir / "delivery_bundle.md").read_text(encoding="utf-8")
 
 
 def test_delivery_bundle_requires_plan_quality_artifact() -> None:
