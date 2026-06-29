@@ -56,6 +56,54 @@ const localRequire = (specifier) => {
       exampleDeepOpportunityInput: {},
     };
   }
+  if (specifier === "@/lib/deepEvidenceCollectionPlan") {
+    return {
+      exampleCollectionContext: {
+        province: "广东",
+        schoolName: "华南理工示例校",
+        majorName: "智能制造与数据工程",
+        targetYear: 2026,
+      },
+      buildDeepEvidenceCollectionPlan: () => ({
+        targetLabel: "广东 2026 华南理工示例校 智能制造与数据工程",
+        tasks: [],
+      }),
+    };
+  }
+  if (specifier === "@/lib/evidenceAutopilot") {
+    return {
+      buildEvidenceAutopilotRun: () => ({
+        searchTasks: [],
+        evidenceResults: [
+          { claim: "official_admission", excerpts: ["official excerpt"] },
+        ],
+        evaluation: {
+          opportunityScore: 90,
+          claimBoundary: "radar boundary",
+          p0Gate: { passedCount: 6, totalCount: 6 },
+          counterEvidence: { hit: false, reasons: [] },
+          horizonSignals: [
+            { horizon: "短期录取", status: "supported", summary: "short" },
+            { horizon: "中期升学", status: "supported", summary: "mid" },
+            { horizon: "长期职业", status: "supported", summary: "long" },
+          ],
+        },
+      }),
+    };
+  }
+  if (specifier === "@/lib/evidenceAutopilotSnapshotProvider") {
+    return {
+      buildEvidenceAutopilotSnapshotProviderResults: () => [],
+    };
+  }
+  if (specifier === "@/lib/evidenceAutopilotRealCaseProvider") {
+    return {
+      loadEvidenceAutopilotRealCaseFixture: () => ({
+        claimBoundary: "Real Case v0 fixture supports an auditable opportunity hypothesis only.",
+      }),
+      buildEvidenceAutopilotRealCaseProviderResults: () => [],
+    };
+  }
   throw new Error(`Unexpected require: ${specifier}`);
 };
 
@@ -66,6 +114,57 @@ assert.equal(
   "function",
   "buildReportPayload should be exported for evidence-binding tests",
 );
+assert.equal(
+  typeof module.exports.buildDeepOpportunityEvidenceAuditTrailFromRecords,
+  "function",
+  "report should convert live reviewed-evidence records into an audit trail",
+);
+
+const liveReviewedTrail = module.exports.buildDeepOpportunityEvidenceAuditTrailFromRecords([
+  {
+    reviewId: "review-live-001",
+    caseId: "scut-im-v0",
+    reviewer: "operator-a",
+    targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+    recordedAt: "2026-06-24T00:00:00Z",
+    ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+    reviewedEvidenceCard: {
+      taskId: "employment-market",
+      status: "captured_candidate",
+      sourceTitle: "Live reviewed job-market sample",
+      sourceUrl: "operator-review://review-live-001",
+      sourceType: "job",
+      excerpt: "Visible job sample describes robotics integration responsibilities.",
+      capturedAt: "2026-06-24",
+      confidence: "medium",
+      reviewAction: "Use as operator-captured job sample only.",
+    },
+  },
+  {
+    reviewId: "review-live-002",
+    caseId: "scut-im-v0",
+    reviewer: "operator-a",
+    targetLabel: "Guangdong 2026 SCUT intelligent manufacturing",
+    recordedAt: "2026-06-24T00:10:00Z",
+    ledgerPath: "logs/evidence_autopilot/reviewed_evidence.jsonl",
+    reviewedEvidenceCard: {
+      taskId: "wechat-public-account",
+      status: "operator_review",
+      sourceTitle: "Incomplete WeChat note",
+      sourceUrl: "",
+      sourceType: "wechat",
+      excerpt: "",
+      capturedAt: "",
+      confidence: "low",
+      reviewAction: "Collect visible screenshot before use.",
+    },
+  },
+]);
+assert.equal(liveReviewedTrail.length, 1);
+assert.equal(liveReviewedTrail[0].reviewId, "review-live-001");
+assert.equal(liveReviewedTrail[0].caseId, "scut-im-v0");
+assert.equal(liveReviewedTrail[0].sourceUrl, "operator-review://review-live-001");
+assert.match(liveReviewedTrail[0].reviewAction, /operator-captured job sample/);
 
 const reportData = module.exports.buildReportPayload({
   gameMatrix: {

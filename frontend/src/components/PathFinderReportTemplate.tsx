@@ -1,6 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { buildDeliveryReadinessSummary, type DeliveryReadinessSummary } from "@/lib/deliveryReadiness";
+import { buildDeepEvidenceCollectionPlan, exampleCollectionContext } from "@/lib/deepEvidenceCollectionPlan";
 import { buildDeepOpportunityCard, exampleDeepOpportunityInput } from "@/lib/deepOpportunityCard";
+import { buildEvidenceAutopilotRun } from "@/lib/evidenceAutopilot";
+import {
+  buildEvidenceAutopilotRealCaseProviderResults,
+  loadEvidenceAutopilotRealCaseFixture,
+  type EvidenceAutopilotRealCaseFixture,
+} from "@/lib/evidenceAutopilotRealCaseProvider";
+import { buildEvidenceAutopilotSnapshotProviderResults } from "@/lib/evidenceAutopilotSnapshotProvider";
 
 type Metric = {
   label: string;
@@ -25,6 +33,34 @@ type EvidenceItem = {
   source: string;
   usage: string;
   boundary: string;
+};
+
+type DeepOpportunityEvidenceAuditTrailItem = {
+  reviewId: string;
+  caseId: string;
+  taskId: string;
+  sourceTitle: string;
+  sourceUrl: string;
+  sourceType: string;
+  capturedAt: string;
+  confidence: string;
+  reviewAction: string;
+};
+
+type ReportReviewedEvidenceRecord = {
+  reviewId: string;
+  caseId: string;
+  reviewedEvidenceCard: {
+    taskId: string;
+    status: "requires_capture" | "operator_review" | "captured_candidate";
+    sourceTitle: string;
+    sourceUrl: string;
+    sourceType: string;
+    excerpt: string;
+    capturedAt: string;
+    confidence: string;
+    reviewAction: string;
+  };
 };
 
 type RiskItem = {
@@ -131,6 +167,12 @@ export type PathFinderReportPayload = {
       formal_recommendation_ready?: boolean;
       limitations?: string[];
     } | null;
+  } | null;
+  evidenceAutopilot?: {
+    caseId?: string;
+    reviewedEvidenceRecords?: ReportReviewedEvidenceRecord[];
+    claimBoundary?: string;
+    status?: "live_ledger" | "ledger_unavailable" | "fixture_fallback";
   } | null;
   deliveryProfile?: {
     score?: number;
@@ -1948,8 +1990,81 @@ const ReportContentsPage = ({ data }: { data: ReportRenderData }) => {
   );
 };
 
-const DeepOpportunityReportPage = () => {
+export function buildDeepOpportunityEvidenceAuditTrail(
+  fixture: EvidenceAutopilotRealCaseFixture,
+): DeepOpportunityEvidenceAuditTrailItem[] {
+  return fixture.evidenceCards
+    .filter((card) => card.status === "captured_candidate" && card.excerpt.trim())
+    .map((card, index) => ({
+      reviewId: `${fixture.caseId}-review-${String(index + 1).padStart(2, "0")}`,
+      caseId: fixture.caseId,
+      taskId: card.taskId,
+      sourceTitle: card.sourceTitle,
+      sourceUrl: card.sourceUrl.trim() || `operator-review://${fixture.caseId}-${card.taskId}`,
+      sourceType: card.sourceType,
+      capturedAt: card.capturedAt,
+      confidence: card.confidence,
+      reviewAction: card.reviewAction,
+    }));
+}
+
+export function buildDeepOpportunityEvidenceAuditTrailFromRecords(
+  records: ReportReviewedEvidenceRecord[] = [],
+): DeepOpportunityEvidenceAuditTrailItem[] {
+  return records
+    .filter((record) =>
+      record.reviewedEvidenceCard.status === "captured_candidate"
+      && record.reviewedEvidenceCard.excerpt.trim()
+    )
+    .map((record) => {
+      const card = record.reviewedEvidenceCard;
+      return {
+        reviewId: record.reviewId,
+        caseId: record.caseId,
+        taskId: card.taskId,
+        sourceTitle: card.sourceTitle,
+        sourceUrl: card.sourceUrl.trim() || `operator-review://${record.reviewId}`,
+        sourceType: card.sourceType,
+        capturedAt: card.capturedAt,
+        confidence: card.confidence,
+        reviewAction: card.reviewAction,
+      };
+    });
+}
+
+const DeepOpportunityReportPage = ({
+  reviewedEvidenceRecords = [],
+}: {
+  reviewedEvidenceRecords?: ReportReviewedEvidenceRecord[];
+}) => {
   const card = buildDeepOpportunityCard(exampleDeepOpportunityInput);
+  const plan = buildDeepEvidenceCollectionPlan(exampleCollectionContext);
+  const draftRun = buildEvidenceAutopilotRun({ plan });
+  const realCaseFixture = loadEvidenceAutopilotRealCaseFixture();
+  const realCaseProviderResults = buildEvidenceAutopilotRealCaseProviderResults(realCaseFixture);
+  const realCaseEvidenceMode = "Real Case v0 auditable opportunity hypothesis";
+  const liveReviewedEvidenceAuditTrail = buildDeepOpportunityEvidenceAuditTrailFromRecords(reviewedEvidenceRecords);
+  const reviewedEvidenceAuditTrail = (
+    liveReviewedEvidenceAuditTrail.length > 0
+      ? liveReviewedEvidenceAuditTrail
+      : buildDeepOpportunityEvidenceAuditTrail(realCaseFixture)
+  ).slice(0, 4);
+  const providerResults = realCaseProviderResults.length > 0
+    ? realCaseProviderResults
+    : buildEvidenceAutopilotSnapshotProviderResults({
+      plan,
+      searchTasks: draftRun.searchTasks,
+      targetLabel: plan.targetLabel,
+    });
+  const autopilotRun = buildEvidenceAutopilotRun({ plan, providerResults });
+  const autopilotSourceExcerpt: Array<{ claim: string; excerpt: string }> = autopilotRun.evidenceResults
+    .flatMap((item) => item.excerpts.map((excerpt) => ({ claim: item.claim, excerpt })));
+  const sourceExcerpt = autopilotSourceExcerpt.slice(0, 3).concat(
+    reviewedEvidenceAuditTrail.slice(0, 2).map((item) => ({
+      claim: "Reviewed Evidence Ledger",
+      excerpt: `case-scoped audit trail ${item.reviewId} ${item.taskId} ${item.sourceTitle} ${item.sourceUrl} reviewAction: ${item.reviewAction}`,
+    })),
+  );
   const pillarByLabel = (label: string) => card.evidencePillars.find((item) => item.label === label);
 
   return (
@@ -1972,6 +2087,44 @@ const DeepOpportunityReportPage = () => {
               </article>
             );
           })}
+        </div>
+        <div className="counter-evidence">
+          <p className="small-label">Evidence Autopilot · 机会雷达</p>
+          <p>短期录取 / 中期升学 / 长期职业</p>
+          <p>{realCaseEvidenceMode}: {realCaseFixture.claimBoundary}</p>
+          <div className="path-grid">
+            <article className="path-card">
+              <strong>{autopilotRun.evaluation.opportunityScore}</strong>
+              <h3>机会雷达分</h3>
+              <p>{autopilotRun.evaluation.claimBoundary}</p>
+            </article>
+            <article className="path-card">
+              <strong>{autopilotRun.evaluation.p0Gate.passedCount}/{autopilotRun.evaluation.p0Gate.totalCount}</strong>
+              <h3>P0 门槛</h3>
+              <p>官方招生、位次、科研方向、本科可获得性、真实就业和反证检查必须先过门槛。</p>
+            </article>
+            <article className="path-card">
+              <strong>{autopilotRun.evaluation.counterEvidence.hit ? "命中" : "未命中"}</strong>
+              <h3>反证命中</h3>
+              <p>{autopilotRun.evaluation.counterEvidence.reasons[0] ?? "未发现阻断推荐的 P0 反证，仍需顾问复核原始来源。"}</p>
+            </article>
+          </div>
+          <div className="counter-evidence__grid">
+            {autopilotRun.evaluation.horizonSignals.map((signal) => (
+              <article className="counter-evidence__item" key={signal.horizon}>
+                <div><strong>{signal.horizon}</strong><span>{signal.status}</span></div>
+                <p>{signal.summary}</p>
+              </article>
+            ))}
+          </div>
+          <div className="evidence-grid sourceExcerpt">
+            {sourceExcerpt.map((item) => (
+              <article key={`${item.claim}-${item.excerpt}`}>
+                <h3>{item.claim}</h3>
+                <p><b>sourceExcerpt：</b>{item.excerpt}</p>
+              </article>
+            ))}
+          </div>
         </div>
         <div className="counter-evidence">
           <p className="small-label">科研视角</p>
@@ -2119,7 +2272,7 @@ export function PathFinderReportTemplate({ payload }: { payload?: PathFinderRepo
         </div>
       </section>
 
-      <DeepOpportunityReportPage />
+      <DeepOpportunityReportPage reviewedEvidenceRecords={payload?.evidenceAutopilot?.reviewedEvidenceRecords ?? []} />
 
       <section className="report-page report-page--dense">
         <div className="report-page__inner">

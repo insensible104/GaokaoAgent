@@ -68,7 +68,7 @@ function extractCities(text: string): string[] {
   const raw = extractLabeledValue(text, ["地点", "城市", "工作地点"]);
   if (!raw) return [];
   return raw
-    .split(/[\/、，,;；\s]+/)
+    .split(/[/、，,;；\s]+/)
     .map((item) => item.replace(/市$/, "").trim())
     .filter(Boolean)
     .slice(0, 4);

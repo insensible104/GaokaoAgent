@@ -12,6 +12,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buildApiUrl } from "@/lib/api";
+import { ReviewedEvidenceCaseBrowserPanel } from "@/components/ReviewedEvidenceCaseBrowserPanel";
+import { buildDeliveryReviewedEvidencePlan } from "@/lib/deliveryReviewedEvidencePlan";
+import { fetchReviewedEvidenceRecords, type ReviewedEvidenceRecord } from "@/lib/evidenceAutopilotApi";
+import {
+  buildOperatorEvidenceCaptureGate,
+  buildOperatorEvidenceCaptureWorklist,
+} from "@/lib/operatorEvidenceCaptureWorklist";
+import { buildOperatorEvidenceCapturePacket } from "@/lib/operatorEvidenceCapturePacket";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GameMatrix, MajorGroupRow } from "@/components/GameMatrixView";
 
@@ -326,6 +334,7 @@ const statusLabel: Record<string, string> = {
 
 const CLIENT_FACING_ARTIFACT_IDS = new Set(["expectation_packet", "final_report"]);
 const CLIENT_FACING_AUDIENCES = new Set(["client_confirmation", "client_final"]);
+const OPERATOR_CAPTURE_WORKFLOW = "captureAndSubmitOperatorReviewedEvidence";
 
 function statusTone(status: string | undefined) {
   if (!status) return "border-slate-300 bg-slate-50 text-slate-700";
@@ -354,6 +363,12 @@ function percent(value: number | undefined) {
 
 function artifactTitle(id: string) {
   const labels: Record<string, string> = {
+    real_case_reviewer_handoff_markdown: "Real Case reviewer handoff",
+    real_case_reviewer_handoff_json: "Real Case reviewer JSON",
+    real_case_operator_closure_brief: "Real Case operator closure",
+    real_case_operator_closure_json: "Real Case operator closure JSON",
+    real_case_counselor_decision_brief: "Real Case counselor decision",
+    real_case_counselor_decision_json: "Real Case counselor decision JSON",
     delivery_bundle: "交付包索引",
     intake_audit: "问诊审计",
     expectation_packet: "预期确认单",
@@ -504,13 +519,42 @@ export function InternalDeliveryReview({
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
+  const [reviewedEvidenceRecords, setReviewedEvidenceRecords] = useState<ReviewedEvidenceRecord[]>([]);
+  const [reviewedEvidenceError, setReviewedEvidenceError] = useState<string | null>(null);
 
   const canRun = Boolean(profile?.score && profile?.subject_group && report);
   const plan = useMemo(() => buildPlanFromGameMatrix(profile, gameMatrix), [profile, gameMatrix]);
+  const reviewedEvidencePlan = useMemo(
+    () => buildDeliveryReviewedEvidencePlan({ profile, gameMatrix }),
+    [profile, gameMatrix]
+  );
+  const operatorCaptureWorklist = useMemo(() => {
+    const caseId = preview?.manifest.case_id || preview?.case_id;
+    if (!caseId) return null;
+    return buildOperatorEvidenceCaptureWorklist({
+      caseId,
+      plan: reviewedEvidencePlan,
+      records: reviewedEvidenceRecords,
+    });
+  }, [preview, reviewedEvidencePlan, reviewedEvidenceRecords]);
+  const operatorCaptureGate = useMemo(
+    () => (operatorCaptureWorklist ? buildOperatorEvidenceCaptureGate(operatorCaptureWorklist) : null),
+    [operatorCaptureWorklist]
+  );
+  const operatorCapturePacket = useMemo(
+    () => (operatorCaptureWorklist ? buildOperatorEvidenceCapturePacket({ worklist: operatorCaptureWorklist }) : null),
+    [operatorCaptureWorklist]
+  );
   const orderedArtifacts = useMemo(() => {
     if (!preview) return [];
     const preferredOrder = [
       "delivery_bundle",
+      "real_case_reviewer_handoff_markdown",
+      "real_case_reviewer_handoff_json",
+      "real_case_operator_closure_brief",
+      "real_case_operator_closure_json",
+      "real_case_counselor_decision_brief",
+      "real_case_counselor_decision_json",
       "intake_audit",
       "expectation_packet",
       "plan_quality_audit",
@@ -534,8 +578,10 @@ export function InternalDeliveryReview({
     },
     [orderedArtifacts, preview]
   );
-  const clientDeliveryAllowed = preview?.manifest.client_delivery?.allowed ?? true;
+  const clientDeliveryAllowed =
+    (preview?.manifest.client_delivery?.allowed ?? true) && !(operatorCaptureGate?.blocksClientDelivery ?? false);
   const clientDeliveryBlockedReason =
+    (operatorCaptureGate?.blocksClientDelivery ? operatorCaptureGate.blockedReason : undefined) ||
     preview?.manifest.client_delivery?.blocked_reason ||
     "客户确认包暂不可下载，请先修订内部质检问题。";
 
@@ -582,6 +628,8 @@ export function InternalDeliveryReview({
     if (!profile || !report) return;
     setIsLoading(true);
     setError(null);
+    setReviewedEvidenceRecords([]);
+    setReviewedEvidenceError(null);
 
     try {
       const response = await fetch(buildApiUrl("/api/delivery/preview"), {
@@ -603,6 +651,14 @@ export function InternalDeliveryReview({
       const nextPreview: DeliveryPreview = await response.json();
       setPreview(nextPreview);
       onManifestGenerated?.(nextPreview.manifest);
+      const reviewedEvidenceCaseId = nextPreview.manifest.case_id || nextPreview.case_id;
+      try {
+        const listing = await fetchReviewedEvidenceRecords({ caseId: reviewedEvidenceCaseId });
+        setReviewedEvidenceRecords(listing.records);
+      } catch (reviewedEvidenceErr) {
+        const reason = reviewedEvidenceErr instanceof Error ? reviewedEvidenceErr.message : String(reviewedEvidenceErr);
+        setReviewedEvidenceError(`operator-review ledger unavailable: ${reason}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "交付预检失败");
     } finally {
@@ -1206,6 +1262,47 @@ export function InternalDeliveryReview({
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-800">case-scoped reviewed evidence</div>
+            {reviewedEvidenceError && (
+              <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                {reviewedEvidenceError}
+              </div>
+            )}
+            <ReviewedEvidenceCaseBrowserPanel
+              caseId={preview.manifest.case_id || preview.case_id}
+              records={reviewedEvidenceRecords}
+              plan={reviewedEvidencePlan}
+            />
+            {operatorCaptureWorklist && operatorCaptureWorklist.totalItems > 0 ? (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <div className="font-medium">operator capture worklist</div>
+                <p className="mt-1">
+                  {operatorCaptureWorklist.blockingItemCount} blocking / {operatorCaptureWorklist.totalItems} item(s)
+                  must use {OPERATOR_CAPTURE_WORKFLOW}.
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {operatorCaptureWorklist.items.slice(0, 3).map((item) => (
+                    <li key={item.taskId} className="break-words">
+                      {item.taskId} - {item.priority} - {item.captureStatus} - {item.reason}
+                    </li>
+                  ))}
+                </ul>
+                {operatorCapturePacket?.items[0] ? (
+                  <div className="mt-2 border-t border-amber-200 pt-2 text-xs leading-5">
+                    <div className="font-medium">capture packet: {operatorCapturePacket.items[0].taskId}</div>
+                    <div>{operatorCapturePacket.items[0].captureBrief}</div>
+                    <div>
+                      attachment template: {operatorCapturePacket.items[0].submissionTemplate.attachmentPayload.kind}
+                      {" -> "}
+                      {OPERATOR_CAPTURE_WORKFLOW}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-lg border border-slate-200 p-4">

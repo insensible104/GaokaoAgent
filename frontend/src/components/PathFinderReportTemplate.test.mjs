@@ -127,4 +127,17 @@ assert(
   "App should persist the latest analyzed report payload for the report preview",
 );
 
+for (const token of [
+  "fetchReviewedEvidenceRecords",
+  "resolveReviewedEvidenceCaseId",
+  "buildReportEvidenceAutopilotPayload",
+  "reviewedEvidenceRecords",
+  "evidenceAutopilot",
+]) {
+  assert(
+    appSource.includes(token),
+    `App report preview should wire reviewed evidence token: ${token}`,
+  );
+}
+
 console.log("PathFinder report template smoke test passed");

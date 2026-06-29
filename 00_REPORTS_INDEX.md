@@ -4,6 +4,27 @@
 
 ---
 
+## 2026年6月30日 (260630) 赛后收敛与项目收尾
+
+### 主要成果：停止 2026 实时交付叙事，保留可复盘研究资产
+
+16. **[2026-06-29-post-score-season-project-summary.md](docs/2026-06-29-post-score-season-project-summary.md)** **赛后项目总结入口**
+   - **内容**: 明确 PathFinder 不再按 2026 live delivery product 推进，改为 post-season research/product asset。
+   - **边界**: 不能作为今年家长最终志愿建议，不能声明 2026 录取结果提升。
+   - **用途**: 后续任何继续工作前，先确认项目处于赛后收敛模式。
+
+15. **[2026-06-29-project-file-state-review.md](docs/2026-06-29-project-file-state-review.md)** **文件状态复盘**
+   - **内容**: 区分已提交产品主线、未治理 2026-06-28 研究批次、历史文档和临时输出。
+   - **结论**: 项目混乱主要来自未跟踪研究批次，不是主线代码不可用。
+   - **用途**: 判断哪些文件可以进 GitHub，哪些只作为本地研究输出保留。
+
+14. **[2026-06-28-special-control-opportunity-pipeline.md](docs/research_runs/2026-06-28-special-control-opportunity-pipeline.md)** **6月28日机会挖掘批次 manifest**
+   - **内容**: 登记 special-control / elite opportunity discovery 批次的输入、输出、脚本范围和证据边界。
+   - **边界**: 全部为 internal-only research run；不上传原始 500+ 输出和 80 个一次性脚本。
+   - **用途**: 为后续单案例 retrospective audit 选择候选，不再让批量产物污染主线。
+
+---
+
 ## 2026年6月5日 (260605) 自我迭代与交付闭环
 
 ### 主要成果：补齐 GitHub 提交之外的可复盘迭代记录
@@ -379,8 +400,8 @@
 
 ---
 
-**最后更新**: 2026-01-10 13:30
-**索引版本**: v2.0
+**最后更新**: 2026-06-30
+**索引版本**: v2.1
 
 ---
 

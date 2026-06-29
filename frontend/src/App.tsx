@@ -21,6 +21,7 @@ import type { AgentStep } from "@/components/ProgressTracker";
 import type { PathFinderReportPayload } from "@/components/PathFinderReportTemplate";
 import { buildApiUrl } from "@/lib/api";
 import { buildDeliveryReadinessSummary } from "@/lib/deliveryReadiness";
+import { fetchReviewedEvidenceRecords } from "@/lib/evidenceAutopilotApi";
 import type { DeliveryManifest } from "@/components/InternalDeliveryReview";
 
 const appBasePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -90,6 +91,53 @@ interface AnalysisRequest {
     geography?: number;
   };
   delivery_profile?: DeliveryProfile;
+}
+
+type ReportEvidenceAutopilotPayload = NonNullable<PathFinderReportPayload["evidenceAutopilot"]>;
+
+function readStringField(value: unknown, key: string): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const field = (value as Record<string, unknown>)[key];
+  return typeof field === "string" && field.trim() ? field.trim() : undefined;
+}
+
+function resolveReviewedEvidenceCaseId({
+  gameMatrix,
+  deliveryManifests,
+}: {
+  gameMatrix?: GameMatrix | null;
+  deliveryManifests: DeliveryManifest[];
+}): string | undefined {
+  const latestManifest = [...deliveryManifests].reverse().find((manifest) => manifest.case_id);
+  return latestManifest?.case_id
+    ?? readStringField(gameMatrix, "case_id")
+    ?? readStringField(gameMatrix, "caseId")
+    ?? readStringField(gameMatrix, "id")
+    ?? readStringField(gameMatrix?.volunteer_plan, "case_id")
+    ?? readStringField(gameMatrix?.volunteer_plan, "caseId");
+}
+
+async function buildReportEvidenceAutopilotPayload(
+  caseId: string | undefined,
+): Promise<ReportEvidenceAutopilotPayload | undefined> {
+  if (!caseId) return undefined;
+  try {
+    const listing = await fetchReviewedEvidenceRecords({ caseId });
+    return {
+      caseId,
+      reviewedEvidenceRecords: listing.records,
+      claimBoundary: "Reviewed evidence records were loaded from the case-scoped ledger for report preview.",
+      status: "live_ledger",
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      caseId,
+      reviewedEvidenceRecords: [],
+      claimBoundary: `Reviewed evidence ledger was unavailable for report preview: ${reason}.`,
+      status: "ledger_unavailable",
+    };
+  }
 }
 
 // 修复：创建fetchWithTimeout工具函数
@@ -470,10 +518,17 @@ function AppContent() {
     setDeliveryManifests([]);
   };
 
-  const openReportTemplatePreview = useCallback(() => {
+  const openReportTemplatePreview = useCallback(async () => {
     if (!result?.game_matrix) return;
+    const evidenceAutopilot = await buildReportEvidenceAutopilotPayload(
+      resolveReviewedEvidenceCaseId({
+        gameMatrix: result.game_matrix,
+        deliveryManifests,
+      }),
+    );
     const payload: PathFinderReportPayload = {
       gameMatrix: result.game_matrix,
+      evidenceAutopilot,
       deliveryProfile,
       report: result.report,
       deliveryReadiness: buildDeliveryReadinessSummary({
@@ -485,7 +540,7 @@ function AppContent() {
     };
     window.sessionStorage.setItem("pathfinder-report-preview", JSON.stringify(payload));
     window.open(buildAppPath("/report-template-preview"), "_blank", "noopener,noreferrer");
-  }, [deliveryProfile, result]);
+  }, [deliveryManifests, deliveryProfile, result]);
 
   if (window.location.pathname.includes("report-template-preview")) {
     return (

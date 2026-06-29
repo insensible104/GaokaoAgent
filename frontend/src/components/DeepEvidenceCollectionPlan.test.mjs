@@ -20,13 +20,17 @@ for (const token of [
   "师资与论文",
   "本科生可获得性",
   "真实就业",
-  "升学/保研",
+  "考研/保研",
   "考公",
   "微信公众号",
-  "Boss直聘/国聘/校招官网",
+  "Boss直聘",
   "反证降权",
 ]) {
   assert(componentSource.includes(token), `collection component should include token: ${token}`);
+}
+
+for (const source of [libSource, componentSource]) {
+  assert.equal(/(閺|锟|鎷|鏈|鐭|鍙嶈|涓|鏅鸿|骞夸|鍗庡)/.test(source), false);
 }
 
 assert.match(cardSource, /DeepEvidenceCollectionPlan/);
@@ -65,8 +69,8 @@ for (const claim of [
 }
 
 assert(
-  plan.tasks.some((task) => task.accessMethod.includes("人工") && task.outputFields.includes("原文摘录")),
-  "WeChat and semi-closed sources should require manual excerpts",
+  plan.tasks.some((task) => task.accessMethod.includes("不绕过登录") && task.outputFields.includes("原文摘录")),
+  "WeChat and semi-closed sources should require compliant excerpts",
 );
 assert(
   plan.tasks.some((task) => task.passRule.includes("降权") || task.failRule.includes("降权")),

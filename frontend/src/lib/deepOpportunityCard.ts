@@ -16,6 +16,13 @@ export interface DeepOpportunitySignal {
   interpretation: string;
 }
 
+export interface AlphaBoardRow {
+  factor: string;
+  score: number;
+  exposure: "正向" | "中性" | "负向";
+  evidence: string;
+}
+
 export interface DeepOpportunityInput {
   student: {
     province: string;
@@ -47,6 +54,7 @@ export interface DeepOpportunityCardModel {
   opportunityType: string;
   totalScore: number;
   confidence: "高" | "中" | "低";
+  alphaBoard: AlphaBoardRow[];
   evidencePillars: DeepOpportunitySignal[];
   researchSignals: string[];
   employmentSignals: string[];
@@ -75,7 +83,7 @@ export const exampleDeepOpportunityInput: DeepOpportunityInput = {
     subjectGroup: "物理类",
     rank: 38200,
     targetRankBand: "36000-43000",
-    preference: ["计算机相关", "愿意读研", "接受非一线城市"],
+    preference: ["计算机相关", "愿意读研", "接受非一线城市岗位路径"],
   },
   target: {
     schoolName: "华南理工示例校",
@@ -86,15 +94,15 @@ export const exampleDeepOpportunityInput: DeepOpportunityInput = {
   evidencePillars: [
     {
       label: "量化定位",
-      score: 84,
+      score: 86,
       weight: 1.2,
       status: "strong",
-      evidence: ["近三年同位次样本落在目标区间内", "专业组计划数增加后，等位分压力方向性下降"],
+      evidence: ["近三年同位次样本落在目标讨论区间内", "专业组计划数增加后，等位分压力方向性下降"],
       interpretation: "从位次角度看，这是可以进入冲稳讨论的候选，不是盲目冲高。",
     },
     {
       label: "科研资源",
-      score: 88,
+      score: 90,
       weight: 1.4,
       status: "strong",
       evidence: ["学院长期覆盖智能制造、工业软件、数据驱动优化方向", "近年论文和项目集中在制造业数字化与工程智能交叉"],
@@ -102,15 +110,15 @@ export const exampleDeepOpportunityInput: DeepOpportunityInput = {
     },
     {
       label: "本科生可获得性",
-      score: 82,
+      score: 83,
       weight: 1.1,
       status: "medium",
       evidence: ["公开材料显示有本科生科研训练计划", "部分课题组长期招收本科助研或竞赛队成员"],
-      interpretation: "机会是否真正落到本科生身上仍需逐个课题组核验。",
+      interpretation: "机会是否真正落到本科生身上，仍需逐个课题组核验。",
     },
     {
       label: "真实就业",
-      score: 81,
+      score: 84,
       weight: 1,
       status: "medium",
       evidence: ["岗位侧能对应工业软件、数据分析、质量工程、算法工程化", "制造业数字化岗位对工程背景更友好"],
@@ -118,7 +126,7 @@ export const exampleDeepOpportunityInput: DeepOpportunityInput = {
     },
     {
       label: "升学路径",
-      score: 86,
+      score: 87,
       weight: 1,
       status: "strong",
       evidence: ["方向可衔接控制、计算机、机械电子、工业工程等交叉读研路径", "保研和考研可围绕导师方向提前构建项目经历"],
@@ -126,15 +134,15 @@ export const exampleDeepOpportunityInput: DeepOpportunityInput = {
     },
     {
       label: "低估可能",
-      score: 80,
+      score: 82,
       weight: 0.9,
       status: "medium",
-      evidence: ["专业名称不如计算机直接，家长搜索时容易低估", "外部方案常只按专业热度排序，忽略导师和产业方向"],
+      evidence: ["专业名称不如计算机直接，家长搜索时容易低估", "外部方案常按专业热度排序，忽略导师和产业方向"],
       interpretation: "低估来自信息维度不足，不来自录取概率保证。",
     },
     {
       label: "反证边界",
-      score: 76,
+      score: 78,
       weight: 0.8,
       status: "needs_check",
       evidence: ["需核验毕业去向是否集中在目标岗位", "需确认专业组内调剂风险和校区安排"],
@@ -152,14 +160,14 @@ export const exampleDeepOpportunityInput: DeepOpportunityInput = {
   ],
   employmentSignals: [
     "岗位锚点包括工业软件实施、制造数据分析、质量工程、算法工程化和智能装备产品经理。",
-    "需要用 Boss 直聘、国聘、校招官网等岗位样本核验城市、薪资、技能栈和学历要求。",
+    "需要用 Boss直聘、国聘、校招官网等岗位样本核验城市、薪资、技能栈和学历要求。",
   ],
   graduateSignals: [
-    "读研可转向控制科学、计算机应用、机械电子、工业工程与管理科学交叉方向。",
+    "考研可转向控制科学、计算机应用、机械电子、工业工程与管理科学交叉方向。",
     "保研竞争力取决于早期项目、竞赛、论文或软件著作权，而不是专业名称本身。",
   ],
   counterEvidenceChecks: [
-    "如果 2026 招生章程显示专业组调剂到学生黑名单专业，直接降级。",
+    "如果 2026 招生章程显示专业组可调剂到学生黑名单专业，直接降级。",
     "如果就业质量报告只给大类就业率，没有岗位和升学去向，不能宣称真实就业优势。",
     "如果导师团队近三年公开成果断档，科研资源评分必须下调。",
   ],
@@ -171,12 +179,16 @@ export const exampleDeepOpportunityInput: DeepOpportunityInput = {
   nextActions: [
     "先核验官方招生计划和专业组风险，再讨论是否进入冲稳组合。",
     "按导师方向建立 5 条证据链：主页、论文、项目、学生培养、毕业去向。",
-    "抓取 20 条国内岗位样本，拆出学历门槛、技能栈、城市和工作内容。",
+    "采样 20 条国内岗位，拆出学历门槛、技能栈、城市和工作内容。",
   ],
 };
 
 export function buildDeepOpportunityCard(input: DeepOpportunityInput): DeepOpportunityCardModel {
-  const totalScore = weightedScore(input.evidencePillars);
+  const normalizedPillars = input.evidencePillars.map((pillar) => ({
+    ...pillar,
+    score: clampScore(pillar.score),
+  }));
+  const totalScore = weightedScore(normalizedPillars);
   const confidence = totalScore >= 84 ? "高" : totalScore >= 72 ? "中" : "低";
 
   return {
@@ -186,27 +198,70 @@ export function buildDeepOpportunityCard(input: DeepOpportunityInput): DeepOppor
     opportunityType: input.target.opportunityType,
     totalScore,
     confidence,
-    evidencePillars: input.evidencePillars.map((pillar) => ({
-      ...pillar,
-      score: clampScore(pillar.score),
-    })),
+    alphaBoard: buildAlphaBoard(normalizedPillars),
+    evidencePillars: normalizedPillars,
     researchSignals: input.researchSignals,
     employmentSignals: input.employmentSignals,
     graduateSignals: input.graduateSignals,
     undergradAccessSignals: input.undergradAccessSignals,
     fitFor: [
-      "愿意读研、保研或较早进入课题组训练的学生",
-      "能接受专业名称不够热门，但愿意看研究方向和岗位任务的家庭",
-      "目标是工程技术、产业数字化、算法工程化等复合路径的学生",
+      "愿意考研、保研或较早进入课题组训练的学生。",
+      "能接受专业名称不够热门，但愿意看研究方向和岗位任务的家庭。",
+      "目标是工程技术、产业数字化、算法工程化等复合路径的学生。",
     ],
     notFitFor: [
-      "只想本科稳定就业，且不愿意投入科研、竞赛或项目经历的学生",
-      "无法接受专业组调剂、校区变化或非互联网岗位路径的家庭",
-      "只按热门专业标签决策，不愿意逐条核验证据的家庭",
+      "只想本科稳定就业，且不愿投入科研、竞赛或项目经历的学生。",
+      "无法接受专业组调剂、校区变化或非互联网岗位路径的家庭。",
+      "只按热门专业标签决策，不愿逐条核验证据的家庭。",
     ],
     counterEvidenceChecks: input.counterEvidenceChecks,
     evidenceGaps: input.evidenceGaps,
     nextActions: input.nextActions,
-    claimBoundary: "这不是最终志愿推荐，而是一张可复核的深度机会卡；必须补齐官方计划、位次、专业组风险、导师与就业证据后，才能进入最终方案排序。",
+    claimBoundary:
+      "这不是最终志愿推荐，而是一张可复核的深度机会卡；必须补齐官方计划、位次、专业组风险、导师与就业证据后，才能进入最终方案排序。",
   };
+}
+
+function buildAlphaBoard(pillars: DeepOpportunitySignal[]): AlphaBoardRow[] {
+  const pillarScore = (label: DeepOpportunityPillarLabel) =>
+    pillars.find((pillar) => pillar.label === label)?.score ?? 0;
+
+  return [
+    {
+      factor: "同分段相对提升",
+      score: pillarScore("量化定位"),
+      exposure: "正向",
+      evidence: "同位次基准允许进入冲稳讨论，但仍受当年计划和选科口径约束。",
+    },
+    {
+      factor: "科研资源折价",
+      score: pillarScore("科研资源"),
+      exposure: "正向",
+      evidence: "研究方向与导师项目比专业名称更能解释中长期价值。",
+    },
+    {
+      factor: "职业路径兑现度",
+      score: Math.round((pillarScore("真实就业") + pillarScore("升学路径")) / 2),
+      exposure: "正向",
+      evidence: "岗位任务、考研保研方向和本科能力建设能形成连续路径。",
+    },
+    {
+      factor: "本科可获得性",
+      score: pillarScore("本科生可获得性"),
+      exposure: "中性",
+      evidence: "公开入口存在，但必须核验本科生是否真的能进入课题组和项目。",
+    },
+    {
+      factor: "市场低关注",
+      score: pillarScore("低估可能"),
+      exposure: "正向",
+      evidence: "普通家长和通用 AI 容易按专业名称热度排序，忽略导师和产业场景。",
+    },
+    {
+      factor: "反证风险暴露",
+      score: 100 - pillarScore("反证边界"),
+      exposure: "负向",
+      evidence: "专业组调剂、校区、就业去向或导师断档任一命中都要降权。",
+    },
+  ];
 }
