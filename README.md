@@ -2,6 +2,22 @@
 
 PathFinder Lite is a public demo of an evidence-first Gaokao volunteer-planning system. It is not another chat wrapper: the core workflow is structured recommendation, quantitative risk control, deep research, external-plan audit, and counselor-review boundaries.
 
+## Current Status: Post-Score-Season Consolidation
+
+As of 2026-06-30, PathFinder is no longer positioned as a 2026 live delivery product. The Gaokao score-release window has passed, and the system has not completed the evidence, redaction, authentication, counselor-signoff, and outcome-validation gates required for responsible family-facing advice this year.
+
+The project is being preserved as a post-season research and product asset:
+
+- current safe use: internal research, retrospective analysis, opportunity hypothesis generation, and workflow review;
+- current unsafe use: final family-facing application advice or claims of improved 2026 admission outcomes;
+- next direction: one reproducible research run, one reviewed retrospective case, then 2027-oriented evidence-system preparation.
+
+Start with:
+
+- `docs/2026-06-29-post-score-season-project-summary.md`
+- `docs/2026-06-29-project-file-state-review.md`
+- `docs/research_runs/2026-06-28-special-control-opportunity-pipeline.md`
+
 ## PathFinder Alpha Loop
 
 PathFinder uses quant positioning, evidence autopilot, opportunity radar, and a Chinese deliverable report to find auditable Gaokao volunteer opportunities.

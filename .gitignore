@@ -17,6 +17,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Local post-season research batches
+# Keep raw generated evidence-mining runs local unless a curated manifest under
+# docs/research_runs/ explicitly promotes selected artifacts.
+analysis_inputs/
+analysis_outputs/
+scripts/build_*.py
+scripts/export_special_control_*.py
+scripts/mine_paid_*.py
+scripts/review_elite_*.py
+scripts/run_special_control_*.py
+scripts/run_special_control_*.mjs
+
 # Archive directory (historical files)
 archive/
 docs/reports_archive/
